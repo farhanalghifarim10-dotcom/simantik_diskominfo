@@ -1,0 +1,19 @@
+node_modules/
+dist/
+build/
+coverage/
+
+.env
+.env.*
+!.env.example
+
+.DS_Store
+
+.vscode/
+.idea/
+
+*.log
+
+# Python cache
+__pycache__/
+*.pyc

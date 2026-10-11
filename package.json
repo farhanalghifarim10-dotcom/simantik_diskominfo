@@ -1,0 +1,20 @@
+{
+  "name": "simantik",
+  "version": "1.0.0",
+  "description": "SIMANTIK — Sistem Manajemen Layanan Teknologi Informasi Diskominfo",
+  "scripts": {
+    "dev:backend": "npm --prefix backend/api run start:dev",
+    "dev:service": "npm --prefix frontend/service-web run dev",
+    "dev:admin": "npm --prefix frontend/admin-web run dev",
+    "build:backend": "npm --prefix backend/api run build",
+    "build:service": "npm --prefix frontend/service-web run build",
+    "build:admin": "npm --prefix frontend/admin-web run build",
+    "build:all": "npm run build:backend && npm run build:service && npm run build:admin",
+    "test:backend": "npm --prefix backend/api test",
+    "lint:admin": "npm --prefix frontend/admin-web run lint",
+    "lint:service": "npm --prefix frontend/service-web run lint"
+  },
+  "devDependencies": {
+    "supabase": "^2.120.0"
+  }
+}

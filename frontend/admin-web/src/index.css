@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Primary Government Navy */
+  --color-navy-50: #f0f4f9;
+  --color-navy-100: #dbe4f0;
+  --color-navy-200: #b9cbe3;
+  --color-navy-300: #8ea8d1;
+  --color-navy-400: #6283bd;
+  --color-navy-500: #4263a7;
+  --color-navy-600: #314d8c;
+  --color-navy-700: #263c71;
+  --color-navy-800: #1b2b52;
+  --color-navy-900: #0f1d36;
+  --color-navy-950: #0a1322;
+
+  /* Supporting ASN Blue */
+  --color-govblue-50: #f0f9ff;
+  --color-govblue-100: #e0f2fe;
+  --color-govblue-200: #bae6fd;
+  --color-govblue-300: #7dd3fc;
+  --color-govblue-400: #38bdf8;
+  --color-govblue-500: #0ea5e9;
+  --color-govblue-600: #0284c7;
+  --color-govblue-700: #0369a1;
+  --color-govblue-800: #075985;
+  --color-govblue-900: #0c4a6e;
+}
+
+:root {
+  font-family:
+    'Inter',
+    'Plus Jakarta Sans',
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+
+  color: #0f172a;
+  background-color: #f8fafc;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+/* High-contrast accessible focus ring standard for Indonesian Public Services */
+:focus-visible {
+  outline: 2px solid #0f1d36;
+  outline-offset: 2px;
+}
+
+/* Respect user's operating system reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
