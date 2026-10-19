@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import {
   ArrowRightIcon,
-  Badge,
   Button,
   EmptyState,
   ErrorState,
@@ -11,7 +10,13 @@ import {
   SearchIcon,
   Select,
   Skeleton,
+  KeyIcon,
 } from '../components/ui';
+import { useAuth } from '../features/auth/useAuth';
+import {
+  ReissueTrackingCodeModal,
+  type TargetApplicationInfo,
+} from '../features/applications/ReissueTrackingCodeModal';
 import {
   useAdminApplications,
   type ApplicationStage,
@@ -56,6 +61,10 @@ export function AdminApplicationsListPage() {
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  const [selectedReissueApp, setSelectedReissueApp] = useState<TargetApplicationInfo | null>(null);
+
   const { data, isLoading, isError, error, refetch } = useAdminApplications({
     search: searchInput,
     status: statusFilter,
@@ -89,9 +98,6 @@ export function AdminApplicationsListPage() {
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">
               Daftar Permohonan Layanan
             </h1>
-            <Badge variant="neutral" className="font-mono text-xs">
-              Phase 07
-            </Badge>
           </div>
           <p className="text-sm text-slate-500 mt-1">
             Kelola, verifikasi berkas, dan tindak lanjuti usulan pembangunan serta modifikasi aplikasi dari Perangkat Daerah.
@@ -165,7 +171,7 @@ export function AdminApplicationsListPage() {
                 setSortBy('submitted_at');
                 setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc');
               }}
-              className={`hover:underline ${sortBy === 'submitted_at' ? 'font-bold text-blue-600' : ''}`}
+              className={`hover:underline ${sortBy === 'submitted_at' ? 'font-bold text-[#1B5040]' : ''}`}
             >
               Tanggal Masuk ({sortOrder === 'desc' && sortBy === 'submitted_at' ? 'Terbaru' : 'Terlama'})
             </button>
@@ -176,7 +182,7 @@ export function AdminApplicationsListPage() {
                 setSortBy('ticket_number');
                 setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc');
               }}
-              className={`hover:underline ${sortBy === 'ticket_number' ? 'font-bold text-blue-600' : ''}`}
+              className={`hover:underline ${sortBy === 'ticket_number' ? 'font-bold text-[#1B5040]' : ''}`}
             >
               No. Tiket
             </button>
@@ -186,7 +192,7 @@ export function AdminApplicationsListPage() {
             <button
               type="button"
               onClick={resetFilters}
-              className="text-blue-600 font-semibold hover:underline"
+              className="text-[#1B5040] font-semibold hover:underline"
             >
               Reset Semua Filter
             </button>
@@ -273,7 +279,7 @@ export function AdminApplicationsListPage() {
                       <td className="px-5 py-4 whitespace-nowrap">
                         <Link
                           to={`/applications/${item.id}`}
-                          className="font-mono font-bold text-blue-600 hover:underline block"
+                          className="font-mono font-bold text-[#1B5040] hover:underline block"
                         >
                           {item.ticket_number}
                         </Link>
@@ -297,7 +303,7 @@ export function AdminApplicationsListPage() {
                       <td className="px-5 py-4 max-w-xs">
                         <Link
                           to={`/applications/${item.id}`}
-                          className="font-semibold text-slate-900 hover:text-blue-600 line-clamp-2 leading-snug block"
+                          className="font-semibold text-slate-900 hover:text-[#1B5040] line-clamp-2 leading-snug block"
                         >
                           {item.title}
                         </Link>
@@ -331,12 +337,34 @@ export function AdminApplicationsListPage() {
 
                       {/* Action */}
                       <td className="px-5 py-4 text-right whitespace-nowrap">
-                        <Link to={`/applications/${item.id}`}>
-                          <Button variant="outline" size="sm" className="font-semibold text-xs">
-                            Detail
-                            <ArrowRightIcon size={14} className="ml-1" />
-                          </Button>
-                        </Link>
+                        <div className="flex items-center justify-end gap-2">
+                          {isSuperAdmin && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedReissueApp({
+                                  id: item.id,
+                                  ticket_number: item.ticket_number,
+                                  title: item.title,
+                                  applicant: item.applicant,
+                                });
+                              }}
+                              className="font-semibold text-xs border-amber-300 text-amber-800 hover:bg-amber-50"
+                              title="Terbitkan Ulang Kode Pelacakan (Khusus Super Admin)"
+                            >
+                              <KeyIcon size={13} className="mr-1 text-amber-700" />
+                              Kode
+                            </Button>
+                          )}
+                          <Link to={`/applications/${item.id}`} onClick={(e) => e.stopPropagation()}>
+                            <Button variant="outline" size="sm" className="font-semibold text-xs">
+                              Detail
+                              <ArrowRightIcon size={14} className="ml-1" />
+                            </Button>
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -374,6 +402,15 @@ export function AdminApplicationsListPage() {
           </>
         )}
       </div>
+
+      {/* Modal Penerbitan Ulang Kode Pelacakan (Khusus SUPER_ADMIN) */}
+      {isSuperAdmin && (
+        <ReissueTrackingCodeModal
+          isOpen={Boolean(selectedReissueApp)}
+          onClose={() => setSelectedReissueApp(null)}
+          application={selectedReissueApp}
+        />
+      )}
     </div>
   );
 }

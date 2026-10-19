@@ -144,7 +144,7 @@ export function TicketDiscussionPanel({ applicationId }: TicketDiscussionPanelPr
                   isInternal
                     ? 'bg-amber-50/80 border-amber-200 text-amber-950'
                     : isApplicant
-                    ? 'bg-blue-50/70 border-blue-200 text-slate-900 ml-4 sm:ml-8'
+                    ? 'bg-[#CAF3E4]/40 border-[#98F7D9] text-slate-900 ml-4 sm:ml-8'
                     : 'bg-white border-slate-200 text-slate-900 mr-4 sm:mr-8 shadow-sm'
                 }`}
               >
@@ -196,9 +196,9 @@ export function TicketDiscussionPanel({ applicationId }: TicketDiscussionPanelPr
                 name="msgVisibility"
                 checked={targetVisibility === 'PUBLIC'}
                 onChange={() => setTargetVisibility('PUBLIC')}
-                className="text-blue-600 focus:ring-blue-500"
+                className="text-[#1B5040] focus:ring-[#1B5040]"
               />
-              <span className="text-blue-700 font-bold">
+              <span className="text-[#1B5040] font-bold">
                 Balasan Publik (Dikirim ke Pemohon + Notifikasi)
               </span>
             </label>

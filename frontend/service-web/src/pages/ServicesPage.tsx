@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
+import { motion } from 'motion/react';
 import {
   Alert,
   ArrowRightIcon,
@@ -49,8 +50,13 @@ export function ServicesPage() {
       {/* =========================================================================
           PAGE HEADER
          ========================================================================= */}
-      <div className="border-b border-slate-200 pb-8 space-y-3">
-        <div className="flex items-center gap-2 text-xs font-semibold text-blue-600 uppercase tracking-wider">
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+        className="border-b border-slate-200 pb-8 space-y-3"
+      >
+        <div className="flex items-center gap-2 text-xs font-semibold text-[#1B5040] uppercase tracking-wider">
           <Link to="/" className="hover:underline text-slate-500">Beranda</Link>
           <span className="text-slate-400">/</span>
           <span>Katalog Layanan</span>
@@ -62,20 +68,26 @@ export function ServicesPage() {
           Pilih kategori layanan yang sesuai dengan kebutuhan digitalisasi pada unit kerja Anda. 
           Pastikan seluruh berkas kelengkapan wajib telah disiapkan sebelum memulai formulir pengajuan.
         </p>
-      </div>
+      </motion.div>
 
       {/* =========================================================================
           SPBE REGULATION NOTICE
          ========================================================================= */}
-      <Alert variant="info" title="Pemberitahuan Penyelenggaraan SPBE Terpadu">
-        <div className="text-xs sm:text-sm text-slate-700 leading-relaxed space-y-1">
-          <p>
-            Sesuai amanat <strong>Permenkomdigi No. 6 Tahun 2025</strong> dan regulasi SPBE Pemerintah Daerah Kabupaten Bandung, 
-            seluruh inisiatif perangkat lunak harus melalui telaah arsitektur Diskominfo guna mencegah duplikasi fungsi dan 
-            memastikan standar interoperabilitas data daerah.
-          </p>
-        </div>
-      </Alert>
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <Alert variant="info" title="Pemberitahuan Penyelenggaraan SPBE Terpadu">
+          <div className="text-xs sm:text-sm text-slate-700 leading-relaxed space-y-1">
+            <p>
+              Sesuai amanat <strong>Permenkomdigi No. 6 Tahun 2025</strong> dan regulasi SPBE Pemerintah Daerah Kabupaten Bandung,
+              seluruh inisiatif perangkat lunak harus melalui telaah arsitektur Diskominfo guna mencegah duplikasi fungsi dan
+              memastikan standar interoperabilitas data daerah.
+            </p>
+          </div>
+        </Alert>
+      </motion.div>
 
       {/* =========================================================================
           LOADING STATE
@@ -147,7 +159,7 @@ export function ServicesPage() {
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-slate-100">
                     <div className="space-y-2">
                       <div className="flex flex-wrap items-center gap-3">
-                        <span className="font-mono text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+                        <span className="font-mono text-xs font-bold text-[#1B5040] bg-[#CAF3E4] px-2 py-0.5 rounded">
                           {srv.code}
                         </span>
                         <Badge variant="primary" className="uppercase font-bold text-[11px]">
@@ -185,7 +197,7 @@ export function ServicesPage() {
                     {/* Column 1: Kriteria */}
                     <div className="space-y-4">
                       <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                        <ShieldIcon size={16} className="text-blue-600" />
+                        <ShieldIcon size={16} className="text-[#2E8A6E]" />
                         Kriteria & Ketentuan SPBE
                       </h3>
                       <ul className="space-y-3">
@@ -211,7 +223,7 @@ export function ServicesPage() {
                     {/* Column 2: Alur Pelaksanaan */}
                     <div className="space-y-4">
                       <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                        <ClockIcon size={16} className="text-indigo-600" />
+                        <ClockIcon size={16} className="text-[#2E8A6E]" />
                         Tahapan Pelaksanaan
                       </h3>
                       <ol className="space-y-3 text-xs sm:text-sm text-slate-600">
@@ -259,13 +271,14 @@ export function ServicesPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {requiredDocs.map((doc: ServiceRequirement) => (
-                        <div
+                        <motion.div
                           key={doc.id}
-                          className="p-5 rounded-xl border-2 border-slate-200 bg-white shadow-sm space-y-2 hover:border-blue-300 transition-colors"
+                          whileHover={{ y: -3, transition: { duration: 0.18 } }}
+                          className="p-5 rounded-xl border-2 border-slate-200 bg-white shadow-sm space-y-2 hover:border-[#98F7D9] transition-all"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex items-center gap-2.5">
-                              <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
+                              <div className="p-2 rounded-lg bg-[#CAF3E4] text-[#1B5040]">
                                 <FileTextIcon size={18} />
                               </div>
                               <h4 className="text-sm font-bold text-slate-900">
@@ -287,7 +300,7 @@ export function ServicesPage() {
                               *Data konfigurasi implementasi
                             </span>
                           )}
-                        </div>
+                        </motion.div>
                       ))}
                     </div>
                   </div>
@@ -303,9 +316,10 @@ export function ServicesPage() {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {optionalDocs.map((doc: ServiceRequirement) => (
-                          <div
+                          <motion.div
                             key={doc.id}
-                            className="p-5 rounded-xl border border-slate-200 bg-white/80 shadow-sm space-y-2 hover:border-slate-300 transition-colors"
+                            whileHover={{ y: -3, transition: { duration: 0.18 } }}
+                            className="p-5 rounded-xl border border-slate-200 bg-white/80 shadow-sm space-y-2 hover:border-slate-300 transition-all"
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex items-center gap-2.5">
@@ -326,7 +340,7 @@ export function ServicesPage() {
                                 {doc.description}
                               </p>
                             )}
-                          </div>
+                          </motion.div>
                         ))}
                       </div>
                     </div>
@@ -341,7 +355,13 @@ export function ServicesPage() {
       {/* =========================================================================
           HELP & ASSISTANCE BANNER
          ========================================================================= */}
-      <div className="rounded-2xl bg-slate-100 border border-slate-200 p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-40px' }}
+        transition={{ duration: 0.5 }}
+        className="rounded-2xl bg-slate-100 border border-slate-200 p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6"
+      >
         <div className="space-y-1 text-center sm:text-left">
           <h4 className="text-base font-bold text-slate-900">
             Perlu Template Dokumen KAK atau Panduan Penyusunan?
@@ -352,17 +372,21 @@ export function ServicesPage() {
         </div>
         <div className="flex items-center gap-3 shrink-0">
           <Link to="/bantuan">
-            <Button variant="outline" size="sm">
-              Bantuan & FAQ
-            </Button>
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button variant="outline" size="sm">
+                Bantuan & FAQ
+              </Button>
+            </motion.div>
           </Link>
           <Link to="/kontak">
-            <Button variant="primary" size="sm">
-              Kontak Helpdesk
-            </Button>
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button variant="primary" size="sm">
+                Kontak Helpdesk
+              </Button>
+            </motion.div>
           </Link>
         </div>
-      </div>
+      </motion.div>
 
       {/* Modal Dialog for Guidance & Clear Call to Action */}
       <Dialog
@@ -389,11 +413,11 @@ export function ServicesPage() {
       >
         <div className="space-y-4 text-xs sm:text-sm text-slate-600">
           <p>
-            Formulir pendaftaran digital interaktif akan dibuka secara penuh pada tahap integrasi alur pengajuan (Phase 06).
+            Pastikan seluruh dokumen kelengkapan telah siap sebelum melanjutkan ke formulir pengajuan layanan.
           </p>
-          <div className="p-3.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-900 space-y-2 text-xs">
+          <div className="p-3.5 rounded-lg bg-[#CAF3E4]/60 border border-[#98F7D9] text-[#000408] space-y-2 text-xs">
             <p className="font-bold">Persyaratan Utama Yang Perlu Disiapkan OPD:</p>
-            <ul className="space-y-1 text-blue-800 list-disc list-inside">
+            <ul className="space-y-1 text-[#1B5040] list-disc list-inside">
               {(selectedServiceForModal?.requirements || [])
                 .filter((r) => r.is_required)
                 .map((r) => (

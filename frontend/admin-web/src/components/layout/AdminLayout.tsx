@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Outlet } from 'react-router';
+import { Outlet, useLocation } from 'react-router';
+import { motion } from 'motion/react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { ToastProvider } from '../ui';
@@ -7,6 +8,7 @@ import { ToastProvider } from '../ui';
 export function AdminLayout() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const location = useLocation();
 
   return (
     <ToastProvider>
@@ -24,11 +26,17 @@ export function AdminLayout() {
           {/* Header */}
           <Header onOpenMobile={() => setIsMobileOpen(true)} />
 
-          {/* Page Body */}
+          {/* Page Body with Motion Page Transitions */}
           <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-            <div className="mx-auto max-w-7xl">
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+              className="mx-auto max-w-7xl"
+            >
               <Outlet />
-            </div>
+            </motion.div>
           </main>
         </div>
       </div>

@@ -18,9 +18,11 @@ import {
   Tabs,
   Textarea,
   useToast,
+  KeyIcon,
 } from '../components/ui';
 import { UsersIcon } from '../components/layout/NavIcons';
 import { useAuth } from '../features/auth/useAuth';
+import { ReissueTrackingCodeModal } from '../features/applications/ReissueTrackingCodeModal';
 import {
   fetchDocumentSignedUrl,
   useAddInternalNote,
@@ -63,6 +65,9 @@ export function AdminApplicationDetailPage() {
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
 
   const { data: application, isLoading, isError, error } = useAdminApplicationDetail(id);
+  const isTerminalStatus = ['COMPLETED', 'CLOSED', 'REJECTED', 'CANCELLED'].includes(
+    application?.current_status || '',
+  );
 
   // Assignment Queries & Mutation
   const {
@@ -105,6 +110,9 @@ export function AdminApplicationDetailPage() {
   // State for Internal Note Input
   const [newInternalNote, setNewInternalNote] = useState('');
 
+  // State for Reissue Tracking Code Modal (Khusus Super Admin)
+  const [reissueModalOpen, setReissueModalOpen] = useState(false);
+
   // State for Downloading/Opening Document
   const [downloadingDocId, setDownloadingDocId] = useState<string | null>(null);
 
@@ -123,7 +131,7 @@ export function AdminApplicationDetailPage() {
   // Confirm Assign Handler
   const handleConfirmAssign = async () => {
     if (!application || !selectedTechId) {
-      setAssignError('Silakan tentukan teknisi penanggung jawab.');
+      setAssignError('Silakan tentukan tenaga ahli penanggung jawab.');
       return;
     }
 
@@ -322,7 +330,7 @@ export function AdminApplicationDetailPage() {
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 pb-6 border-b border-slate-100">
           <div className="space-y-2 max-w-3xl">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200">
+              <span className="font-mono text-xs font-bold text-[#1B5040] bg-[#CAF3E4] px-2.5 py-1 rounded-md border border-[#98F7D9]">
                 {application.ticket_number}
               </span>
               <span className="text-xs text-slate-400">•</span>
@@ -333,6 +341,19 @@ export function AdminApplicationDetailPage() {
               <Badge variant="neutral" className="text-xs font-mono">
                 {application.service.code}
               </Badge>
+              {isSuperAdmin && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setReissueModalOpen(true)}
+                  className="border-amber-300 text-amber-800 hover:bg-amber-50 font-bold text-xs flex items-center gap-1.5 ml-auto"
+                  title="Terbitkan Ulang Kode Pelacakan (Khusus Super Admin)"
+                >
+                  <KeyIcon size={14} className="text-amber-700" />
+                  Terbitkan Ulang Kode
+                </Button>
+              )}
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-snug">
@@ -354,6 +375,48 @@ export function AdminApplicationDetailPage() {
                 </>
               )}
             </div>
+
+            {/* Prominent Tenaga Ahli Penanggung Jawab Summary */}
+            <div className="flex flex-wrap items-center gap-2 pt-2 text-xs">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200">
+                <UsersIcon size={14} className="text-[#1B5040] shrink-0" />
+                <span className="text-slate-500 font-medium">Tenaga Ahli Penanggung Jawab:</span>
+                {isAssignmentsLoading ? (
+                  <Skeleton className="h-4 w-28 rounded" />
+                ) : isAssignmentsError ? (
+                  <span className="text-red-500 font-medium text-[11px]">Gagal memuat penugasan</span>
+                ) : assignmentsData?.current_assignment ? (
+                  <span className="font-bold text-slate-900 flex items-center gap-1.5">
+                    {assignmentsData.current_assignment.technician_name || 'Tenaga Ahli TI'}
+                    {isSuperAdmin && !isTerminalStatus && (
+                      <button
+                        type="button"
+                        onClick={handleOpenAssignModal}
+                        className="text-[11px] text-[#1B5040] hover:underline font-semibold ml-1 cursor-pointer"
+                        title="Alihkan / Ganti Tenaga Ahli"
+                      >
+                        (Ganti)
+                      </button>
+                    )}
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded text-[11px] font-semibold border border-amber-200">
+                      Belum Ditugaskan
+                    </span>
+                    {isSuperAdmin && !isTerminalStatus && (
+                      <button
+                        type="button"
+                        onClick={handleOpenAssignModal}
+                        className="text-[11px] text-[#1B5040] hover:underline font-bold cursor-pointer"
+                      >
+                        + Tugaskan Sekarang
+                      </button>
+                    )}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Current Operational Status & Stage Indicators */}
@@ -368,14 +431,14 @@ export function AdminApplicationDetailPage() {
             </span>
             <div className="flex items-center gap-2">
               {getStageBadge(application.current_stage)}
-              {['APPROVED', 'IN_PROGRESS', 'COMPLETED'].includes(application.current_status) && (
+              {['APPROVED', 'IN_PROGRESS'].includes(application.current_status) && (
                 <button
                   type="button"
                   onClick={() => {
                     setSelectedTargetStage(application.current_stage || 'ANALYSIS');
                     setStageModalOpen(true);
                   }}
-                  className="text-xs text-blue-600 hover:underline font-semibold"
+                  className="text-xs text-[#1B5040] hover:underline font-semibold"
                 >
                   (Ubah)
                 </button>
@@ -385,10 +448,10 @@ export function AdminApplicationDetailPage() {
         </div>
 
         {/* WORKFLOW ACTION PANEL (Allowed Transitions from Centralized Engine) */}
-        <div className="bg-gradient-to-r from-blue-50/60 via-slate-50/60 to-slate-50 p-5 rounded-xl border border-blue-100 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+        <div className="bg-gradient-to-r from-[#CAF3E4]/50 via-slate-50/60 to-slate-50 p-5 rounded-xl border border-[#98F7D9] flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
           <div className="space-y-1">
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <ClockIcon size={16} className="text-blue-600" />
+              <ClockIcon size={16} className="text-[#1B5040]" />
               Tindakan Alur Kerja Yang Diizinkan
             </h3>
             <p className="text-xs text-slate-600">
@@ -436,13 +499,13 @@ export function AdminApplicationDetailPage() {
           <Tab value="overview" className="flex-1 py-2.5 text-xs sm:text-sm font-semibold">
             Rincian & Pemohon
           </Tab>
-          <Tab value="lifecycle" className="flex-1 py-2.5 text-xs sm:text-sm font-semibold text-indigo-700">
+          <Tab value="lifecycle" className="flex-1 py-2.5 text-xs sm:text-sm font-semibold text-[#1B5040]">
             Lifecycle & Dokumen Teknis
           </Tab>
           <Tab value="documents" className="flex-1 py-2.5 text-xs sm:text-sm font-semibold">
             Dokumen Persyaratan ({application.documents.length})
           </Tab>
-          <Tab value="messages" className="flex-1 py-2.5 text-xs sm:text-sm font-semibold text-blue-700">
+          <Tab value="messages" className="flex-1 py-2.5 text-xs sm:text-sm font-semibold text-[#1B5040]">
             Komunikasi & Chat
           </Tab>
           <Tab value="history" className="flex-1 py-2.5 text-xs sm:text-sm font-semibold">
@@ -463,7 +526,7 @@ export function AdminApplicationDetailPage() {
             <div className="lg:col-span-2 space-y-6">
               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5">
                 <h3 className="text-base font-bold text-slate-900 pb-3 border-b border-slate-100 flex items-center gap-2">
-                  <FileTextIcon size={18} className="text-blue-600" />
+                  <FileTextIcon size={18} className="text-[#1B5040]" />
                   Rincian Kebutuhan Aplikasi
                 </h3>
 
@@ -516,11 +579,11 @@ export function AdminApplicationDetailPage() {
                   </div>
 
                   {application.existing_application_name && (
-                    <div className="p-3.5 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-900">
+                    <div className="p-3.5 rounded-xl bg-[#CAF3E4]/40 border border-[#98F7D9] text-[#1B5040]">
                       <span className="font-bold block text-xs uppercase tracking-wider mb-0.5">
                         Aplikasi Eksisting Terkait:
                       </span>
-                      <span className="font-medium text-sm">
+                      <span className="font-medium text-sm text-[#0D2820]">
                         {application.existing_application_name}
                       </span>
                     </div>
@@ -597,7 +660,7 @@ export function AdminApplicationDetailPage() {
                     <span className="text-slate-400 block text-xs">Email Kedinasan:</span>
                     <a
                       href={`mailto:${application.applicant.email}`}
-                      className="text-blue-600 font-medium hover:underline break-all"
+                      className="text-[#1B5040] font-medium hover:underline break-all"
                     >
                       {application.applicant.email}
                     </a>
@@ -619,19 +682,19 @@ export function AdminApplicationDetailPage() {
 
               {/* Technician Assignment Card */}
               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                  <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                    <UsersIcon size={16} className="text-blue-600" />
-                    Teknisi Penanggung Jawab
+                <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3 border-b border-slate-100">
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2 min-w-0">
+                    <UsersIcon size={16} className="text-[#1B5040] shrink-0" />
+                    <span>Tenaga Ahli Penanggung Jawab</span>
                   </h3>
-                  {isSuperAdmin && (
+                  {isSuperAdmin && !isTerminalStatus && (
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={handleOpenAssignModal}
-                      className="text-xs font-semibold"
+                      className="text-xs font-semibold shrink-0"
                     >
-                      {assignmentsData?.current_assignment ? 'Ganti Teknisi' : 'Tugaskan'}
+                      {assignmentsData?.current_assignment ? 'Ganti Tenaga Ahli' : 'Tugaskan'}
                     </Button>
                   )}
                 </div>
@@ -655,7 +718,7 @@ export function AdminApplicationDetailPage() {
                 ) : assignmentsData?.current_assignment ? (
                   <div className="space-y-3 text-xs sm:text-sm">
                     <div>
-                      <span className="text-slate-400 block text-xs">Teknisi Utama:</span>
+                      <span className="text-slate-400 block text-xs">Tenaga Ahli Utama:</span>
                       <span className="font-bold text-slate-900 text-sm">
                         {assignmentsData.current_assignment.technician_name}
                       </span>
@@ -672,8 +735,8 @@ export function AdminApplicationDetailPage() {
                     </div>
 
                     {assignmentsData.current_assignment.note && (
-                      <div className="p-3 rounded-xl bg-blue-50/60 border border-blue-100 text-xs text-blue-900">
-                        <span className="font-bold block text-[11px] uppercase tracking-wider text-blue-700 mb-0.5">
+                      <div className="p-3 rounded-xl bg-[#CAF3E4]/60 border border-[#98F7D9] text-xs text-[#000408]">
+                        <span className="font-bold block text-[11px] uppercase tracking-wider text-[#1B5040] mb-0.5">
                           Instruksi Tugas:
                         </span>
                         {assignmentsData.current_assignment.note}
@@ -683,16 +746,16 @@ export function AdminApplicationDetailPage() {
                 ) : (
                   <div className="py-4 text-center space-y-2">
                     <p className="text-xs text-slate-400 italic">
-                      Belum ada teknisi penanggung jawab yang ditugaskan untuk tiket ini.
+                      Belum ada tenaga ahli penanggung jawab yang ditugaskan untuk tiket ini.
                     </p>
-                    {isSuperAdmin && (
+                    {isSuperAdmin && !isTerminalStatus && (
                       <Button
                         variant="primary"
                         size="sm"
                         onClick={handleOpenAssignModal}
                         className="text-xs font-bold"
                       >
-                        Tugaskan Teknisi Sekarang
+                        Tugaskan Tenaga Ahli Sekarang
                       </Button>
                     )}
                   </div>
@@ -741,6 +804,7 @@ export function AdminApplicationDetailPage() {
             applicationId={application.id}
             isSuperAdmin={isSuperAdmin}
             onOpenStageModal={handleOpenStageModal}
+            application={application}
           />
         </TabPanel>
 
@@ -778,7 +842,7 @@ export function AdminApplicationDetailPage() {
                       <div className="space-y-2">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-center gap-2">
-                            <div className="p-2 rounded-lg bg-blue-100 text-blue-700">
+                            <div className="p-2 rounded-lg bg-[#CAF3E4] text-[#1B5040]">
                               <FileTextIcon size={20} />
                             </div>
                             <div>
@@ -842,8 +906,8 @@ export function AdminApplicationDetailPage() {
 
               <div className="space-y-4">
                 {application.status_history.map((sh) => (
-                  <div key={sh.id} className="relative pl-6 pb-4 border-l-2 border-blue-500 last:border-l-0 last:pb-0">
-                    <div className="absolute -left-1.5 top-0 w-3 h-3 rounded-full bg-blue-600 ring-4 ring-blue-50" />
+                  <div key={sh.id} className="relative pl-6 pb-4 border-l-2 border-[#1B5040] last:border-l-0 last:pb-0">
+                    <div className="absolute -left-1.5 top-0 w-3 h-3 rounded-full bg-[#1B5040] ring-4 ring-[#CAF3E4]" />
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold text-slate-900">
@@ -883,8 +947,8 @@ export function AdminApplicationDetailPage() {
               ) : (
                 <div className="space-y-4">
                   {application.stage_history.map((sth) => (
-                    <div key={sth.id} className="relative pl-6 pb-4 border-l-2 border-indigo-500 last:border-l-0 last:pb-0">
-                      <div className="absolute -left-1.5 top-0 w-3 h-3 rounded-full bg-indigo-600 ring-4 ring-indigo-50" />
+                    <div key={sth.id} className="relative pl-6 pb-4 border-l-2 border-[#2E8A6E]/40 last:border-l-0 last:pb-0">
+                      <div className="absolute -left-1.5 top-0 w-3 h-3 rounded-full bg-[#1B5040] ring-4 ring-[#CAF3E4]" />
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-bold text-slate-900 font-mono">
@@ -901,7 +965,7 @@ export function AdminApplicationDetailPage() {
                           {formatDateTime(sth.changed_at)}
                         </p>
                         {sth.note && (
-                          <div className="mt-1.5 p-2.5 rounded-lg bg-indigo-50/50 text-xs text-slate-700 border border-indigo-100">
+                          <div className="mt-1.5 p-2.5 rounded-lg bg-[#CAF3E4]/30 text-xs text-slate-700 border border-[#98F7D9]">
                             "{sth.note}"
                           </div>
                         )}
@@ -912,36 +976,36 @@ export function AdminApplicationDetailPage() {
               )}
             </div>
 
-            {/* Riwayat Penugasan Teknisi */}
+            {/* Riwayat Penugasan Tenaga Ahli */}
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 lg:col-span-2">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <UsersIcon size={16} className="text-blue-600" />
-                  Riwayat Penugasan Teknisi (Assignment History)
+              <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3 border-b border-slate-100">
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 min-w-0">
+                  <UsersIcon size={16} className="text-[#1B5040] shrink-0" />
+                  <span>Riwayat Penugasan Tenaga Ahli (Assignment History)</span>
                 </h3>
-                {isSuperAdmin && (
+                {isSuperAdmin && !isTerminalStatus && (
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={handleOpenAssignModal}
-                    className="text-xs font-semibold"
+                    className="text-xs font-semibold shrink-0"
                   >
-                    Tugaskan / Alihkan Teknisi
+                    Tugaskan / Alihkan Tenaga Ahli
                   </Button>
                 )}
               </div>
 
               {isAssignmentsLoading ? (
                 <div className="p-6 text-center text-xs text-slate-400 animate-pulse">
-                  Memuat riwayat penugasan teknisi...
+                  Memuat riwayat penugasan tenaga ahli...
                 </div>
               ) : isAssignmentsError ? (
                 <div className="p-6 text-center text-xs text-amber-700 bg-amber-50 rounded-xl border border-amber-200">
-                  Gagal memuat catatan riwayat penugasan teknisi.
+                  Gagal memuat catatan riwayat penugasan tenaga ahli.
                 </div>
               ) : !assignmentsData || assignmentsData.assignment_history.length === 0 ? (
                 <div className="p-6 text-center text-xs text-slate-400">
-                  Belum ada catatan riwayat penugasan teknisi pada permohonan ini.
+                  Belum ada catatan riwayat penugasan tenaga ahli pada permohonan ini.
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -990,7 +1054,7 @@ export function AdminApplicationDetailPage() {
                 Catatan Internal Diskominfo
               </h3>
               <p className="text-xs text-slate-500">
-                Pesan dan catatan pada kanal ini hanya dapat dilihat oleh Super Admin dan Teknisi internal Diskominfo (terpisah dari data publik pemohon).
+                Pesan dan catatan pada kanal ini hanya dapat dilihat oleh Super Admin dan Tenaga Ahli internal Diskominfo (terpisah dari data publik pemohon).
               </p>
             </div>
 
@@ -1231,10 +1295,10 @@ export function AdminApplicationDetailPage() {
         onClose={() => setAssignModalOpen(false)}
         title={
           assignmentsData?.current_assignment
-            ? 'Pengalihan Teknisi Penanggung Jawab'
-            : 'Penugasan Teknisi Penanggung Jawab'
+            ? 'Pengalihan Tenaga Ahli Penanggung Jawab'
+            : 'Penugasan Tenaga Ahli Penanggung Jawab'
         }
-        description="Tetapkan personel teknisi internal Diskominfo untuk menangani pelaksanaan teknis tiket ini."
+        description="Tetapkan personel tenaga ahli internal Diskominfo untuk menangani pelaksanaan teknis tiket ini."
         footer={
           <>
             <Button
@@ -1271,7 +1335,7 @@ export function AdminApplicationDetailPage() {
 
           <div className="space-y-1.5">
             <label className="font-bold text-slate-800 block text-xs">
-              Pilih Teknisi Penanggung Jawab:
+              Pilih Tenaga Ahli Penanggung Jawab:
             </label>
             <Select
               value={selectedTechId}
@@ -1299,6 +1363,20 @@ export function AdminApplicationDetailPage() {
           </div>
         </div>
       </Dialog>
+
+      {/* Modal Penerbitan Ulang Kode Pelacakan (Khusus SUPER_ADMIN) */}
+      {isSuperAdmin && (
+        <ReissueTrackingCodeModal
+          isOpen={reissueModalOpen}
+          onClose={() => setReissueModalOpen(false)}
+          application={{
+            id: application.id,
+            ticket_number: application.ticket_number,
+            title: application.title,
+            applicant: application.applicant,
+          }}
+        />
+      )}
     </div>
   );
 }

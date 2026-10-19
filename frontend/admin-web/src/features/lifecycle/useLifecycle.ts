@@ -399,7 +399,7 @@ export function useLifecycleOverview(applicationId?: string) {
     queryKey: ['lifecycle-overview', applicationId],
     queryFn: async () => {
       const res = await apiFetch<{ data: LifecycleOverview }>(
-        `/api/v1/applications/${applicationId}/lifecycle`,
+        `/applications/${applicationId}/lifecycle`,
       );
       return res.data;
     },
@@ -412,7 +412,7 @@ export function useLifecycleAnalysis(applicationId?: string) {
     queryKey: ['lifecycle-analysis', applicationId],
     queryFn: async () => {
       const res = await apiFetch<{ data: AnalysisRecord | null }>(
-        `/api/v1/applications/${applicationId}/lifecycle/analysis`,
+        `/applications/${applicationId}/lifecycle/analysis`,
       );
       return res.data;
     },
@@ -425,7 +425,7 @@ export function useUpsertAnalysis(applicationId?: string) {
   return useMutation({
     mutationFn: async (dto: UpsertAnalysisDto) => {
       const res = await apiFetch<{ data: AnalysisRecord }>(
-        `/api/v1/applications/${applicationId}/lifecycle/analysis`,
+        `/applications/${applicationId}/lifecycle/analysis`,
         {
           method: 'PUT',
           body: JSON.stringify(dto),
@@ -445,7 +445,7 @@ export function useLifecyclePlanning(applicationId?: string) {
     queryKey: ['lifecycle-planning', applicationId],
     queryFn: async () => {
       const res = await apiFetch<{ data: ProjectPlanRecord | null }>(
-        `/api/v1/applications/${applicationId}/lifecycle/planning`,
+        `/applications/${applicationId}/lifecycle/planning`,
       );
       return res.data;
     },
@@ -458,7 +458,7 @@ export function useUpsertPlanning(applicationId?: string) {
   return useMutation({
     mutationFn: async (dto: UpsertProjectPlanDto) => {
       const res = await apiFetch<{ data: ProjectPlanRecord }>(
-        `/api/v1/applications/${applicationId}/lifecycle/planning`,
+        `/applications/${applicationId}/lifecycle/planning`,
         {
           method: 'PUT',
           body: JSON.stringify(dto),
@@ -478,7 +478,7 @@ export function useLifecycleDesign(applicationId?: string) {
     queryKey: ['lifecycle-design', applicationId],
     queryFn: async () => {
       const res = await apiFetch<{ data: DesignRecord | null }>(
-        `/api/v1/applications/${applicationId}/lifecycle/design`,
+        `/applications/${applicationId}/lifecycle/design`,
       );
       return res.data;
     },
@@ -491,7 +491,7 @@ export function useUpsertDesign(applicationId?: string) {
   return useMutation({
     mutationFn: async (dto: UpsertDesignDto) => {
       const res = await apiFetch<{ data: DesignRecord }>(
-        `/api/v1/applications/${applicationId}/lifecycle/design`,
+        `/applications/${applicationId}/lifecycle/design`,
         {
           method: 'PUT',
           body: JSON.stringify(dto),
@@ -511,7 +511,7 @@ export function useLifecycleImplementation(applicationId?: string) {
     queryKey: ['lifecycle-implementation', applicationId],
     queryFn: async () => {
       const res = await apiFetch<{ data: ImplementationRecord | null }>(
-        `/api/v1/applications/${applicationId}/lifecycle/implementation`,
+        `/applications/${applicationId}/lifecycle/implementation`,
       );
       return res.data;
     },
@@ -524,7 +524,7 @@ export function useUpsertImplementation(applicationId?: string) {
   return useMutation({
     mutationFn: async (dto: UpsertImplementationDto) => {
       const res = await apiFetch<{ data: ImplementationRecord }>(
-        `/api/v1/applications/${applicationId}/lifecycle/implementation`,
+        `/applications/${applicationId}/lifecycle/implementation`,
         {
           method: 'PUT',
           body: JSON.stringify(dto),
@@ -554,7 +554,7 @@ export function useLifecycleTests(
       if (filters?.result) params.set('result', filters.result);
       const queryStr = params.toString() ? `?${params.toString()}` : '';
       const res = await apiFetch<{ data: TestRecordItem[] }>(
-        `/api/v1/applications/${applicationId}/lifecycle/tests${queryStr}`,
+        `/applications/${applicationId}/lifecycle/tests${queryStr}`,
       );
       return res.data;
     },
@@ -567,7 +567,7 @@ export function useTestDetail(applicationId?: string, testId?: string) {
     queryKey: ['lifecycle-test-detail', applicationId, testId],
     queryFn: async () => {
       const res = await apiFetch<{ data: TestRecordItem }>(
-        `/api/v1/applications/${applicationId}/lifecycle/tests/${testId}`,
+        `/applications/${applicationId}/lifecycle/tests/${testId}`,
       );
       return res.data;
     },
@@ -580,7 +580,7 @@ export function useCreateTest(applicationId?: string) {
   return useMutation({
     mutationFn: async (dto: CreateTestRecordDto) => {
       const res = await apiFetch<{ data: TestRecordItem }>(
-        `/api/v1/applications/${applicationId}/lifecycle/tests`,
+        `/applications/${applicationId}/lifecycle/tests`,
         {
           method: 'POST',
           body: JSON.stringify(dto),
@@ -600,7 +600,7 @@ export function useUpdateTest(applicationId?: string) {
   return useMutation({
     mutationFn: async ({ testId, dto }: { testId: string; dto: UpdateTestRecordDto }) => {
       const res = await apiFetch<{ data: TestRecordItem }>(
-        `/api/v1/applications/${applicationId}/lifecycle/tests/${testId}`,
+        `/applications/${applicationId}/lifecycle/tests/${testId}`,
         {
           method: 'PUT',
           body: JSON.stringify(dto),
@@ -621,7 +621,7 @@ export function useDeleteTest(applicationId?: string) {
   return useMutation({
     mutationFn: async (testId: string) => {
       await apiFetch(
-        `/api/v1/applications/${applicationId}/lifecycle/tests/${testId}`,
+        `/applications/${applicationId}/lifecycle/tests/${testId}`,
         {
           method: 'DELETE',
         },
@@ -640,7 +640,7 @@ export async function fetchTestAttachmentUrl(
 ): Promise<{ signed_url: string; filename: string }> {
   const res = await apiFetch<{
     data: { signed_url: string; expires_in: number; filename: string };
-  }>(`/api/v1/applications/${applicationId}/lifecycle/tests/${testId}/attachment`);
+  }>(`/applications/${applicationId}/lifecycle/tests/${testId}/attachment`);
   return res.data;
 }
 
@@ -658,7 +658,7 @@ export function useLifecycleMaintenance(
       if (filters?.type) params.set('type', filters.type);
       const queryStr = params.toString() ? `?${params.toString()}` : '';
       const res = await apiFetch<{ data: MaintenanceRecordItem[] }>(
-        `/api/v1/applications/${applicationId}/lifecycle/maintenance${queryStr}`,
+        `/applications/${applicationId}/lifecycle/maintenance${queryStr}`,
       );
       return res.data;
     },
@@ -671,7 +671,7 @@ export function useMaintenanceDetail(applicationId?: string, recordId?: string) 
     queryKey: ['lifecycle-maintenance-detail', applicationId, recordId],
     queryFn: async () => {
       const res = await apiFetch<{ data: MaintenanceRecordItem }>(
-        `/api/v1/applications/${applicationId}/lifecycle/maintenance/${recordId}`,
+        `/applications/${applicationId}/lifecycle/maintenance/${recordId}`,
       );
       return res.data;
     },
@@ -684,7 +684,7 @@ export function useCreateMaintenance(applicationId?: string) {
   return useMutation({
     mutationFn: async (dto: CreateMaintenanceRecordDto) => {
       const res = await apiFetch<{ data: MaintenanceRecordItem }>(
-        `/api/v1/applications/${applicationId}/lifecycle/maintenance`,
+        `/applications/${applicationId}/lifecycle/maintenance`,
         {
           method: 'POST',
           body: JSON.stringify(dto),
@@ -704,7 +704,7 @@ export function useUpdateMaintenance(applicationId?: string) {
   return useMutation({
     mutationFn: async ({ recordId, dto }: { recordId: string; dto: UpdateMaintenanceRecordDto }) => {
       const res = await apiFetch<{ data: MaintenanceRecordItem }>(
-        `/api/v1/applications/${applicationId}/lifecycle/maintenance/${recordId}`,
+        `/applications/${applicationId}/lifecycle/maintenance/${recordId}`,
         {
           method: 'PUT',
           body: JSON.stringify(dto),
@@ -725,7 +725,7 @@ export function useDeleteMaintenance(applicationId?: string) {
   return useMutation({
     mutationFn: async (recordId: string) => {
       await apiFetch(
-        `/api/v1/applications/${applicationId}/lifecycle/maintenance/${recordId}`,
+        `/applications/${applicationId}/lifecycle/maintenance/${recordId}`,
         {
           method: 'DELETE',
         },
@@ -744,7 +744,7 @@ export async function fetchMaintenanceAttachmentUrl(
 ): Promise<{ signed_url: string; filename: string }> {
   const res = await apiFetch<{
     data: { signed_url: string; expires_in: number; filename: string };
-  }>(`/api/v1/applications/${applicationId}/lifecycle/maintenance/${recordId}/attachment`);
+  }>(`/applications/${applicationId}/lifecycle/maintenance/${recordId}/attachment`);
   return res.data;
 }
 
@@ -756,7 +756,7 @@ export function useLifecycleEvaluations(applicationId?: string) {
     queryKey: ['lifecycle-evaluations', applicationId],
     queryFn: async () => {
       const res = await apiFetch<{ data: EvaluationRecordItem[] }>(
-        `/api/v1/applications/${applicationId}/lifecycle/evaluations`,
+        `/applications/${applicationId}/lifecycle/evaluations`,
       );
       return res.data;
     },
@@ -769,7 +769,7 @@ export function useEvaluationDetail(applicationId?: string, evalId?: string) {
     queryKey: ['lifecycle-evaluation-detail', applicationId, evalId],
     queryFn: async () => {
       const res = await apiFetch<{ data: EvaluationRecordItem }>(
-        `/api/v1/applications/${applicationId}/lifecycle/evaluations/${evalId}`,
+        `/applications/${applicationId}/lifecycle/evaluations/${evalId}`,
       );
       return res.data;
     },
@@ -782,7 +782,7 @@ export function useCreateEvaluation(applicationId?: string) {
   return useMutation({
     mutationFn: async (dto: CreateEvaluationDto) => {
       const res = await apiFetch<{ data: EvaluationRecordItem }>(
-        `/api/v1/applications/${applicationId}/lifecycle/evaluations`,
+        `/applications/${applicationId}/lifecycle/evaluations`,
         {
           method: 'POST',
           body: JSON.stringify(dto),
@@ -802,7 +802,7 @@ export function useUpdateEvaluation(applicationId?: string) {
   return useMutation({
     mutationFn: async ({ evalId, dto }: { evalId: string; dto: UpdateEvaluationDto }) => {
       const res = await apiFetch<{ data: EvaluationRecordItem }>(
-        `/api/v1/applications/${applicationId}/lifecycle/evaluations/${evalId}`,
+        `/applications/${applicationId}/lifecycle/evaluations/${evalId}`,
         {
           method: 'PUT',
           body: JSON.stringify(dto),
@@ -823,7 +823,7 @@ export function useDeleteEvaluation(applicationId?: string) {
   return useMutation({
     mutationFn: async (evalId: string) => {
       await apiFetch(
-        `/api/v1/applications/${applicationId}/lifecycle/evaluations/${evalId}`,
+        `/applications/${applicationId}/lifecycle/evaluations/${evalId}`,
         {
           method: 'DELETE',
         },
@@ -842,7 +842,7 @@ export async function fetchEvaluationAttachmentUrl(
 ): Promise<{ signed_url: string; filename: string }> {
   const res = await apiFetch<{
     data: { signed_url: string; expires_in: number; filename: string };
-  }>(`/api/v1/applications/${applicationId}/lifecycle/evaluations/${evalId}/attachment`);
+  }>(`/applications/${applicationId}/lifecycle/evaluations/${evalId}/attachment`);
   return res.data;
 }
 
@@ -854,7 +854,7 @@ export function useLifecycleTechnicalDocs(applicationId?: string) {
     queryKey: ['lifecycle-tech-docs', applicationId],
     queryFn: async () => {
       const res = await apiFetch<{ data: TechnicalDocumentItem[] }>(
-        `/api/v1/applications/${applicationId}/lifecycle/technical-documents`,
+        `/applications/${applicationId}/lifecycle/technical-documents`,
       );
       return res.data;
     },
@@ -867,7 +867,7 @@ export function useUploadTechnicalDoc(applicationId?: string) {
   return useMutation({
     mutationFn: async (dto: UploadTechnicalDocumentDto) => {
       const res = await apiFetch<{ data: TechnicalDocumentItem }>(
-        `/api/v1/applications/${applicationId}/lifecycle/technical-documents`,
+        `/applications/${applicationId}/lifecycle/technical-documents`,
         {
           method: 'POST',
           body: JSON.stringify(dto),
@@ -887,7 +887,7 @@ export function useDeleteTechnicalDoc(applicationId?: string) {
   return useMutation({
     mutationFn: async (docId: string) => {
       await apiFetch(
-        `/api/v1/applications/${applicationId}/lifecycle/technical-documents/${docId}`,
+        `/applications/${applicationId}/lifecycle/technical-documents/${docId}`,
         {
           method: 'DELETE',
         },
@@ -906,6 +906,6 @@ export async function fetchTechnicalDocDownloadUrl(
 ): Promise<{ signed_url: string; filename: string }> {
   const res = await apiFetch<{
     data: { signed_url: string; expires_in: number; filename: string };
-  }>(`/api/v1/applications/${applicationId}/lifecycle/technical-documents/${docId}/download`);
+  }>(`/applications/${applicationId}/lifecycle/technical-documents/${docId}/download`);
   return res.data;
 }

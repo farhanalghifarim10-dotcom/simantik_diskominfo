@@ -294,10 +294,8 @@ describe('Security Hardening & Audit Verification Suite', () => {
 
     it('should mask sensitive applicant identity data in public summary', async () => {
       const session = tokenService.generateSessionToken(validTicket, 'a1000000-0000-0000-0000-000000000001');
-      const summary = await trackingService.getPublicTicketSummary(validTicket, {
-        ticket_number: validTicket,
-        application_id: 'a1000000-0000-0000-0000-000000000001',
-      });
+      const payload = tokenService.verifySessionToken(session.token);
+      const summary = await trackingService.getPublicTicketSummary(validTicket, payload);
 
       // Verification of data minimization
       expect(summary.applicant_name_masked).toContain('***');

@@ -27,8 +27,8 @@ export function Badge({
   ...props
 }: BadgeProps) {
   const sizeStyles = {
-    sm: 'px-2 py-0.5 text-[11px]',
-    md: 'px-2.5 py-0.5 text-xs',
+    sm: 'px-2.5 py-0.5 text-[11px] leading-normal',
+    md: 'px-3 py-1 text-xs leading-normal',
   };
 
   const variantStyles: Record<BadgeVariant, { container: string; dot: string }> = {
@@ -37,12 +37,12 @@ export function Badge({
       dot: 'bg-slate-500',
     },
     primary: {
-      container: 'bg-slate-900 text-white border-transparent',
-      dot: 'bg-white',
+      container: 'bg-[#1b5040] text-white border-transparent',
+      dot: 'bg-[#2bd9a5]',
     },
     secondary: {
-      container: 'bg-sky-50 text-sky-800 border-sky-200',
-      dot: 'bg-sky-600',
+      container: 'bg-[#caf3e4] text-[#1b5040] border-[#98f7d9]',
+      dot: 'bg-[#2e8a6e]',
     },
     success: {
       container: 'bg-emerald-50 text-emerald-800 border-emerald-200',
@@ -57,16 +57,16 @@ export function Badge({
       dot: 'bg-red-600',
     },
     info: {
-      container: 'bg-blue-50 text-blue-800 border-blue-200',
-      dot: 'bg-blue-600',
+      container: 'bg-[#caf3e4] text-[#1b5040] border-[#98f7d9]',
+      dot: 'bg-[#2e8a6e]',
     },
     neutral: {
-      container: 'bg-slate-50 text-slate-600 border-slate-200',
+      container: 'bg-[#f5f5f5] text-slate-700 border-slate-200',
       dot: 'bg-slate-400',
     },
     outline: {
-      container: 'bg-transparent text-slate-700 border-slate-300',
-      dot: 'bg-slate-400',
+      container: 'bg-transparent text-[#1b5040] border-[#98f7d9]',
+      dot: 'bg-[#2e8a6e]',
     },
   };
 
@@ -74,7 +74,7 @@ export function Badge({
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 font-medium rounded-full border tracking-normal select-none ${sizeStyles[size]} ${container} ${className}`}
+      className={`inline-flex items-center gap-1.5 font-medium rounded-full border tracking-normal select-none whitespace-nowrap shrink-0 ${sizeStyles[size]} ${container} ${className}`}
       {...props}
     >
       {hasDot && (

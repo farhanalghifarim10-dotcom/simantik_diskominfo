@@ -98,8 +98,8 @@ export function Pagination({
               aria-current={isCurrent ? 'page' : undefined}
               className={`h-8 w-8 rounded text-xs font-semibold transition-colors duration-150 flex items-center justify-center select-none cursor-pointer ${
                 isCurrent
-                  ? 'bg-slate-900 text-white font-bold'
-                  : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300'
+                  ? 'bg-[#1b5040] text-white font-bold'
+                  : 'border border-slate-200 bg-white text-slate-700 hover:bg-[#caf3e4]/30 hover:border-[#2e8a6e]'
               }`}
             >
               {p}

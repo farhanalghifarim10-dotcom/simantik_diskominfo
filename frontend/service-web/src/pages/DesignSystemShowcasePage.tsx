@@ -10,6 +10,7 @@ import {
   Dropdown,
   DropdownDivider,
   DropdownItem,
+  DiskominfoLogo,
   EmptyState,
   ErrorState,
   Heading,
@@ -17,8 +18,10 @@ import {
   Kbd,
   LogoHierarchy,
   Pagination,
+  PemkabBandungLogo,
   RadioGroup,
   Select,
+  SimantikLogo,
   SkeletonCard,
   StageBadge,
   StatusBadge,
@@ -73,7 +76,7 @@ function ShowcaseContent() {
               </Text>
             </div>
             <Badge variant="primary" size="md" hasDot>
-              Phase 02 Baseline
+              Standar Desain UI
             </Badge>
           </div>
         </div>
@@ -99,6 +102,34 @@ function ShowcaseContent() {
             <div className="p-4 rounded-lg border border-slate-200 bg-slate-50 flex flex-col justify-center">
               <span className="text-xs font-semibold text-slate-500 mb-3">Layout Vertikal (Cover Dokumen / Splash):</span>
               <LogoHierarchy layout="vertical" />
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-slate-100">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              Aset Resmi Brand & Identitas Individual:
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-3">
+              <div className="p-4 rounded-lg border border-slate-200 bg-white flex flex-col items-center text-center gap-2">
+                <PemkabBandungLogo size={52} />
+                <span className="text-xs font-bold text-slate-900 mt-1">Pemerintah Daerah</span>
+                <span className="text-[11px] text-slate-500">kabupaten-bandung.png</span>
+              </div>
+              <div className="p-4 rounded-lg border border-slate-200 bg-white flex flex-col items-center text-center gap-2">
+                <DiskominfoLogo size={52} />
+                <span className="text-xs font-bold text-slate-900 mt-1">Diskominfo</span>
+                <span className="text-[11px] text-slate-500">diskominfo.png</span>
+              </div>
+              <div className="p-4 rounded-lg border border-slate-200 bg-white flex flex-col items-center text-center gap-2">
+                <SimantikLogo size={52} variant="emblem" />
+                <span className="text-xs font-bold text-slate-900 mt-1">Emblem SIMANTIK</span>
+                <span className="text-[11px] text-slate-500">simantik-emblem.png</span>
+              </div>
+              <div className="p-4 rounded-lg border border-slate-200 bg-white flex flex-col items-center text-center gap-2">
+                <SimantikLogo size={68} variant="full" />
+                <span className="text-xs font-bold text-slate-900 mt-1">Logo Lengkap SIMANTIK</span>
+                <span className="text-[11px] text-slate-500">simantik-logo.png (Vertikal)</span>
+              </div>
             </div>
           </div>
         </section>
@@ -336,7 +367,7 @@ function ShowcaseContent() {
                 Lihat Detail Tiket
               </DropdownItem>
               <DropdownItem icon={<UserIcon size={16} />}>
-                Ubah Penugasan Teknisi
+                Ubah Penugasan Tenaga Ahli
               </DropdownItem>
               <DropdownDivider />
               <DropdownItem icon={<LogOutIcon size={16} />} destructive>
@@ -366,8 +397,8 @@ function ShowcaseContent() {
           <Dialog
             isOpen={dialogOpen}
             onClose={() => setDialogOpen(false)}
-            title="Formulir Penugasan Teknisi"
-            description="Tentukan teknisi utama penanggung jawab pengerjaan permohonan ini."
+            title="Formulir Penugasan Tenaga Ahli"
+            description="Tentukan tenaga ahli utama penanggung jawab pengerjaan permohonan ini."
             footer={
               <>
                 <Button variant="outline" size="sm" onClick={() => setDialogOpen(false)}>
@@ -381,8 +412,8 @@ function ShowcaseContent() {
           >
             <div className="space-y-4 py-2">
               <Select
-                label="Pilih Teknisi"
-                placeholder="Pilih nama personel teknisi"
+                label="Pilih Tenaga Ahli"
+                placeholder="Pilih nama personel tenaga ahli"
                 options={[
                   { value: '1', label: 'Budi Santoso — Pranata Komputer Ahli' },
                   { value: '2', label: 'Siti Rahma — Pengembang Web' },

@@ -5,14 +5,12 @@ import type { AppRole } from '../types/auth';
 interface ModulePlaceholderProps {
   title: string;
   description: string;
-  phase: string;
   allowedRoles: AppRole[];
 }
 
 export function ModulePlaceholderPage({
   title,
   description,
-  phase,
   allowedRoles,
 }: ModulePlaceholderProps) {
   const isSuperAdminOnly =
@@ -27,8 +25,8 @@ export function ModulePlaceholderPage({
               <Badge variant={isSuperAdminOnly ? 'primary' : 'secondary'} size="sm">
                 {isSuperAdminOnly ? 'SUPER_ADMIN Saja' : 'SUPER_ADMIN & TECHNICIAN'}
               </Badge>
-              <span className="text-xs font-semibold text-sky-700 bg-sky-50 px-2 py-0.5 rounded">
-                Target: {phase}
+              <span className="text-xs font-semibold text-[#1B5040] bg-[#CAF3E4] px-2 py-0.5 rounded">
+                Dalam Pengembangan
               </span>
             </div>
             <Heading level={2}>{title}</Heading>
@@ -52,7 +50,7 @@ export function ModulePlaceholderPage({
         <div>
           <h3 className="text-base font-bold text-slate-900">{title}</h3>
           <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
-            Fondasi Admin Shell dan otorisasi RBAC untuk modul ini telah aktif. Implementasi fungsional vertikal slice modul ini dijadwalkan pada {phase}.
+            Fondasi Admin Shell dan otorisasi RBAC untuk modul ini telah aktif. Implementasi fungsional untuk modul ini sedang dalam tahap pengembangan.
           </p>
         </div>
       </div>

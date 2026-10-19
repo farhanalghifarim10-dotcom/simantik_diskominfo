@@ -227,7 +227,7 @@ export function AdminOpdPage() {
               <tbody className="divide-y divide-slate-100 text-sm">
                 {opdList.map((opd) => (
                   <tr key={opd.id} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="px-5 py-4 font-mono font-semibold text-blue-800 text-xs">
+                    <td className="px-5 py-4 font-mono font-semibold text-[#1B5040] text-xs">
                       {opd.code}
                     </td>
                     <td className="px-5 py-4 font-medium text-slate-900">
@@ -317,7 +317,7 @@ export function AdminOpdPage() {
               id="opd_is_active"
               checked={formData.is_active}
               onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              className="h-4 w-4 rounded border-slate-300 text-[#1B5040] focus:ring-[#1B5040]"
             />
             <label htmlFor="opd_is_active" className="text-xs font-semibold text-slate-700">
               Unit OPD Aktif (Dapat dipilih pemohon pada portal layanan publik)

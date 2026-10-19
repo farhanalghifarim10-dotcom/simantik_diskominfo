@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { assert, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   BadRequestException,
   ConflictException,
@@ -20,6 +20,7 @@ describe('Technician Account Management (Phase 13 & Regression Fixes)', () => {
 
   let profilesTableData: any[] = [];
   let assignmentsTableData: any[] = [];
+  let applicationsTableData: any[] = [];
   let profilesError: any = null;
   let assignmentsError: any = null;
 
@@ -28,6 +29,7 @@ describe('Technician Account Management (Phase 13 & Regression Fixes)', () => {
 
     profilesTableData = [];
     assignmentsTableData = [];
+    applicationsTableData = [];
     profilesError = null;
     assignmentsError = null;
 
@@ -35,12 +37,16 @@ describe('Technician Account Management (Phase 13 & Regression Fixes)', () => {
       const chain: any = {
         select: vi.fn(() => chain),
         eq: vi.fn(() => chain),
+        in: vi.fn(() => chain),
         order: vi.fn(async () => {
           if (tableName === 'profiles') {
             return { data: profilesError ? null : profilesTableData, error: profilesError };
           }
           if (tableName === 'assignments') {
             return { data: assignmentsError ? null : assignmentsTableData, error: assignmentsError };
+          }
+          if (tableName === 'applications') {
+            return { data: applicationsTableData, error: null };
           }
           return { data: [], error: null };
         }),
@@ -56,7 +62,7 @@ describe('Technician Account Management (Phase 13 & Regression Fixes)', () => {
         insert: vi.fn().mockResolvedValue({ error: null }),
       };
 
-      // Buat thenable agar await client.from('assignments').select(...) langsung mengembalikan hasil
+      // Buat thenable agar await client.from('...').select(...) langsung mengembalikan hasil
       chain.then = (resolve: any) => {
         if (tableName === 'assignments') {
           return Promise.resolve({
@@ -68,6 +74,12 @@ describe('Technician Account Management (Phase 13 & Regression Fixes)', () => {
           return Promise.resolve({
             data: profilesError ? null : profilesTableData,
             error: profilesError,
+          }).then(resolve);
+        }
+        if (tableName === 'applications') {
+          return Promise.resolve({
+            data: applicationsTableData,
+            error: null,
           }).then(resolve);
         }
         return Promise.resolve({ data: [], error: null }).then(resolve);
@@ -215,15 +227,56 @@ describe('Technician Account Management (Phase 13 & Regression Fixes)', () => {
       expect(res.data.length).toBe(2);
 
       const tech1 = res.data.find((t: any) => t.id === tech1Id);
+      expect(tech1).toBeDefined();
+      assert(tech1);
       expect(tech1.active_assignments_count).toBe(2);
       expect(tech1.total_assignments_count).toBe(3);
 
       const tech2 = res.data.find((t: any) => t.id === tech2Id);
+      expect(tech2).toBeDefined();
+      assert(tech2);
       expect(tech2.active_assignments_count).toBe(1);
       expect(tech2.total_assignments_count).toBe(1);
 
       // Password hash atau credential rahasia tidak pernah diekspos
       expect((tech1 as any).password).toBeUndefined();
+    });
+
+    it('tidak menghitung beban kerja aktif jika tiket berstatus CLOSED, COMPLETED, REJECTED, atau CANCELLED meskipun is_current=true', async () => {
+      const techId = 't-closed-test';
+      profilesTableData = [
+        {
+          id: techId,
+          full_name: 'Muhammad Farhan',
+          email: 'muhammad.farhan@bandungkab.go.id',
+          role: 'TECHNICIAN',
+          is_active: true,
+          created_at: '2026-02-01T00:00:00Z',
+          updated_at: '2026-02-01T00:00:00Z',
+        },
+      ];
+
+      assignmentsTableData = [
+        { technician_id: techId, application_id: 'app-closed', is_current: true },
+        { technician_id: techId, application_id: 'app-completed', is_current: true },
+        { technician_id: techId, application_id: 'app-rejected', is_current: true },
+        { technician_id: techId, application_id: 'app-cancelled', is_current: true },
+      ];
+
+      applicationsTableData = [
+        { id: 'app-closed', current_status: 'CLOSED' },
+        { id: 'app-completed', current_status: 'COMPLETED' },
+        { id: 'app-rejected', current_status: 'REJECTED' },
+        { id: 'app-cancelled', current_status: 'CANCELLED' },
+      ];
+
+      const res = await adminTechniciansController.getTechnicians();
+      expect(res.success).toBe(true);
+      const tech = res.data.find((t: any) => t.id === techId);
+      expect(tech).toBeDefined();
+      assert(tech);
+      expect(tech.active_assignments_count).toBe(0);
+      expect(tech.total_assignments_count).toBe(4);
     });
   });
 

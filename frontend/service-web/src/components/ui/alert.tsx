@@ -40,9 +40,9 @@ export function Alert({
     { container: string; text: string; icon: ReactNode }
   > = {
     info: {
-      container: 'bg-sky-50 border-sky-200 text-sky-950',
-      text: 'text-sky-800',
-      icon: <InfoIcon size={20} className="text-sky-700 shrink-0 mt-0.5" />,
+      container: 'bg-[#caf3e4]/60 border-[#98f7d9] text-[#000408]',
+      text: 'text-[#1b5040]',
+      icon: <InfoIcon size={20} className="text-[#1b5040] shrink-0 mt-0.5" />,
     },
     success: {
       container: 'bg-emerald-50 border-emerald-200 text-emerald-950',

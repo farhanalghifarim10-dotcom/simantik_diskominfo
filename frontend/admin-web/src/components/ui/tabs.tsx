@@ -108,12 +108,12 @@ export function Tab({
     context.variant === 'underline'
       ? `pb-3 -mb-px text-sm font-semibold transition-colors duration-150 border-b-2 flex items-center gap-2 whitespace-nowrap cursor-pointer select-none ${
           isActive
-            ? 'border-slate-900 text-slate-950 font-bold'
+            ? 'border-[#1b5040] text-[#1b5040] font-bold'
             : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
         }`
       : `px-3.5 py-1.5 text-xs font-semibold rounded-md transition-all duration-150 flex items-center gap-2 whitespace-nowrap cursor-pointer select-none ${
           isActive
-            ? 'bg-white text-slate-950 shadow-xs'
+            ? 'bg-white text-[#1b5040] shadow-xs font-bold'
             : 'text-slate-600 hover:text-slate-900'
         }`;
 

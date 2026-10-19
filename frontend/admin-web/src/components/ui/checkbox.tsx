@@ -65,14 +65,14 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
             />
 
             <div
-              className={`h-4.5 w-4.5 rounded border transition-colors duration-150 flex items-center justify-center peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-slate-900 ${
+              className={`h-4.5 w-4.5 rounded border transition-colors duration-150 flex items-center justify-center peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[#1b5040] ${
                 errorMessage
                   ? 'border-red-500'
                   : 'border-slate-300 peer-hover:border-slate-400'
-              } peer-checked:bg-slate-900 peer-checked:border-slate-900 peer-checked:text-white bg-white`}
+              } peer-checked:bg-[#1b5040] peer-checked:border-[#1b5040] peer-checked:text-white bg-white`}
             >
               {indeterminate ? (
-                <div className="h-0.5 w-2 bg-slate-900 rounded-sm" />
+                <div className="h-0.5 w-2 bg-[#1b5040] rounded-sm" />
               ) : checked ? (
                 <CheckIcon size={12} className="stroke-[3]" />
               ) : null}

@@ -60,7 +60,7 @@ export class AdminAssignmentsController {
       );
       if (!isAssigned) {
         throw new ForbiddenException(
-          'Akses ditolak: Anda tidak memiliki wewenang atas informasi penugasan permohonan ini karena tidak ditugaskan sebagai teknisi penanggung jawab.',
+          'Akses ditolak: Anda tidak memiliki wewenang atas informasi penugasan permohonan ini karena tidak ditugaskan sebagai tenaga ahli penanggung jawab.',
         );
       }
     }

@@ -28,6 +28,16 @@ export interface PublicDocumentItem {
   uploaded_at: string;
 }
 
+export type StageProgressStatus = 'recorded' | 'current' | 'upcoming' | 'completed';
+
+export interface StageProgressItem {
+  stage: ApplicationStage;
+  label: string;
+  description: string;
+  status: StageProgressStatus;
+  recorded_at?: string;
+}
+
 export interface PublicTicketSummary {
   ticket_number: string;
   title: string;
@@ -39,6 +49,10 @@ export interface PublicTicketSummary {
   status_label: string;
   current_stage: ApplicationStage | null;
   stage_label: string | null;
+  stage_description?: string | null;
+  stage_progress?: StageProgressItem[];
+  action_required_by_applicant?: boolean;
+  applicant_action_message?: string;
   submitted_at: string;
   updated_at: string;
   next_step: string;

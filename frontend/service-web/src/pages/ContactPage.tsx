@@ -71,7 +71,7 @@ export function ContactPage() {
           PAGE HEADER
          ========================================================================= */}
       <div className="border-b border-slate-200 pb-8 space-y-3">
-        <div className="flex items-center gap-2 text-xs font-semibold text-blue-600 uppercase tracking-wider">
+        <div className="flex items-center gap-2 text-xs font-semibold text-[#2E8A6E] uppercase tracking-wider">
           <Link to="/" className="hover:underline text-slate-500">Beranda</Link>
           <span className="text-slate-400">/</span>
           <span>Kontak & Helpdesk</span>
@@ -108,7 +108,7 @@ export function ContactPage() {
 
             {/* Alamat Fisik */}
             <div className="space-y-1.5 text-xs sm:text-sm">
-              <span className="font-bold text-slate-800 uppercase tracking-wider text-[11px] block text-blue-600">
+              <span className="font-bold uppercase tracking-wider text-[11px] block text-[#1B5040]">
                 Alamat Kantor Instansi
               </span>
               <p className="font-semibold text-slate-900">
@@ -126,7 +126,7 @@ export function ContactPage() {
 
             {/* Jam Layanan */}
             <div className="space-y-1.5 text-xs sm:text-sm pt-4 border-t border-slate-100">
-              <span className="font-bold text-slate-800 uppercase tracking-wider text-[11px] block text-blue-600">
+              <span className="font-bold uppercase tracking-wider text-[11px] block text-[#1B5040]">
                 Waktu Pelayanan Operasional
               </span>
               <div className="space-y-1 text-slate-600">
@@ -150,7 +150,7 @@ export function ContactPage() {
 
             {/* Kanal Komunikasi Placeholder */}
             <div className="space-y-3 pt-4 border-t border-slate-100 text-xs sm:text-sm">
-              <span className="font-bold text-slate-800 uppercase tracking-wider text-[11px] block text-blue-600">
+              <span className="font-bold uppercase tracking-wider text-[11px] block text-[#1B5040]">
                 Telepon & Komunikasi Digital
               </span>
 

@@ -332,3 +332,39 @@ export function useAdminDashboardStats(year?: number, options?: { enabled?: bool
     enabled: options?.enabled ?? true,
   });
 }
+
+export interface ReissueTrackingCodeResult {
+  application_id: string;
+  ticket_number: string;
+  tracking_code: string;
+  reissued_at: string;
+  message: string;
+}
+
+/**
+ * Hook to reissue tracking code for an application (Khusus SUPER_ADMIN)
+ */
+export function useReissueTrackingCode() {
+  const queryClient = useQueryClient();
+  return useMutation<
+    ReissueTrackingCodeResult,
+    Error,
+    { id: string; reason: string }
+  >({
+    mutationFn: async ({ id, reason }) => {
+      const res = await apiFetch<ApiResponse<ReissueTrackingCodeResult>>(
+        `/admin/applications/${id}/reissue-tracking-code`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ reason }),
+        },
+      );
+      return res.data;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-application-detail', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['admin-applications'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
+    },
+  });
+}

@@ -1,4 +1,5 @@
 import { Link } from 'react-router';
+import { motion } from 'motion/react';
 import { useAuth } from '../features/auth/useAuth';
 import {
   Badge,
@@ -74,7 +75,12 @@ export function DashboardPage() {
   return (
     <div className="space-y-8">
       {/* Welcome Banner */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-xs">
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+        className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-xs"
+      >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
@@ -83,7 +89,7 @@ export function DashboardPage() {
                 size="sm"
                 hasDot
               >
-                {isSuperAdmin ? 'Super Admin' : 'Teknisi'}
+                {isSuperAdmin ? 'Super Admin' : 'Tenaga Ahli'}
               </Badge>
               <span className="text-xs text-slate-500 font-medium">
                 Diskominfo Pemerintah Daerah Kabupaten Bandung
@@ -97,7 +103,7 @@ export function DashboardPage() {
             <Text variant="body" className="mt-2 text-slate-600 max-w-2xl">
               {isSuperAdmin
                 ? 'Portal manajemen terpadu permohonan pembangunan dan pengembangan aplikasi SPBE Pemerintah Kabupaten Bandung.'
-                : 'Portal kerja penugasan teknisi dan pencatatan siklus hidup pembangunan aplikasi SPBE.'}
+                : 'Portal kerja penugasan tenaga ahli dan pencatatan siklus hidup pembangunan aplikasi SPBE.'}
             </Text>
           </div>
 
@@ -112,23 +118,29 @@ export function DashboardPage() {
             >
               <RefreshCwIcon
                 size={16}
-                className={isFetching ? 'animate-spin text-sky-600' : ''}
+                className={isFetching ? 'animate-spin text-[#1B5040]' : ''}
               />
               <span className="text-xs font-semibold">Segarkan</span>
             </Button>
 
             <Link to="/applications">
-              <Button variant="primary" size="md">
-                {isSuperAdmin ? 'Kelola Permohonan' : 'Lihat Tugas Saya'}
-              </Button>
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <Button variant="primary" size="md">
+                  {isSuperAdmin ? 'Kelola Permohonan' : 'Lihat Tugas Saya'}
+                </Button>
+              </motion.div>
             </Link>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Error State Banner */}
       {isError && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs"
+        >
           <div>
             <p className="font-semibold text-rose-900">
               Gagal memuat data ringkasan dashboard
@@ -145,13 +157,19 @@ export function DashboardPage() {
           >
             Coba Lagi
           </Button>
-        </div>
+        </motion.div>
       )}
 
       {/* Role-Aware Metric Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {/* Card 1: Total Permohonan / Tugas Ditugaskan */}
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs flex items-center justify-between">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+          whileHover={{ y: -4, transition: { duration: 0.18 } }}
+          className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs hover:shadow-md transition-shadow flex items-center justify-between"
+        >
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               {isSuperAdmin ? 'Total Permohonan' : 'Tugas Ditugaskan'}
@@ -167,13 +185,19 @@ export function DashboardPage() {
               {isSuperAdmin ? 'Semua permohonan terdaftar' : 'Menunggu pemrosesan'}
             </span>
           </div>
-          <div className="h-10 w-10 rounded-lg bg-sky-50 text-sky-700 flex items-center justify-center">
+          <div className="h-10 w-10 rounded-lg bg-[#CAF3E4] text-[#1B5040] flex items-center justify-center">
             <FileTextIcon size={20} />
           </div>
-        </div>
+        </motion.div>
 
         {/* Card 2: Dalam Pengerjaan */}
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs flex items-center justify-between">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.18, ease: [0.16, 1, 0.3, 1] }}
+          whileHover={{ y: -4, transition: { duration: 0.18 } }}
+          className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs hover:shadow-md transition-shadow flex items-center justify-between"
+        >
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Dalam Pengerjaan
@@ -192,14 +216,20 @@ export function DashboardPage() {
           <div className="h-10 w-10 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
             <LayersIcon size={20} />
           </div>
-        </div>
+        </motion.div>
 
-        {/* Card 3: Teknisi Aktif / Uji Kelaikan */}
+        {/* Card 3: Tenaga Ahli Aktif / Uji Kelaikan */}
         {isSuperAdmin ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs flex items-center justify-between">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.26, ease: [0.16, 1, 0.3, 1] }}
+            whileHover={{ y: -4, transition: { duration: 0.18 } }}
+            className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs hover:shadow-md transition-shadow flex items-center justify-between"
+          >
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Teknisi Aktif
+                Tenaga Ahli Aktif
               </p>
               {isLoading ? (
                 <Skeleton className="h-8 w-16 mt-1.5" />
@@ -215,9 +245,15 @@ export function DashboardPage() {
             <div className="h-10 w-10 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center">
               <UsersIcon size={20} />
             </div>
-          </div>
+          </motion.div>
         ) : (
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs flex items-center justify-between">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.26, ease: [0.16, 1, 0.3, 1] }}
+            whileHover={{ y: -4, transition: { duration: 0.18 } }}
+            className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs hover:shadow-md transition-shadow flex items-center justify-between"
+          >
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Uji Kelaikan
@@ -236,11 +272,17 @@ export function DashboardPage() {
             <div className="h-10 w-10 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
               <ShieldIcon size={20} />
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* Card 4: Selesai / Ditutup */}
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs flex items-center justify-between">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.34, ease: [0.16, 1, 0.3, 1] }}
+          whileHover={{ y: -4, transition: { duration: 0.18 } }}
+          className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs hover:shadow-md transition-shadow flex items-center justify-between"
+        >
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Selesai / Ditutup
@@ -256,19 +298,24 @@ export function DashboardPage() {
               Selesai &amp; ditutup
             </span>
           </div>
-          <div className="h-10 w-10 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center">
+          <div className="h-10 w-10 rounded-lg bg-[#CAF3E4] text-[#1B5040] flex items-center justify-center">
             <ShieldIcon size={20} />
           </div>
-        </div>
+        </motion.div>
       </div>
 
       {/* Role Notice & Quick Access */}
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-4"
+      >
         <Heading level={3}>Kewenangan Akses Peran Anda</Heading>
         <Text variant="body" className="text-slate-600">
           {isSuperAdmin
-            ? 'Sebagai SUPER_ADMIN, Anda memiliki hak penuh untuk verifikasi pengajuan, penugasan pekerjaan kepada teknisi, pengelolaan katalog master data layanan dan OPD, serta monitoring audit trail.'
-            : 'Sebagai TECHNICIAN, menu navigasi Anda dibatasi hanya untuk pekerjaan yang ditugaskan kepada Anda, pencatatan artefak teknis siklus hidup, pengujian, pemeliharaan, serta komunikasi tiket.'}
+            ? 'Sebagai SUPER_ADMIN, Anda memiliki hak penuh untuk verifikasi pengajuan, penugasan pekerjaan kepada tenaga ahli, pengelolaan katalog master data layanan dan OPD, serta monitoring audit trail.'
+            : 'Sebagai Tenaga Ahli, menu navigasi Anda dibatasi hanya untuk pekerjaan yang ditugaskan kepada Anda, pencatatan artefak teknis siklus hidup, pengujian, pemeliharaan, serta komunikasi tiket.'}
         </Text>
 
         <div className="pt-2 flex flex-wrap gap-3">
@@ -283,7 +330,7 @@ export function DashboardPage() {
             </Button>
           </Link>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

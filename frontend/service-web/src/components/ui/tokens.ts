@@ -11,30 +11,56 @@
  */
 
 export const colors = {
+  // Official Pine Teal Palette (User Official Design Tokens)
+  pine: {
+    50: '#f0faf6',  // Subtle Mint Wash
+    100: '#caf3e4', // Frozen Water
+    200: '#98f7d9', // Aquamarine 2
+    300: '#66ffcc', // Aquamarine
+    400: '#2bd9a5', // Tropical Mint
+    500: '#38a584',
+    600: '#2e8a6e', // Jungle Teal
+    700: '#246854',
+    800: '#1b5040', // Pine Teal (Primary Brand)
+    900: '#143d31', // Dark Pine Hover
+    950: '#000408', // Black
+  },
+  // Backward compatibility alias mapped directly to Pine Teal scale
   navy: {
-    50: '#f0f4f9',
-    100: '#dbe4f0',
-    200: '#b9cbe3',
-    300: '#8ea8d1',
-    400: '#6283bd',
-    500: '#4263a7',
-    600: '#314d8c',
-    700: '#263c71',
-    800: '#1b2b52',
-    900: '#0f1d36', // Primary Brand Navy
-    950: '#0a1322', // Deep Institutional Navy
+    50: '#f0faf6',
+    100: '#caf3e4',
+    200: '#98f7d9',
+    300: '#66ffcc',
+    400: '#2bd9a5',
+    500: '#38a584',
+    600: '#2e8a6e',
+    700: '#246854',
+    800: '#1b5040',
+    900: '#143d31',
+    950: '#000408',
   },
   blue: {
-    50: '#f0f9ff',
-    100: '#e0f2fe',
-    200: '#bae6fd',
-    300: '#7dd3fc',
-    400: '#38bdf8',
-    500: '#0ea5e9',
-    600: '#0284c7', // Primary Supporting ASN Blue
-    700: '#0369a1', // Dark ASN Blue for high-contrast text
-    800: '#075985',
-    900: '#0c4a6e',
+    50: '#f0faf6',
+    100: '#caf3e4',
+    200: '#98f7d9',
+    300: '#66ffcc',
+    400: '#2bd9a5',
+    500: '#2e8a6e',
+    600: '#1b5040',
+    700: '#143d31',
+    800: '#0d2820',
+    900: '#000408',
+  },
+  brand: {
+    pine: '#1b5040',
+    jungle: '#2e8a6e',
+    mint: '#2bd9a5',
+    aqua: '#66ffcc',
+    aqua2: '#98f7d9',
+    frozen: '#caf3e4',
+    smoke: '#f5f5f5',
+    black: '#000408',
+    white: '#ffffff',
   },
   neutral: {
     50: '#f8fafc',  // Background Slate
@@ -47,9 +73,23 @@ export const colors = {
     700: '#334155', // Subheading Text
     800: '#1e293b', // Heading Text
     900: '#0f172a', // Primary Text
-    950: '#020617', // High-contrast Foreground
+    950: '#000408', // High-contrast Foreground (Black)
   },
   semantic: {
+    primary: {
+      light: '#caf3e4',
+      border: '#98f7d9',
+      text: '#1b5040',
+      solid: '#1b5040',
+      solidHover: '#143d31',
+    },
+    secondary: {
+      light: '#caf3e4',
+      border: '#98f7d9',
+      text: '#1b5040',
+      solid: '#2e8a6e',
+      solidHover: '#246854',
+    },
     success: {
       light: '#ecfdf5',
       border: '#a7f3d0',
@@ -72,11 +112,11 @@ export const colors = {
       solidHover: '#b91c1c',
     },
     info: {
-      light: '#f0f9ff',
-      border: '#bae6fd',
-      text: '#075985',
-      solid: '#0284c7',
-      solidHover: '#0369a1',
+      light: '#caf3e4',
+      border: '#98f7d9',
+      text: '#1b5040',
+      solid: '#1b5040',
+      solidHover: '#143d31',
     },
   },
 } as const;

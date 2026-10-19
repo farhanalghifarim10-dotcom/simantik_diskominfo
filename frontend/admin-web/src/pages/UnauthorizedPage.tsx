@@ -9,7 +9,7 @@ interface UnauthorizedPageProps {
 export function UnauthorizedPage({ userRole }: UnauthorizedPageProps) {
   const roleLabel =
     userRole === 'TECHNICIAN'
-      ? 'Teknisi (TECHNICIAN)'
+      ? 'Tenaga Ahli (TECHNICIAN)'
       : userRole === 'SUPER_ADMIN'
       ? 'Super Admin (SUPER_ADMIN)'
       : 'Pengguna Terotentikasi';

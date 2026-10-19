@@ -242,7 +242,8 @@ export class WorkflowEngine {
 
   /**
    * Memvalidasi transisi lifecycle stage secara terpusat:
-   * - stage hanya boleh diperbarui jika status permohonan sedang APPROVED, IN_PROGRESS, atau COMPLETED
+   * - stage hanya boleh diperbarui jika status permohonan sedang aktif dalam siklus (APPROVED atau IN_PROGRESS)
+   * - status terminal (COMPLETED, CLOSED, REJECTED, CANCELLED) tidak diizinkan mengubah stage
    * - role yang diizinkan: SUPER_ADMIN atau TECHNICIAN
    */
   validateStageTransition(
@@ -254,7 +255,6 @@ export class WorkflowEngine {
     const validStatuses: ApplicationStatus[] = [
       'APPROVED',
       'IN_PROGRESS',
-      'COMPLETED',
     ];
 
     if (!validStatuses.includes(currentStatus)) {

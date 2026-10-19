@@ -115,7 +115,7 @@ export const Radio = forwardRef<HTMLInputElement, RadioProps>(
             {...props}
           />
 
-          <div className="h-4.5 w-4.5 rounded-full border border-slate-300 bg-white transition-colors duration-150 flex items-center justify-center peer-hover:border-slate-400 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-slate-900 peer-checked:border-slate-900 peer-checked:bg-slate-900">
+          <div className="h-4.5 w-4.5 rounded-full border border-slate-300 bg-white transition-colors duration-150 flex items-center justify-center peer-hover:border-slate-400 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[#1b5040] peer-checked:border-[#1b5040] peer-checked:bg-[#1b5040]">
             <div className="h-1.5 w-1.5 rounded-full bg-white opacity-0 transition-opacity peer-checked:opacity-100" />
           </div>
         </div>

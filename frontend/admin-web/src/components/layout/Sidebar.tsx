@@ -19,6 +19,7 @@ import {
   LogOutIcon,
   LogoHierarchy,
   ShieldIcon,
+  SimantikLogo,
   Tooltip,
   XIcon,
 } from '../ui';
@@ -96,8 +97,8 @@ export function Sidebar({
               onClick={onCloseMobile}
               className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors select-none ${
                 isActive
-                  ? 'bg-slate-900 text-white font-semibold'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  ? 'bg-[#1B5040] text-white font-semibold shadow-xs'
+                  : 'text-slate-600 hover:bg-[#CAF3E4]/40 hover:text-[#1B5040]'
               } ${isCollapsed ? 'justify-center px-2' : ''}`}
             >
               <span className={`shrink-0 ${isActive ? 'text-white' : 'text-slate-500'}`}>
@@ -118,7 +119,12 @@ export function Sidebar({
 
           if (isCollapsed) {
             return (
-              <Tooltip key={item.href} content={item.title} position="right">
+              <Tooltip
+                key={item.href}
+                content={item.badge ? `${item.title} (${item.badge})` : item.title}
+                position="right"
+                className="w-full justify-center"
+              >
                 {linkContent}
               </Tooltip>
             );
@@ -141,7 +147,9 @@ export function Sidebar({
         <div className="flex items-center justify-between border-b border-slate-100 pb-4">
           <Link to="/" onClick={onCloseMobile} className="inline-block">
             {isCollapsed ? (
-              <LogoHierarchy layout="compact" />
+              <div className="flex items-center justify-center py-1" title="SIMANTIK — Diskominfo Kab. Bandung">
+                <SimantikLogo size={32} variant="emblem" />
+              </div>
             ) : (
               <LogoHierarchy layout="compact" />
             )}
@@ -160,20 +168,21 @@ export function Sidebar({
 
         {/* User Role Banner */}
         {!isCollapsed && (
-          <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 flex items-center justify-between">
-            <div className="flex flex-col truncate pr-2">
-              <span className="text-xs font-bold text-slate-900 truncate">
+          <div className="rounded-xl bg-slate-50 border border-slate-200/80 p-3 flex items-center justify-between gap-2.5">
+            <div className="flex flex-col min-w-0 flex-1">
+              <span className="text-xs font-bold text-slate-900 truncate" title={user.fullName}>
                 {user.fullName}
               </span>
-              <span className="text-[11px] text-slate-500 truncate">
+              <span className="text-[11px] text-slate-500 truncate" title={user.email ?? ''}>
                 {user.email}
               </span>
             </div>
             <Badge
               variant={user.role === 'SUPER_ADMIN' ? 'primary' : 'secondary'}
               size="sm"
+              className="px-2.5 py-1 text-[10.5px] font-bold tracking-tight"
             >
-              {user.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Teknisi'}
+              {user.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Tenaga Ahli'}
             </Badge>
           </div>
         )}
@@ -188,33 +197,53 @@ export function Sidebar({
 
       {/* Footer & Logout */}
       <div className="pt-4 border-t border-slate-100 space-y-2">
-        <button
-          type="button"
-          onClick={() => logout()}
-          className={`w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors cursor-pointer ${
-            isCollapsed ? 'justify-center px-2' : ''
-          }`}
-        >
-          <LogOutIcon size={18} className="shrink-0 text-red-500" />
-          {!isCollapsed && <span>Keluar Sistem</span>}
-        </button>
+        {isCollapsed ? (
+          <Tooltip content="Keluar Sistem" position="right" className="w-full justify-center">
+            <button
+              type="button"
+              onClick={() => logout()}
+              aria-label="Keluar Sistem"
+              className="w-full flex items-center justify-center rounded-lg px-2 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+            >
+              <LogOutIcon size={18} className="shrink-0 text-red-500" />
+            </button>
+          </Tooltip>
+        ) : (
+          <button
+            type="button"
+            onClick={() => logout()}
+            className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+          >
+            <LogOutIcon size={18} className="shrink-0 text-red-500" />
+            <span>Keluar Sistem</span>
+          </button>
+        )}
 
         {/* Desktop Collapse Toggle */}
-        <button
-          type="button"
-          onClick={onToggleCollapse}
-          aria-label={isCollapsed ? 'Buka bilah samping' : 'Perkecil bilah samping'}
-          className="hidden md:flex w-full items-center justify-center gap-2 rounded-lg py-1.5 text-xs text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors cursor-pointer"
-        >
-          {isCollapsed ? (
-            <PanelLeftOpenIcon size={16} />
-          ) : (
+        {isCollapsed ? (
+          <Tooltip content="Perluas Menu" position="right" className="w-full justify-center">
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              aria-label="Perluas bilah samping"
+              className="hidden md:flex w-full items-center justify-center rounded-lg py-1.5 text-xs text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors cursor-pointer"
+            >
+              <PanelLeftOpenIcon size={16} />
+            </button>
+          </Tooltip>
+        ) : (
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            aria-label="Perkecil bilah samping"
+            className="hidden md:flex w-full items-center justify-center gap-2 rounded-lg py-1.5 text-xs text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors cursor-pointer"
+          >
             <div className="flex items-center gap-2">
               <PanelLeftCloseIcon size={16} />
               <span>Perkecil Menu</span>
             </div>
-          )}
-        </button>
+          </button>
+        )}
       </div>
     </div>
   );

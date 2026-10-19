@@ -350,7 +350,7 @@ export function AdminServicesPage() {
               >
                 <div className="space-y-3 flex-1">
                   <div className="flex flex-wrap items-center gap-2.5">
-                    <span className="font-mono text-xs font-bold bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded border border-blue-200">
+                    <span className="font-mono text-xs font-bold bg-[#CAF3E4] text-[#1B5040] px-2.5 py-0.5 rounded border border-[#98F7D9]">
                       {service.code}
                     </span>
                     <Badge variant={service.type === 'DEVELOPMENT' ? 'primary' : 'info'} className="text-xs font-semibold">
@@ -531,7 +531,7 @@ export function AdminServicesPage() {
                         <button
                           type="button"
                           onClick={() => handleOpenEditRequirement(req)}
-                          className="text-blue-600 hover:text-blue-800 font-semibold cursor-pointer"
+                          className="text-[#1B5040] hover:underline font-semibold cursor-pointer"
                         >
                           Ubah
                         </button>
@@ -811,7 +811,7 @@ export function AdminServicesPage() {
                       is_active: e.target.checked,
                     })
                   }
-                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  className="rounded border-slate-300 text-[#1B5040] focus:ring-[#1B5040]"
                 />
                 <span>Persyaratan Aktif (Dipersyaratkan)</span>
               </label>
@@ -825,7 +825,7 @@ export function AdminServicesPage() {
                       is_placeholder: e.target.checked,
                     })
                   }
-                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  className="rounded border-slate-300 text-[#1B5040] focus:ring-[#1B5040]"
                 />
                 <span>Tandai sebagai Placeholder / Konfigurasi</span>
               </label>
@@ -912,7 +912,7 @@ export function AdminServicesPage() {
               id="new_srv_is_active"
               checked={newServiceForm.is_active}
               onChange={(e) => setNewServiceForm({ ...newServiceForm, is_active: e.target.checked })}
-              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              className="h-4 w-4 rounded border-slate-300 text-[#1B5040] focus:ring-[#1B5040]"
             />
             <label htmlFor="new_srv_is_active" className="text-xs font-semibold text-slate-700">
               Layanan Aktif (Tampil pada portal pengajuan publik)

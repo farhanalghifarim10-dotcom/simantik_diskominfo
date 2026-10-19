@@ -79,7 +79,7 @@ export function AdminAssignmentsOverviewPage() {
 
   const handleConfirmAssign = async () => {
     if (!targetAppId || !selectedTechnicianId) {
-      setAssignmentError('Silakan pilih teknisi penanggung jawab.');
+      setAssignmentError('Silakan pilih tenaga ahli penanggung jawab.');
       return;
     }
 
@@ -100,7 +100,7 @@ export function AdminAssignmentsOverviewPage() {
       refetchApps();
       refetchTech();
     } catch (err: any) {
-      setAssignmentError(err?.message || 'Gagal menyimpan penugasan teknisi.');
+      setAssignmentError(err?.message || 'Gagal menyimpan penugasan tenaga ahli.');
     }
   };
 
@@ -111,14 +111,11 @@ export function AdminAssignmentsOverviewPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              Penugasan Pekerjaan Teknisi
+              Penugasan Pekerjaan Tenaga Ahli
             </h1>
-            <Badge variant="neutral" className="font-mono text-xs">
-              Phase 08
-            </Badge>
           </div>
           <p className="text-sm text-slate-500 mt-1">
-            Monitoring distribusi beban kerja personel teknisi dan delegasi tiket permohonan layanan SPBE.
+            Monitoring distribusi beban kerja personel tenaga ahli dan delegasi tiket permohonan layanan SPBE.
           </p>
         </div>
 
@@ -139,8 +136,8 @@ export function AdminAssignmentsOverviewPage() {
       {/* TECHNICIAN WORKLOAD OVERVIEW CARDS */}
       <div>
         <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-2">
-          <UsersIcon size={16} className="text-blue-600" />
-          Beban Kerja Personel Teknisi Internal Diskominfo
+          <UsersIcon size={16} className="text-[#1B5040]" />
+          Beban Kerja Personel Tenaga Ahli Internal Diskominfo
         </h2>
 
         {techLoading ? (
@@ -150,7 +147,7 @@ export function AdminAssignmentsOverviewPage() {
             <Skeleton className="h-28 rounded-2xl" />
           </div>
         ) : techError ? (
-          <Alert variant="danger">Gagal memuat daftar personel teknisi.</Alert>
+          <Alert variant="danger">Gagal memuat daftar personel tenaga ahli.</Alert>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {technicians?.map((tech) => {
@@ -163,7 +160,7 @@ export function AdminAssignmentsOverviewPage() {
                   }
                   className={`p-5 rounded-2xl border transition-all cursor-pointer bg-white flex flex-col justify-between gap-3 ${
                     isFiltered
-                      ? 'border-blue-600 ring-2 ring-blue-500/20 shadow-md'
+                      ? 'border-[#1B5040] ring-2 ring-[#1B5040]/20 shadow-md'
                       : 'border-slate-200 hover:border-slate-300 shadow-sm'
                   }`}
                 >
@@ -173,7 +170,7 @@ export function AdminAssignmentsOverviewPage() {
                         {tech.full_name}
                       </h3>
                       <p className="text-xs text-slate-500 font-mono mt-0.5">
-                        {tech.email || 'teknisi@bandungkab.go.id'}
+                        {tech.email || 'tenagaahli@bandungkab.go.id'}
                       </p>
                     </div>
                     <Badge variant="neutral" className="text-[10px]">
@@ -183,7 +180,7 @@ export function AdminAssignmentsOverviewPage() {
 
                   <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
                     <span className="text-slate-500">Penugasan Aktif:</span>
-                    <span className="font-bold text-sm text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+                    <span className="font-bold text-sm text-[#1B5040] bg-[#CAF3E4] px-2.5 py-0.5 rounded-full border border-[#98F7D9]">
                       {tech.active_assignments_count} Tiket
                     </span>
                   </div>
@@ -202,7 +199,7 @@ export function AdminAssignmentsOverviewPage() {
               Daftar Penugasan Permohonan
             </h3>
             <p className="text-xs text-slate-500">
-              Satu permohonan memiliki maksimal satu teknisi penanggung jawab aktif.
+              Satu permohonan memiliki maksimal satu tenaga ahli penanggung jawab aktif.
             </p>
           </div>
 
@@ -278,7 +275,7 @@ export function AdminAssignmentsOverviewPage() {
                     <td className="px-4 py-3 whitespace-nowrap">
                       <Link
                         to={`/applications/${app.id}`}
-                        className="font-mono font-bold text-blue-600 hover:underline block"
+                        className="font-mono font-bold text-[#1B5040] hover:underline block"
                       >
                         {app.ticket_number}
                       </Link>
@@ -299,7 +296,7 @@ export function AdminAssignmentsOverviewPage() {
                     <td className="px-4 py-3 max-w-xs">
                       <Link
                         to={`/applications/${app.id}`}
-                        className="font-medium text-slate-900 hover:text-blue-600 line-clamp-1 block text-xs sm:text-sm"
+                        className="font-medium text-slate-900 hover:text-[#1B5040] line-clamp-1 block text-xs sm:text-sm"
                       >
                         {app.title}
                       </Link>
@@ -317,16 +314,18 @@ export function AdminAssignmentsOverviewPage() {
 
                     <td className="px-4 py-3 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-xs font-semibold"
-                          onClick={() =>
-                            handleOpenAssign(app.id, app.ticket_number, app.title)
-                          }
-                        >
-                          Tugaskan / Alihkan
-                        </Button>
+                        {!['COMPLETED', 'CLOSED', 'REJECTED', 'CANCELLED'].includes(app.current_status) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs font-semibold"
+                            onClick={() =>
+                              handleOpenAssign(app.id, app.ticket_number, app.title)
+                            }
+                          >
+                            Tugaskan / Alihkan
+                          </Button>
+                        )}
                         <Link to={`/applications/${app.id}`}>
                           <Button variant="primary" size="sm" className="text-xs font-semibold">
                             Buka Detail
@@ -347,8 +346,8 @@ export function AdminAssignmentsOverviewPage() {
       <Dialog
         isOpen={assignmentModalOpen}
         onClose={() => setAssignmentModalOpen(false)}
-        title="Penugasan Teknisi Penanggung Jawab"
-        description={`Tetapkan personel teknisi utama untuk tiket ${targetTicket}`}
+        title="Penugasan Tenaga Ahli Penanggung Jawab"
+        description={`Tetapkan personel tenaga ahli utama untuk tiket ${targetTicket}`}
         footer={
           <>
             <Button
@@ -377,7 +376,7 @@ export function AdminAssignmentsOverviewPage() {
           </div>
 
           <Alert variant="warning">
-            Sesuai aturan arsitektur SPBE SIMANTIK, setiap permohonan hanya memiliki <strong>1 teknisi utama aktif</strong>. 
+            Sesuai aturan arsitektur SPBE SIMANTIK, setiap permohonan hanya memiliki <strong>1 tenaga ahli utama aktif</strong>.
             Jika sebelumnya telah ditugaskan, penugasan baru akan mengarsipkan penugasan lama secara otomatis.
           </Alert>
 
@@ -387,7 +386,7 @@ export function AdminAssignmentsOverviewPage() {
 
           <div className="space-y-1.5">
             <label className="font-bold text-slate-800 block text-xs">
-              Pilih Teknisi Penanggung Jawab:
+              Pilih Tenaga Ahli Penanggung Jawab:
             </label>
             <Select
               value={selectedTechnicianId}

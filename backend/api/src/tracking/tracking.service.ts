@@ -1,6 +1,10 @@
 import {
   BadRequestException,
+  ConflictException,
+  ForbiddenException,
   Injectable,
+  InternalServerErrorException,
+  Logger,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -8,7 +12,12 @@ import * as crypto from 'crypto';
 import { SupabaseService } from '../supabase/supabase.service.js';
 import { TrackingTokenService } from './tracking-token.service.js';
 import { TrackingRateLimiter } from './tracking-rate-limiter.js';
-import { validateUploadedFile } from '../common/utils/file-validator.js';
+import {
+  generateSecureStorageKey,
+  parseAndValidateBase64,
+  sanitizeFilename,
+  validateUploadedFile,
+} from '../common/utils/file-validator.js';
 import type {
   ApplicationStage,
   ApplicationStatus,
@@ -16,6 +25,8 @@ import type {
   PublicTicketSummary,
   PublicTimelineMilestone,
   PublicTimelineResponse,
+  StageProgressItem,
+  StageProgressStatus,
   SubmitRevisionDto,
   SubmitRevisionResult,
   TrackingSessionPayload,
@@ -44,10 +55,55 @@ interface InMemApplicationTrack {
     note: string | null;
     changed_at: string;
   }[];
+  stage_history?: {
+    from_stage: ApplicationStage | null;
+    to_stage: ApplicationStage;
+    changed_at: string;
+  }[];
 }
+
+const LIFECYCLE_STAGES: { stage: ApplicationStage; label: string; description: string }[] = [
+  {
+    stage: 'ANALYSIS',
+    label: 'Analisis Kebutuhan SPBE',
+    description: 'Telaah proses bisnis, spesifikasi teknis, arsitektur data, dan kepatuhan standar SPBE.',
+  },
+  {
+    stage: 'PLANNING',
+    label: 'Perencanaan Proyek',
+    description: 'Penyusunan jadwal pengerjaan, alokasi sumber daya teknis, dan rencana deliverable sistem.',
+  },
+  {
+    stage: 'DESIGN',
+    label: 'Perancangan Arsitektur & UI/UX',
+    description: 'Perancangan arsitektur sistem, basis data, diagram alur, dan prototipe antarmuka pengguna.',
+  },
+  {
+    stage: 'IMPLEMENTATION',
+    label: 'Pembangunan / Koding Sistem',
+    description: 'Pengembangan kode program modul aplikasi, integrasi basis data, dan implementasi layanan.',
+  },
+  {
+    stage: 'TESTING',
+    label: 'Uji Kelaikan Aplikasi',
+    description: 'Pengujian fungsionalitas fitur, keamanan informasi, performa, dan kesesuaian integrasi.',
+  },
+  {
+    stage: 'MAINTENANCE',
+    label: 'Pemeliharaan Sistem',
+    description: 'Pemantauan stabilitas operasional sistem, penanganan kendala teknis, dan optimasi performa.',
+  },
+  {
+    stage: 'EVALUATION',
+    label: 'Evaluasi Pasca-Implementasi',
+    description: 'Penilaian efektivitas pemanfaatan sistem informasi dan evaluasi kesesuaian siklus hidup SPBE.',
+  },
+];
 
 @Injectable()
 export class TrackingService {
+  private readonly logger = new Logger(TrackingService.name);
+
   // In-memory application store for testing and fallback
   private inMemoryTrackRecords: Map<string, InMemApplicationTrack> = new Map();
 
@@ -64,6 +120,59 @@ export class TrackingService {
    */
   registerInMemoryApplication(record: InMemApplicationTrack): void {
     this.inMemoryTrackRecords.set(record.ticket_number.toUpperCase(), record);
+  }
+
+  /**
+   * Memperbarui status permohonan di in-memory store jika status diubah oleh admin/workflow.
+   */
+  updateInMemoryStatus(
+    ticketNumber: string,
+    toStatus: ApplicationStatus,
+    targetStage?: ApplicationStage | null,
+    note?: string | null,
+    now: string = new Date().toISOString(),
+  ): void {
+    const norm = ticketNumber.toUpperCase();
+    const record = this.inMemoryTrackRecords.get(norm);
+    if (record) {
+      const fromStatus = record.current_status;
+      const fromStage = record.current_stage;
+      record.current_status = toStatus;
+      if (targetStage) {
+        record.current_stage = targetStage;
+        if (!record.stage_history) {
+          record.stage_history = [];
+        }
+        record.stage_history.push({
+          from_stage: fromStage,
+          to_stage: targetStage,
+          changed_at: now,
+        });
+      }
+      record.updated_at = now;
+      record.status_history.unshift({
+        from_status: fromStatus,
+        to_status: toStatus,
+        note: note || null,
+        changed_at: now,
+      });
+    }
+  }
+
+  /**
+   * Memperbarui tracking_code_hash permohonan di in-memory store jika diterbitkan ulang.
+   */
+  updateInMemoryTrackingCodeHash(
+    ticketNumber: string,
+    newTrackingCodeHash: string,
+    now: string = new Date().toISOString(),
+  ): void {
+    const norm = ticketNumber.toUpperCase();
+    const record = this.inMemoryTrackRecords.get(norm);
+    if (record) {
+      record.tracking_code_hash = newTrackingCodeHash;
+      record.updated_at = now;
+    }
   }
 
   private seedFallbackApplications() {
@@ -86,6 +195,13 @@ export class TrackingService {
       current_stage: 'ANALYSIS',
       submitted_at: now,
       updated_at: now,
+      stage_history: [
+        {
+          from_stage: null,
+          to_stage: 'ANALYSIS',
+          changed_at: now,
+        },
+      ],
       documents: [
         {
           requirement_name: 'Surat Permohonan Resmi OPD',
@@ -209,6 +325,15 @@ export class TrackingService {
       });
     }
 
+    // Periksa apakah tiket telah resmi DITUTUP oleh Administrator
+    if (appRecord.current_status === 'CLOSED') {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'TICKET_CLOSED',
+        message: `Tiket permohonan [${appRecord.ticket_number}] telah resmi ditutup oleh Administrator. Layanan untuk nomor tiket ini sudah selesai dan tidak dapat dibuka kembali.`,
+      });
+    }
+
     // Berhasil verifikasi: reset kegagalan rate limit
     this.rateLimiter.reset(rateLimitKey);
 
@@ -252,6 +377,15 @@ export class TrackingService {
       });
     }
 
+    // Tolak akses jika tiket telah DITUTUP oleh Administrator
+    if (app.current_status === 'CLOSED') {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'TICKET_CLOSED',
+        message: `Tiket permohonan [${app.ticket_number}] telah resmi ditutup oleh Administrator. Layanan untuk nomor tiket ini sudah selesai dan tidak dapat dibuka kembali.`,
+      });
+    }
+
     // Masking data sensitif pemohon
     const applicantNameMasked = this.maskName(app.applicant_name);
     const applicantEmailMasked = this.maskEmail(app.applicant_email);
@@ -265,6 +399,15 @@ export class TrackingService {
       revisionReason = app.revision_note || this.findLatestRevisionNote(app.status_history);
     }
 
+    const stageLabel = app.current_stage ? this.resolveStageLabel(app.current_stage) : null;
+    const stageDescription = this.resolveStageDescription(app.current_stage);
+    const applicantAction = this.resolveApplicantAction(app.current_status, stageLabel);
+    const stageProgress = this.buildStageProgress(
+      app.current_status,
+      app.current_stage,
+      app.stage_history || [],
+    );
+
     return {
       ticket_number: app.ticket_number,
       title: app.title,
@@ -275,7 +418,11 @@ export class TrackingService {
       current_status: app.current_status,
       status_label: this.resolveStatusLabel(app.current_status),
       current_stage: app.current_stage,
-      stage_label: app.current_stage ? this.resolveStageLabel(app.current_stage) : null,
+      stage_label: stageLabel,
+      stage_description: stageDescription,
+      stage_progress: stageProgress,
+      action_required_by_applicant: applicantAction.actionRequired,
+      applicant_action_message: applicantAction.message,
       submitted_at: app.submitted_at,
       updated_at: app.updated_at,
       next_step: nextStep,
@@ -308,6 +455,14 @@ export class TrackingService {
         statusCode: 404,
         code: 'TICKET_NOT_FOUND',
         message: `Tiket [${normalizedTicket}] tidak ditemukan.`,
+      });
+    }
+
+    if (app.current_status === 'CLOSED') {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'TICKET_CLOSED',
+        message: `Tiket permohonan [${app.ticket_number}] telah resmi ditutup oleh Administrator. Akses pelacakan layanan untuk tiket ini tidak lagi aktif.`,
       });
     }
 
@@ -371,14 +526,30 @@ export class TrackingService {
       });
     }
 
-    // Validasi berkas lampiran tambahan jika ada
+    // Validasi berkas lampiran tambahan jika ada (wajibkan base64 buffer > 0 dan lolos validasi keamanan)
+    const validatedRevisionDocs: {
+      original_filename: string;
+      mime_type: string;
+      size_bytes: number;
+      buffer: Buffer;
+    }[] = [];
+
     if (dto.additional_documents && dto.additional_documents.length > 0) {
       for (const doc of dto.additional_documents) {
+        const buffer = parseAndValidateBase64(doc.base64_data, doc.original_filename);
+
         validateUploadedFile({
           original_filename: doc.original_filename,
           mime_type: doc.mime_type,
           size_bytes: doc.size_bytes,
-          buffer: doc.base64_data ? Buffer.from(doc.base64_data, 'base64') : undefined,
+          buffer,
+        });
+
+        validatedRevisionDocs.push({
+          original_filename: doc.original_filename,
+          mime_type: doc.mime_type,
+          size_bytes: doc.size_bytes,
+          buffer,
         });
       }
     }
@@ -387,12 +558,62 @@ export class TrackingService {
     const previousStatus = app.current_status;
     const newStatus: ApplicationStatus = 'VERIFICATION';
 
+    const uploadedStoragePaths: string[] = [];
+    const insertedDocIds: string[] = [];
+    let applicationStatusUpdated = false;
+    let insertedHistoryId: string | null = null;
+    let insertedMessageId: string | null = null;
+
     // 1. Perbarui Supabase jika terhubung
     try {
       const client = this.supabaseService.getClient();
 
-      // Perbarui status aplikasi
-      await client
+      // a. Upload berkas revisi ke bucket privat simantik-documents dan simpan metadata di application_documents
+      for (const doc of validatedRevisionDocs) {
+        const docId = crypto.randomUUID();
+        const storagePath = generateSecureStorageKey(`applications/${normalizedTicket}`, doc.original_filename);
+
+        if (client?.storage) {
+          const { error: uploadError } = await client.storage
+            .from('simantik-documents')
+            .upload(storagePath, doc.buffer, {
+              contentType: doc.mime_type,
+              upsert: false,
+            });
+
+          if (uploadError) {
+            throw new InternalServerErrorException(
+              `Gagal mengunggah berkas perbaikan "${doc.original_filename}" ke penyimpanan: ${uploadError.message}`,
+            );
+          }
+          uploadedStoragePaths.push(storagePath);
+        }
+
+        const { error: docInsertError } = await client
+          .from('application_documents')
+          .insert({
+            id: docId,
+            application_id: app.id,
+            requirement_id: null, // Dokumen revisi tidak terikat requirement_id spesifik awal
+            original_filename: sanitizeFilename(doc.original_filename),
+            storage_path: storagePath,
+            mime_type: doc.mime_type,
+            size_bytes: doc.size_bytes,
+            version: 1,
+            is_current: true,
+            uploaded_at: now,
+          });
+
+        if (docInsertError) {
+          throw new InternalServerErrorException(
+            `Gagal menyimpan metadata berkas perbaikan "${doc.original_filename}": ${docInsertError.message}`,
+          );
+        }
+        insertedDocIds.push(docId);
+      }
+
+      // b. Perbarui status aplikasi (dengan conditional optimistic check bahwa status masih REVISION_REQUIRED)
+      const { data: updatedRows, error: appUpdateError } = await client
         .from('applications')
         .update({
           current_status: newStatus,
@@ -404,10 +625,34 @@ export class TrackingService {
           ...(dto.updated_scope ? { scope: dto.updated_scope.trim() } : {}),
           ...(dto.updated_expected_output ? { expected_output: dto.updated_expected_output.trim() } : {}),
         })
-        .eq('id', app.id);
+        .eq('id', app.id)
+        .eq('current_status', previousStatus)
+        .select('id');
 
-      // Catat di status history
-      await client.from('application_status_history').insert({
+      if (appUpdateError) {
+        throw new InternalServerErrorException(`Gagal memperbarui status permohonan: ${appUpdateError.message}`);
+      }
+
+      if (!updatedRows || updatedRows.length === 0) {
+        throw new ConflictException({
+          statusCode: 409,
+          code: 'CONCURRENT_STATUS_CHANGE',
+          message: `Permohonan [${normalizedTicket}] tidak lagi berada pada status [${previousStatus}]. Status telah diperbarui oleh proses lain. Revisi dibatalkan.`,
+        });
+      }
+
+      if (updatedRows.length !== 1) {
+        throw new InternalServerErrorException(
+          `Inkonsistensi data: mutasi status permohonan [${normalizedTicket}] memengaruhi ${updatedRows.length} baris data, diharapkan tepat 1 baris.`,
+        );
+      }
+
+      applicationStatusUpdated = true;
+
+      // c. Catat di status history dengan ID unik eksplisit
+      const historyId = crypto.randomUUID();
+      const { error: historyError } = await client.from('application_status_history').insert({
+        id: historyId,
         application_id: app.id,
         from_status: previousStatus,
         to_status: newStatus,
@@ -415,8 +660,15 @@ export class TrackingService {
         changed_at: now,
       });
 
-      // Catat pesan komunikasi publik
-      await client.from('messages').insert({
+      if (historyError) {
+        throw new InternalServerErrorException(`Gagal mencatat riwayat status revisi: ${historyError.message}`);
+      }
+      insertedHistoryId = historyId;
+
+      // d. Catat pesan komunikasi publik dengan ID unik eksplisit
+      const messageId = crypto.randomUUID();
+      const { error: msgError } = await client.from('messages').insert({
+        id: messageId,
         application_id: app.id,
         sender_type: 'PUBLIC_APPLICANT',
         sender_name: app.applicant_name,
@@ -425,11 +677,112 @@ export class TrackingService {
         message: `[TANGGAPAN REVISI PEMOHON]: ${notes}`,
         created_at: now,
       });
-    } catch {
-      // Fallback
+
+      if (msgError) {
+        throw new InternalServerErrorException(`Gagal mencatat pesan revisi: ${msgError.message}`);
+      }
+      insertedMessageId = messageId;
+    } catch (err: any) {
+      // Kompensasi rollback selektif: hanya bersihkan artefak yang terbuat pada percobaan ini tanpa menghapus data historis lama
+      if (uploadedStoragePaths.length > 0) {
+        try {
+          const client = this.supabaseService.getClient();
+          if (client?.storage) {
+            await client.storage.from('simantik-documents').remove(uploadedStoragePaths);
+          }
+        } catch (cleanupErr: any) {
+          this.logger.warn(`Gagal membersihkan berkas Storage revisi: ${cleanupErr?.message || cleanupErr}`);
+        }
+      }
+      if (insertedDocIds.length > 0) {
+        try {
+          const client = this.supabaseService.getClient();
+          if (client?.from) {
+            await client.from('application_documents').delete().in('id', insertedDocIds);
+          }
+        } catch (cleanupErr: any) {
+          this.logger.warn(`Gagal membersihkan metadata berkas revisi: ${cleanupErr?.message || cleanupErr}`);
+        }
+      }
+      if (insertedMessageId) {
+        try {
+          const client = this.supabaseService.getClient();
+          if (client?.from) {
+            await client.from('messages').delete().eq('id', insertedMessageId);
+          }
+        } catch (cleanupErr: any) {
+          this.logger.warn(`Gagal membersihkan pesan revisi parsial: ${cleanupErr?.message || cleanupErr}`);
+        }
+      }
+      if (insertedHistoryId) {
+        try {
+          const client = this.supabaseService.getClient();
+          if (client?.from) {
+            await client.from('application_status_history').delete().eq('id', insertedHistoryId);
+          }
+        } catch (cleanupErr: any) {
+          this.logger.warn(`Gagal membersihkan riwayat status revisi parsial: ${cleanupErr?.message || cleanupErr}`);
+        }
+      }
+      if (applicationStatusUpdated) {
+        try {
+          const client = this.supabaseService.getClient();
+          if (client?.from) {
+            const revertPayload: Record<string, any> = {
+              current_status: previousStatus,
+              updated_at: app.updated_at,
+            };
+            if (dto.updated_title) revertPayload.title = app.title;
+            // Gunakan filter id dan current_status agar tidak menimpa transisi konkuren yang sah
+            const { data: revertedRows, error: revertErr } = await client
+              .from('applications')
+              .update(revertPayload)
+              .eq('id', app.id)
+              .eq('current_status', newStatus)
+              .select('id');
+
+            if (revertErr) {
+              this.logger.warn(`Gagal mengembalikan status permohonan ke ${previousStatus}: ${revertErr.message}`);
+            } else if (!revertedRows || revertedRows.length === 0) {
+              this.logger.warn(
+                `Kompensasi status tidak mengenai baris target: status permohonan [${app.ticket_number}] bukan lagi [${newStatus}] saat rollback dilakukan. Status pihak lain dipertahankan.`,
+              );
+            } else if (revertedRows.length !== 1) {
+              this.logger.warn(
+                `Kompensasi status memengaruhi ${revertedRows.length} baris data untuk tiket [${app.ticket_number}], diharapkan tepat 1 baris.`,
+              );
+            } else {
+              this.logger.log(
+                `Kompensasi status berhasil: status permohonan [${app.ticket_number}] dikembalikan ke [${previousStatus}].`,
+              );
+            }
+          }
+        } catch (revertErr: any) {
+          this.logger.warn(`Gagal mengembalikan status permohonan ke ${previousStatus}: ${revertErr?.message || revertErr}`);
+        }
+      }
+
+      if (err instanceof BadRequestException) {
+        throw err;
+      }
+      if (err instanceof ConflictException) {
+        throw err;
+      }
+      if (err instanceof InternalServerErrorException) {
+        throw err;
+      }
+
+      const isExplicitFallbackAllowed =
+        process.env.ALLOW_IN_MEMORY_FALLBACK === 'true' &&
+        process.env.NODE_ENV === 'test';
+      if (!isExplicitFallbackAllowed) {
+        throw new InternalServerErrorException(
+          `Gagal memproses tanggapan revisi ke basis data: ${err?.message || err}`,
+        );
+      }
     }
 
-    // 2. Perbarui in-memory record
+    // 2. Perbarui in-memory record (sinkron untuk mode fallback testing dan query lokal)
     app.current_status = newStatus;
     app.updated_at = now;
     if (dto.updated_title) app.title = dto.updated_title.trim();
@@ -441,8 +794,8 @@ export class TrackingService {
       changed_at: now,
     });
 
-    if (dto.additional_documents && dto.additional_documents.length > 0) {
-      for (const doc of dto.additional_documents) {
+    if (validatedRevisionDocs.length > 0) {
+      for (const doc of validatedRevisionDocs) {
         app.documents.push({
           requirement_name: 'Dokumen Perbaikan Tambahan',
           original_filename: doc.original_filename,
@@ -486,6 +839,25 @@ export class TrackingService {
         .maybeSingle();
 
       if (!error && data) {
+        // Ambil riwayat tahapan tanpa membocorkan internal notes atau identitas teknis
+        let stageHistory: {
+          from_stage: ApplicationStage | null;
+          to_stage: ApplicationStage;
+          changed_at: string;
+        }[] = [];
+        try {
+          const { data: stgData } = await client
+            .from('application_stage_history')
+            .select('from_stage, to_stage, changed_at')
+            .eq('application_id', data.id)
+            .order('changed_at', { ascending: true });
+          if (stgData && Array.isArray(stgData)) {
+            stageHistory = stgData as any;
+          }
+        } catch {
+          // Non-fatal fallback
+        }
+
         const docs: PublicDocumentItem[] = ((data as any).application_documents || []).map(
           (d: any) => ({
             requirement_name: 'Dokumen Persyaratan',
@@ -514,6 +886,7 @@ export class TrackingService {
           updated_at: data.updated_at,
           documents: docs,
           status_history: history,
+          stage_history: stageHistory,
         };
       }
     } catch {
@@ -589,6 +962,136 @@ export class TrackingService {
     }
   }
 
+  private resolveStageDescription(stage: ApplicationStage | null): string | null {
+    if (!stage) return null;
+    const found = LIFECYCLE_STAGES.find((s) => s.stage === stage);
+    return found ? found.description : null;
+  }
+
+  private resolveApplicantAction(
+    status: ApplicationStatus,
+    stageLabel: string | null,
+  ): { actionRequired: boolean; message: string } {
+    switch (status) {
+      case 'REVISION_REQUIRED':
+        return {
+          actionRequired: true,
+          message:
+            'Tindakan diperlukan: Permohonan membutuhkan perbaikan dokumen KAK atau klarifikasi data dari instansi Anda. Silakan cermati catatan revisi pada panel di atas dan kirimkan dokumen perbaikan melalui formulir tanggapan.',
+        };
+      case 'SUBMITTED':
+        return {
+          actionRequired: false,
+          message:
+            'Tidak ada tindakan yang diperlukan dari OPD Anda saat ini. Berkas usulan telah terdaftar dalam sistem dan sedang dalam antrean telaah awal oleh Tim Verifikator Diskominfo.',
+        };
+      case 'VERIFICATION':
+        return {
+          actionRequired: false,
+          message:
+            'Tidak ada tindakan yang diperlukan dari OPD Anda saat ini. Tim Verifikator Diskominfo sedang memeriksa kelengkapan berkas administrasi dan dokumen KAK instansi Anda.',
+        };
+      case 'APPROVED':
+        return {
+          actionRequired: false,
+          message:
+            'Tidak ada tindakan yang diperlukan dari OPD Anda saat ini. Permohonan telah disetujui secara substantif dan administratif. Tim Diskominfo sedang memproses penjadwalan dan penugasan tenaga ahli pengembang.',
+        };
+      case 'IN_PROGRESS':
+        return {
+          actionRequired: false,
+          message: stageLabel
+            ? `Tidak ada tindakan yang diperlukan dari OPD Anda saat ini. Aplikasi sedang dikerjakan secara aktif oleh tenaga ahli pengembang pada tahap ${stageLabel}.`
+            : 'Tidak ada tindakan yang diperlukan dari OPD Anda saat ini. Aplikasi sedang dalam proses pengerjaan teknis oleh tenaga ahli pengembang sesuai siklus hidup SPBE.',
+        };
+      case 'COMPLETED':
+        return {
+          actionRequired: false,
+          message:
+            'Permohonan telah selesai dikerjakan. Seluruh rangkaian deliverable aplikasi telah rampung dan siap digunakan secara resmi oleh instansi Anda.',
+        };
+      case 'CLOSED':
+        return {
+          actionRequired: false,
+          message:
+            'Layanan untuk tiket permohonan ini telah selesai dan diarsipkan secara administratif oleh Diskominfo.',
+        };
+      case 'REJECTED':
+        return {
+          actionRequired: false,
+          message:
+            'Permohonan belum dapat disetujui untuk dilanjutkan berdasarkan hasil telaah administrasi/substantif. Silakan hubungi helpdesk jika memerlukan penjelasan lebih lanjut.',
+        };
+      case 'CANCELLED':
+        return {
+          actionRequired: false,
+          message: 'Permohonan ini telah dibatalkan.',
+        };
+      default:
+        return {
+          actionRequired: false,
+          message:
+            'Pantau perkembangan status permohonan Anda secara berkala melalui portal pelacakan ini.',
+        };
+    }
+  }
+
+  private buildStageProgress(
+    currentStatus: ApplicationStatus,
+    currentStage: ApplicationStage | null,
+    stageHistory: { from_stage: ApplicationStage | null; to_stage: ApplicationStage; changed_at: string }[] = [],
+  ): StageProgressItem[] {
+    const isInLifecycle =
+      ['IN_PROGRESS', 'COMPLETED', 'CLOSED'].includes(currentStatus) ||
+      currentStage !== null ||
+      stageHistory.length > 0;
+
+    const currentStageIndex = currentStage
+      ? LIFECYCLE_STAGES.findIndex((s) => s.stage === currentStage)
+      : -1;
+
+    const recordedStageMap = new Map<ApplicationStage, string>();
+    for (const hist of stageHistory) {
+      if (hist.to_stage && !recordedStageMap.has(hist.to_stage)) {
+        recordedStageMap.set(hist.to_stage, hist.changed_at);
+      }
+      if (hist.from_stage && !recordedStageMap.has(hist.from_stage)) {
+        recordedStageMap.set(hist.from_stage, hist.changed_at);
+      }
+    }
+
+    return LIFECYCLE_STAGES.map((item, idx) => {
+      let status: StageProgressStatus = 'upcoming';
+      const recordedAt: string | undefined = recordedStageMap.get(item.stage);
+
+      if (currentStatus === 'COMPLETED' || currentStatus === 'CLOSED') {
+        if (currentStageIndex >= 0 && idx <= currentStageIndex) {
+          status = 'completed';
+        } else if (recordedStageMap.has(item.stage)) {
+          status = 'completed';
+        } else {
+          status = 'upcoming';
+        }
+      } else if (isInLifecycle) {
+        if (currentStage && item.stage === currentStage && currentStatus === 'IN_PROGRESS') {
+          status = 'current';
+        } else if (recordedStageMap.has(item.stage) || (currentStageIndex > 0 && idx < currentStageIndex)) {
+          status = 'recorded';
+        } else {
+          status = 'upcoming';
+        }
+      }
+
+      return {
+        stage: item.stage,
+        label: item.label,
+        description: item.description,
+        status,
+        recorded_at: recordedAt,
+      };
+    });
+  }
+
   private resolveNextStepAdvisory(status: ApplicationStatus): string {
     switch (status) {
       case 'SUBMITTED':
@@ -598,7 +1101,7 @@ export class TrackingService {
       case 'REVISION_REQUIRED':
         return 'Permohonan memerlukan perbaikan kelengkapan atau penyesuaian dari instansi Anda. Silakan pelajari rincian catatan revisi dan kirimkan tanggapan perbaikan melalui formulir di bawah.';
       case 'APPROVED':
-        return 'Permohonan telah disetujui secara substantif dan administratif. Tim Diskominfo sedang memproses penjadwalan dan penugasan teknisi pengembang.';
+        return 'Permohonan telah disetujui secara substantif dan administratif. Tim Diskominfo sedang memproses penjadwalan dan penugasan tenaga ahli pengembang.';
       case 'REJECTED':
         return 'Permohonan tidak dapat dilanjutkan. Silakan pelajari alasan penelaahan atau hubungi helpdesk jika memerlukan klarifikasi.';
       case 'IN_PROGRESS':
@@ -630,10 +1133,11 @@ export class TrackingService {
     submittedAt: string,
     updatedAt: string,
   ): PublicTimelineMilestone[] {
-    const isVerif = ['VERIFICATION', 'REVISION_REQUIRED', 'APPROVED', 'IN_PROGRESS', 'COMPLETED'].includes(currentStatus);
-    const isApproved = ['APPROVED', 'IN_PROGRESS', 'COMPLETED'].includes(currentStatus);
-    const isInProgress = ['IN_PROGRESS', 'COMPLETED'].includes(currentStatus);
-    const isCompleted = currentStatus === 'COMPLETED';
+    const isVerif = ['VERIFICATION', 'REVISION_REQUIRED', 'APPROVED', 'IN_PROGRESS', 'COMPLETED', 'CLOSED'].includes(currentStatus);
+    const isApproved = ['APPROVED', 'IN_PROGRESS', 'COMPLETED', 'CLOSED'].includes(currentStatus);
+    const isInProgress = ['IN_PROGRESS', 'COMPLETED', 'CLOSED'].includes(currentStatus);
+    const isCompleted = ['COMPLETED', 'CLOSED'].includes(currentStatus);
+    const isClosed = currentStatus === 'CLOSED';
     const isRejected = currentStatus === 'REJECTED';
 
     const getStatusDate = (status: ApplicationStatus): string | undefined => {
@@ -720,6 +1224,17 @@ export class TrackingService {
         date: getStatusDate('COMPLETED'),
       },
     );
+
+    if (isClosed) {
+      milestones.push({
+        step_number: 6,
+        stage: 'DITUTUP',
+        title: 'Tiket Resmi Ditutup & Diarsipkan',
+        description: 'Seluruh rangkaian tahapan layanan telah selesai dilaksanakan dan tiket resmi ditutup serta diarsipkan oleh Administrator Diskominfo.',
+        status: 'completed',
+        date: getStatusDate('CLOSED') || updatedAt,
+      });
+    }
 
     return milestones;
   }

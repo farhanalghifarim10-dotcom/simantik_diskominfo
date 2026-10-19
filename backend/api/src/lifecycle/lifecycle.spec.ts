@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ForbiddenException, BadRequestException } from '@nestjs/common';
 import { LifecycleService } from './lifecycle.service.js';
+import { LifecycleController } from './lifecycle.controller.js';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 
 describe('LifecycleService', () => {
@@ -33,7 +34,7 @@ describe('LifecycleService', () => {
     id: 'applicant-1',
     email: 'opd@bandungkab.go.id',
     fullName: 'Pemohon OPD',
-    role: 'APPLICANT',
+    role: 'TECHNICIAN',
   };
 
   beforeEach(() => {
@@ -557,6 +558,13 @@ describe('LifecycleService', () => {
       expect(overview.stages_status.PLANNING.has_record).toBe(false);
       expect(overview.stages_status.TESTING.count).toBe(1);
       expect(overview.stages_status.TESTING.pass_count).toBe(1);
+    });
+  });
+
+  describe('LifecycleController Route Metadata Regression Test', () => {
+    it('defines canonical route path without redundant api/v1 prefix', () => {
+      const path = Reflect.getMetadata('path', LifecycleController);
+      expect(path).toBe('applications/:id/lifecycle');
     });
   });
 });

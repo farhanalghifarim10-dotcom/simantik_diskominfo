@@ -71,8 +71,8 @@ export class NotificationsService {
         body = `Permohonan [${ticket}] membutuhkan perbaikan atau kelengkapan tambahan dari instansi Anda. Silakan buka halaman pelacakan untuk menanggapi revisi.`;
         break;
       case 'APPLICATION_ASSIGNED':
-        title = `[SIMANTIK] Penugasan Teknisi #${ticket}`;
-        body = `Teknisi penanggung jawab telah ditugaskan untuk memproses permohonan [${ticket}].`;
+        title = `[SIMANTIK] Penugasan Tenaga Ahli #${ticket}`;
+        body = `Tenaga ahli penanggung jawab telah ditugaskan untuk memproses permohonan [${ticket}].`;
         break;
       case 'NEW_MESSAGE':
         title = `[SIMANTIK] Pesan / Catatan Baru #${ticket}`;

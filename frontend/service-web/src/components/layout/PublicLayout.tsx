@@ -1,10 +1,14 @@
 import { useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router';
+import { motion } from 'motion/react';
 import {
   Button,
+  DiskominfoLogo,
   LogoHierarchy,
   MenuIcon,
+  PemkabBandungLogo,
   SearchIcon,
+  SimantikLogo,
   ToastProvider,
   XIcon,
 } from '../ui';
@@ -29,19 +33,7 @@ export function PublicLayout() {
   return (
     <ToastProvider>
       <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans antialiased">
-        {/* Top Government Official Strip */}
-        <div className="bg-slate-900 text-slate-300 text-[11px] font-medium py-1.5 px-4 sm:px-8 border-b border-slate-800">
-          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-1 text-center sm:text-left">
-            <span>
-              Portal Resmi Layanan SPBE — Pemerintah Daerah Kabupaten Bandung
-            </span>
-            <div className="flex items-center gap-3 text-slate-400">
-              <span>Diskominfo Kab. Bandung</span>
-              <span aria-hidden="true">•</span>
-              <span className="text-slate-300">Zona Integritas Digital</span>
-            </div>
-          </div>
-        </div>
+
 
         {/* Main Navbar */}
         <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
@@ -63,10 +55,10 @@ export function PublicLayout() {
                   <NavLink
                     key={link.href}
                     to={link.href}
-                    className={`px-3.5 py-2 text-sm font-semibold rounded-md transition-colors select-none ${
+                    className={`px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition-colors select-none ${
                       isActive
-                        ? 'text-slate-950 bg-slate-100 font-bold'
-                        : 'text-slate-600 hover:text-slate-950 hover:bg-slate-50'
+                        ? 'text-[#1b5040] bg-[#caf3e4]'
+                        : 'text-slate-600 hover:text-[#1b5040] hover:bg-[#caf3e4]/30'
                     }`}
                   >
                     {link.name}
@@ -77,13 +69,19 @@ export function PublicLayout() {
 
             {/* Right Actions: Quick Action */}
             <div className="hidden sm:flex items-center gap-2.5">
-              <Link to="/tracking">
-                <Button variant="outline" size="sm" leftIcon={<SearchIcon size={14} />}>
-                  Lacak Tiket
-                </Button>
+              <Link
+                to="/tracking"
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-[#caf3e4]/20 text-slate-700 hover:text-[#1b5040] text-xs font-medium transition-colors shadow-2xs"
+              >
+                <SearchIcon size={14} className="text-slate-400" />
+                <span>Lacak Tiket</span>
               </Link>
               <Link to="/ajukan">
-                <Button variant="primary" size="sm">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  className="bg-[#1b5040] hover:bg-[#143d31] text-white font-semibold text-xs px-4 h-8 rounded-lg shadow-xs"
+                >
                   Ajukan Layanan
                 </Button>
               </Link>
@@ -117,7 +115,7 @@ export function PublicLayout() {
                       onClick={() => setIsMobileMenuOpen(false)}
                       className={`px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
                         isActive
-                          ? 'bg-slate-900 text-white font-semibold'
+                          ? 'bg-[#1b5040] text-white font-semibold'
                           : 'text-slate-700 hover:bg-slate-100'
                       }`}
                     >
@@ -143,9 +141,16 @@ export function PublicLayout() {
           )}
         </header>
 
-        {/* Page Content Outlet */}
+        {/* Page Content Outlet with Smooth Motion Page Transition */}
         <main className="flex-1">
-          <Outlet />
+          <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <Outlet />
+          </motion.div>
         </main>
 
         {/* Official Institutional Footer */}
@@ -154,7 +159,20 @@ export function PublicLayout() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8 lg:gap-12">
               {/* Kolom 1: Profil Kelembagaan */}
               <div className="md:col-span-2 space-y-4">
-                <LogoHierarchy layout="compact" />
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <PemkabBandungLogo size={32} title="Pemerintah Daerah Kabupaten Bandung" />
+                    <div className="h-5 w-px bg-slate-200" aria-hidden="true" />
+                    <DiskominfoLogo size={32} title="Dinas Komunikasi dan Informatika" />
+                  </div>
+                  <div className="h-6 w-px bg-slate-200" aria-hidden="true" />
+                  <div className="flex items-center gap-2">
+                    <SimantikLogo size={32} variant="emblem" />
+                    <span className="text-base font-bold tracking-tight text-slate-900">
+                      SIMANTIK
+                    </span>
+                  </div>
+                </div>
                 <p className="text-sm text-slate-600 leading-relaxed max-w-md">
                   <strong>SIMANTIK</strong> (Sistem Manajemen Layanan Teknologi Informasi)
                   adalah portal layanan resmi untuk mengelola dan memantau permohonan pembangunan

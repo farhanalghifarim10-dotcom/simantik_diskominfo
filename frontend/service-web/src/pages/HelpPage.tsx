@@ -114,7 +114,7 @@ export function HelpPage() {
           PAGE HEADER
          ========================================================================= */}
       <div className="border-b border-slate-200 pb-8 space-y-3">
-        <div className="flex items-center gap-2 text-xs font-semibold text-blue-600 uppercase tracking-wider">
+        <div className="flex items-center gap-2 text-xs font-semibold text-[#2E8A6E] uppercase tracking-wider">
           <Link to="/" className="hover:underline text-slate-500">Beranda</Link>
           <span className="text-slate-400">/</span>
           <span>Bantuan & FAQ</span>
@@ -158,7 +158,7 @@ export function HelpPage() {
             onClick={() => setActiveCategory('semua')}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
               activeCategory === 'semua'
-                ? 'bg-slate-900 text-white'
+                ? 'bg-[#1B5040] text-white'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
@@ -169,7 +169,7 @@ export function HelpPage() {
             onClick={() => setActiveCategory('umum')}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
               activeCategory === 'umum'
-                ? 'bg-blue-600 text-white'
+                ? 'bg-[#1B5040] text-white'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
@@ -180,7 +180,7 @@ export function HelpPage() {
             onClick={() => setActiveCategory('dokumen')}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
               activeCategory === 'dokumen'
-                ? 'bg-blue-600 text-white'
+                ? 'bg-[#1B5040] text-white'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
@@ -191,7 +191,7 @@ export function HelpPage() {
             onClick={() => setActiveCategory('tracking')}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
               activeCategory === 'tracking'
-                ? 'bg-blue-600 text-white'
+                ? 'bg-[#1B5040] text-white'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
@@ -202,7 +202,7 @@ export function HelpPage() {
             onClick={() => setActiveCategory('teknis')}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
               activeCategory === 'teknis'
-                ? 'bg-blue-600 text-white'
+                ? 'bg-[#1B5040] text-white'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
@@ -250,7 +250,7 @@ export function HelpPage() {
                   aria-expanded={isExpanded}
                 >
                   <span className="text-sm sm:text-base flex items-center gap-2">
-                    <span className="text-blue-600">Q:</span> {item.question}
+                    <span className="text-[#1B5040]">Q:</span> {item.question}
                   </span>
                   {isExpanded ? (
                     <ChevronUpIcon size={20} className="text-slate-500 shrink-0" />
@@ -274,30 +274,38 @@ export function HelpPage() {
       {/* =========================================================================
           OPD PREPARATION CHECKLIST CARD
          ========================================================================= */}
-      <div className="bg-slate-900 text-white rounded-2xl p-6 sm:p-8 space-y-4">
-        <div className="flex items-center gap-2 text-blue-400 text-xs font-bold uppercase tracking-wider">
+      <div className="bg-[#0D2820] text-white rounded-2xl p-6 sm:p-8 space-y-4 border border-[#246854]">
+        <div className="flex items-center gap-2 text-[#2BD9A5] text-xs font-bold uppercase tracking-wider">
           <ShieldIcon size={16} />
           <span>Panduan Cepat PIC OPD</span>
         </div>
         <h3 className="text-xl font-bold text-white">
           Daftar Periksa Sebelum Mengajukan Permohonan
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-300 pt-2">
-          <div className="p-3 rounded-lg bg-slate-800/80 border border-slate-700 space-y-1">
-            <p className="font-bold text-white">✓ Validasi Kebutuhan</p>
-            <p>Pastikan sistem belum pernah dibangun dan benar-benar menunjang Tupoksi dinas Anda.</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-[#CAF3E4]/85 pt-2">
+          <div className="p-3.5 rounded-xl bg-[#143D31]/80 border border-[#246854] space-y-1">
+            <p className="font-bold text-white flex items-center gap-1.5">
+              <span className="text-[#2BD9A5] font-black">✓</span> Validasi Kebutuhan
+            </p>
+            <p className="leading-relaxed">Pastikan sistem belum pernah dibangun dan benar-benar menunjang Tupoksi dinas Anda.</p>
           </div>
-          <div className="p-3 rounded-lg bg-slate-800/80 border border-slate-700 space-y-1">
-            <p className="font-bold text-white">✓ Tanda Tangan Resmi</p>
-            <p>Surat pengantar wajib ditandatangani Kepala OPD / Pejabat Eselon II terkait.</p>
+          <div className="p-3.5 rounded-xl bg-[#143D31]/80 border border-[#246854] space-y-1">
+            <p className="font-bold text-white flex items-center gap-1.5">
+              <span className="text-[#2BD9A5] font-black">✓</span> Tanda Tangan Resmi
+            </p>
+            <p className="leading-relaxed">Surat pengantar wajib ditandatangani Kepala OPD / Pejabat Eselon II terkait.</p>
           </div>
-          <div className="p-3 rounded-lg bg-slate-800/80 border border-slate-700 space-y-1">
-            <p className="font-bold text-white">✓ Kelengkapan KAK</p>
-            <p>Dokumen KAK memuat ruang lingkup proses bisnis dan bagan alir yang jelas.</p>
+          <div className="p-3.5 rounded-xl bg-[#143D31]/80 border border-[#246854] space-y-1">
+            <p className="font-bold text-white flex items-center gap-1.5">
+              <span className="text-[#2BD9A5] font-black">✓</span> Kelengkapan KAK
+            </p>
+            <p className="leading-relaxed">Dokumen KAK memuat ruang lingkup proses bisnis dan bagan alir yang jelas.</p>
           </div>
-          <div className="p-3 rounded-lg bg-slate-800/80 border border-slate-700 space-y-1">
-            <p className="font-bold text-white">✓ Kesiapan Personil</p>
-            <p>PIC teknis ditugaskan siap menghadiri rapat klarifikasi teknis bersama Diskominfo.</p>
+          <div className="p-3.5 rounded-xl bg-[#143D31]/80 border border-[#246854] space-y-1">
+            <p className="font-bold text-white flex items-center gap-1.5">
+              <span className="text-[#2BD9A5] font-black">✓</span> Kesiapan Personil
+            </p>
+            <p className="leading-relaxed">PIC teknis ditugaskan siap menghadiri rapat klarifikasi teknis bersama Diskominfo.</p>
           </div>
         </div>
       </div>
@@ -305,12 +313,12 @@ export function HelpPage() {
       {/* =========================================================================
           STILL NEED HELP BANNER
          ========================================================================= */}
-      <div className="border border-blue-200 bg-blue-50/70 rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+      <div className="border border-[#98F7D9] bg-[#CAF3E4]/70 rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
         <div className="space-y-1 text-center sm:text-left">
-          <h4 className="text-base font-bold text-blue-950">
+          <h4 className="text-base font-bold text-[#000408]">
             Pertanyaan Anda Belum Terjawab di Sini?
           </h4>
-          <p className="text-xs sm:text-sm text-blue-800">
+          <p className="text-xs sm:text-sm text-[#1B5040]">
             Hubungi langsung meja layanan Helpdesk Aptika Diskominfo untuk konsultasi lebih lanjut.
           </p>
         </div>

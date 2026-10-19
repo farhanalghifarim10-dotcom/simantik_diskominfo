@@ -127,7 +127,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             } ${rightAddon ? 'pr-10' : ''} ${
               hasError
                 ? 'border-red-500 focus-visible:outline-red-600'
-                : 'border-slate-300 hover:border-slate-400 focus-visible:outline-slate-900'
+                : 'border-slate-300 hover:border-slate-400 focus-visible:outline-[#1b5040]'
             } ${className}`}
             {...props}
           />

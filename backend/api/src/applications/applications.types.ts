@@ -30,6 +30,7 @@ export interface UploadedDocumentInput {
   mime_type: string;
   size_bytes: number;
   buffer?: Buffer;
+  base64_data?: string;
 }
 
 export interface ApplicationSubmissionResult {

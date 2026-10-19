@@ -8,6 +8,7 @@ import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { SupabaseService } from '../supabase/supabase.service.js';
 import { AdminApplicationsService } from '../applications/admin-applications.service.js';
 import type {
+  ApplicationStatus,
   ExecuteStageTransitionDto,
   ExecuteTransitionDto,
 } from '../applications/workflow/workflow.types.js';
@@ -94,15 +95,38 @@ export class AssignmentsService {
         .eq('is_active', true);
 
       if (!error && data && data.length > 0) {
-        // Hitung active assignments untuk masing-masing teknisi
-        const { data: activeAssignments } = await client
+        // Hitung active assignments untuk masing-masing teknisi berdasarkan status tiket aktif
+        const { data: currentAssignments } = await client
           .from('assignments')
-          .select('technician_id')
+          .select('technician_id, application_id')
           .eq('is_current', true);
 
+        const terminalStatuses = ['COMPLETED', 'CLOSED', 'REJECTED', 'CANCELLED'];
+        const appStatusMap = new Map<string, string>();
+
+        if (currentAssignments && currentAssignments.length > 0) {
+          const appIds = [...new Set(currentAssignments.map((a: any) => a.application_id).filter(Boolean))];
+          if (appIds.length > 0) {
+            const { data: apps } = await client
+              .from('applications')
+              .select('id, current_status')
+              .in('id', appIds);
+
+            (apps || []).forEach((app: any) => {
+              appStatusMap.set(app.id, app.current_status);
+            });
+          }
+        }
+
         const countMap = new Map<string, number>();
-        (activeAssignments || []).forEach((asgn: any) => {
-          countMap.set(asgn.technician_id, (countMap.get(asgn.technician_id) || 0) + 1);
+        (currentAssignments || []).forEach((asgn: any) => {
+          const status = asgn.application_id ? appStatusMap.get(asgn.application_id) : undefined;
+          const isAppActive = appStatusMap.size === 0
+            ? true
+            : Boolean(status && !terminalStatuses.includes(status));
+          if (isAppActive) {
+            countMap.set(asgn.technician_id, (countMap.get(asgn.technician_id) || 0) + 1);
+          }
         });
 
         return data.map((t: any) => ({
@@ -120,13 +144,32 @@ export class AssignmentsService {
 
     // In-memory fallback: hitung beban kerja aktif
     const activeCountMap = new Map<string, number>();
-    for (const list of this.inMemoryAssignments.values()) {
+    const terminalStatuses = ['COMPLETED', 'CLOSED', 'REJECTED', 'CANCELLED'];
+
+    for (const [appId, list] of this.inMemoryAssignments.entries()) {
       const current = list.find((a) => a.is_current);
       if (current) {
-        activeCountMap.set(
-          current.technician_id,
-          (activeCountMap.get(current.technician_id) || 0) + 1,
-        );
+        let isAppActive = true;
+        try {
+          const app = await this.adminApplicationsService.getApplicationDetail(appId, {
+            id: 'system',
+            email: null,
+            role: 'SUPER_ADMIN',
+            fullName: 'System',
+          });
+          if (app && terminalStatuses.includes(app.current_status)) {
+            isAppActive = false;
+          }
+        } catch {
+          // Fallback if app cannot be retrieved
+        }
+
+        if (isAppActive) {
+          activeCountMap.set(
+            current.technician_id,
+            (activeCountMap.get(current.technician_id) || 0) + 1,
+          );
+        }
       }
     }
 
@@ -166,7 +209,7 @@ export class AssignmentsService {
           id: row.id,
           application_id: row.application_id,
           technician_id: row.technician_id,
-          technician_name: row.technician?.full_name || 'Teknisi TI',
+          technician_name: row.technician?.full_name || 'Tenaga Ahli TI',
           assigned_by_id: row.assigned_by,
           assigned_by_name: row.assigner?.full_name || 'Administrator',
           note: row.note,
@@ -203,16 +246,16 @@ export class AssignmentsService {
     adminUser: AuthenticatedUser,
   ): Promise<AssignmentHistoryItem> {
     if (adminUser.role !== 'SUPER_ADMIN') {
-      throw new ForbiddenException('Hanya SUPER_ADMIN yang berwenang melakukan penugasan teknisi.');
+      throw new ForbiddenException('Hanya SUPER_ADMIN yang berwenang melakukan penugasan tenaga ahli.');
     }
 
     // Validasi permohonan ada
     const app = await this.adminApplicationsService.getApplicationDetail(applicationId, adminUser);
 
-    const nonAssignableStatuses = ['REJECTED', 'CANCELLED', 'CLOSED'];
+    const nonAssignableStatuses = ['COMPLETED', 'CLOSED', 'REJECTED', 'CANCELLED'];
     if (nonAssignableStatuses.includes(app.current_status)) {
       throw new BadRequestException(
-        `Tidak dapat menugaskan teknisi pada permohonan dengan status [${app.current_status}].`,
+        `Tidak dapat menugaskan tenaga ahli pada permohonan dengan status [${app.current_status}].`,
       );
     }
 
@@ -220,7 +263,7 @@ export class AssignmentsService {
     const technicians = await this.listTechnicians();
     const technician = technicians.find((t) => t.id === dto.technician_id);
     if (!technician) {
-      throw new NotFoundException(`Teknisi dengan ID [${dto.technician_id}] tidak ditemukan atau tidak aktif.`);
+      throw new NotFoundException(`Tenaga ahli dengan ID [${dto.technician_id}] tidak ditemukan atau tidak aktif.`);
     }
 
     const now = new Date().toISOString();
@@ -333,7 +376,7 @@ export class AssignmentsService {
    * 5. Ringkasan beban kerja teknisi (Workload Summary Metrics)
    */
   async getTechnicianWorkSummary(technicianId: string): Promise<TechnicianWorkSummary> {
-    const allWork = await this.getTechnicianMyWork(technicianId, { page_size: 100 });
+    const allWork = await this.getTechnicianMyWork(technicianId, { page_size: 1000 });
     const items = allWork.items;
 
     return {
@@ -352,7 +395,13 @@ export class AssignmentsService {
     query: ListTechnicianWorkQueryDto,
   ): Promise<PaginatedTechnicianWorkResponse> {
     const page = Math.max(1, Number(query.page) || 1);
-    const pageSize = Math.max(1, Math.min(100, Number(query.page_size) || 10));
+    const pageSize = Math.max(1, Math.min(1000, Number(query.page_size) || 10));
+    const terminalStatuses: ApplicationStatus[] = [
+      'COMPLETED',
+      'CLOSED',
+      'REJECTED',
+      'CANCELLED',
+    ];
 
     try {
       const client = this.supabaseService.getClient();
@@ -378,10 +427,42 @@ export class AssignmentsService {
         .order('assigned_at', { ascending: false });
 
       if (!error && assignmentsData) {
+        // Fallback jika nested join applications tidak terselesaikan oleh PostgREST relationship cache
+        const hasJoinedApps = assignmentsData.some((row: any) => row.applications);
+        const appsMap = new Map<string, any>();
+
+        if (!hasJoinedApps && assignmentsData.length > 0) {
+          const appIds = [...new Set(assignmentsData.map((r: any) => r.application_id).filter(Boolean))];
+          if (appIds.length > 0) {
+            const { data: appsData } = await client
+              .from('applications')
+              .select(`
+                id,
+                ticket_number,
+                title,
+                current_status,
+                current_stage,
+                submitted_at,
+                services:service_id(id, code, name, type),
+                applicants:applicant_id(id, full_name, email, phone, opd_units:opd_unit_id(code, name))
+              `)
+              .in('id', appIds);
+
+            if (appsData) {
+              for (const a of appsData) {
+                appsMap.set(a.id, a);
+              }
+            }
+          }
+        }
+
         let items: TechnicianWorkItem[] = assignmentsData
-          .filter((row: any) => row.applications)
           .map((row: any) => {
-            const app = row.applications;
+            const rawApp = Array.isArray(row.applications) ? row.applications[0] : row.applications;
+            const app = rawApp || appsMap.get(row.application_id);
+            if (!app || terminalStatuses.includes(app.current_status)) {
+              return null;
+            }
             return {
               id: app.id,
               ticket_number: app.ticket_number,
@@ -406,7 +487,8 @@ export class AssignmentsService {
                 phone: app.applicants?.phone,
               },
             };
-          });
+          })
+          .filter((item): item is TechnicianWorkItem => item !== null);
 
         if (query.search && query.search.trim()) {
           const q = query.search.trim().toLowerCase();
@@ -458,14 +540,17 @@ export class AssignmentsService {
     const mockAdminUser: AuthenticatedUser = {
       id: technicianId,
       email: null,
-      role: 'TECHNICIAN',
-      fullName: 'Teknisi TI',
+      role: 'SUPER_ADMIN',
+      fullName: 'Tenaga Ahli TI',
     };
 
     const loadedItems: TechnicianWorkItem[] = [];
     for (const record of assignedAppIds) {
       try {
         const app = await this.adminApplicationsService.getApplicationDetail(record.appId, mockAdminUser);
+        if (terminalStatuses.includes(app.current_status)) {
+          continue;
+        }
         loadedItems.push({
           id: app.id,
           ticket_number: app.ticket_number,
@@ -536,7 +621,7 @@ export class AssignmentsService {
       const isAssigned = await this.checkTechnicianAuthorization(applicationId, user.id);
       if (!isAssigned) {
         throw new ForbiddenException(
-          'Akses ditolak: Anda tidak memiliki wewenang atas permohonan ini karena tidak ditugaskan sebagai teknisi penanggung jawab.',
+          'Akses ditolak: Anda tidak memiliki wewenang atas permohonan ini karena tidak ditugaskan sebagai tenaga ahli penanggung jawab.',
         );
       }
     }

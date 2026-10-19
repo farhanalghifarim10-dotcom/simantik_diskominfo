@@ -85,7 +85,7 @@ export function AdminAuditLogsPage() {
             <option value="opd_units">Perangkat Daerah (OPD)</option>
             <option value="services">Layanan TI</option>
             <option value="service_requirements">Persyaratan Layanan</option>
-            <option value="profiles">Personel Teknisi</option>
+            <option value="profiles">Personel Tenaga Ahli</option>
             <option value="assignments">Penugasan Kerja</option>
             <option value="applications">Permohonan Aplikasi</option>
           </Select>

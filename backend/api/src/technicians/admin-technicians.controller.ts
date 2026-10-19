@@ -65,10 +65,10 @@ export class AdminTechniciansController {
     @Req() req: AuthenticatedRequest,
   ) {
     if (!body.full_name || typeof body.full_name !== 'string') {
-      throw new BadRequestException('Nama lengkap teknisi wajib diisi.');
+      throw new BadRequestException('Nama lengkap tenaga ahli wajib diisi.');
     }
     if (!body.email || typeof body.email !== 'string') {
-      throw new BadRequestException('Alamat email teknisi wajib diisi.');
+      throw new BadRequestException('Alamat email tenaga ahli wajib diisi.');
     }
 
     const dto: CreateTechnicianDto = {
@@ -82,7 +82,7 @@ export class AdminTechniciansController {
     return {
       success: true,
       data,
-      message: `Akun teknisi "${data.full_name}" berhasil didaftarkan.`,
+      message: `Akun tenaga ahli "${data.full_name}" berhasil didaftarkan.`,
     };
   }
 
@@ -103,7 +103,7 @@ export class AdminTechniciansController {
     return {
       success: true,
       data,
-      message: `Data teknisi "${data.full_name}" berhasil diperbarui.`,
+      message: `Data tenaga ahli "${data.full_name}" berhasil diperbarui.`,
     };
   }
 
@@ -127,8 +127,8 @@ export class AdminTechniciansController {
       success: true,
       data,
       message: data.is_active
-        ? `Akun teknisi "${data.full_name}" telah diaktifkan kembali.`
-        : `Akun teknisi "${data.full_name}" telah dinonaktifkan (seluruh arsip & penugasan tetap aman).`,
+        ? `Akun tenaga ahli "${data.full_name}" telah diaktifkan kembali.`
+        : `Akun tenaga ahli "${data.full_name}" telah dinonaktifkan (seluruh arsip & penugasan tetap aman).`,
     };
   }
 }

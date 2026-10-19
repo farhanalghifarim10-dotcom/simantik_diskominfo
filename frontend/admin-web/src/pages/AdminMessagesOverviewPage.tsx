@@ -124,10 +124,10 @@ export function AdminMessagesOverviewPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="flex h-6 w-6 items-center justify-center rounded-md bg-blue-50 text-blue-700">
+            <span className="flex h-6 w-6 items-center justify-center rounded-md bg-[#CAF3E4] text-[#1B5040]">
               <MessageSquareIcon size={14} />
             </span>
-            <span className="text-xs font-semibold text-blue-700 uppercase tracking-wider">
+            <span className="text-xs font-semibold text-[#1B5040] uppercase tracking-wider">
               Pusat Komunikasi & Helpdesk
             </span>
           </div>
@@ -151,7 +151,7 @@ export function AdminMessagesOverviewPage() {
           onClick={() => handleTabChange('tickets')}
           className={`pb-3 text-xs sm:text-sm font-bold border-b-2 transition-all flex items-center gap-2 ${
             activeTab === 'tickets'
-              ? 'border-blue-600 text-blue-700'
+              ? 'border-[#1B5040] text-[#1B5040]'
               : 'border-transparent text-slate-500 hover:text-slate-900'
           }`}
         >
@@ -167,7 +167,7 @@ export function AdminMessagesOverviewPage() {
           onClick={() => handleTabChange('consultations')}
           className={`pb-3 text-xs sm:text-sm font-bold border-b-2 transition-all flex items-center gap-2 ${
             activeTab === 'consultations'
-              ? 'border-blue-600 text-blue-700'
+              ? 'border-[#1B5040] text-[#1B5040]'
               : 'border-transparent text-slate-500 hover:text-slate-900'
           }`}
         >
@@ -240,7 +240,7 @@ export function AdminMessagesOverviewPage() {
                 return (
                   <div
                     key={app.id}
-                    className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-blue-200 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                    className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-[#98F7D9] transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                   >
                     <div className="space-y-1.5 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
@@ -369,7 +369,7 @@ export function AdminMessagesOverviewPage() {
                     key={item.id}
                     className={`p-6 rounded-2xl border transition-all space-y-4 ${
                       isUnread
-                        ? 'bg-blue-50/40 border-blue-200 shadow-xs'
+                        ? 'bg-[#CAF3E4]/30 border-[#98F7D9] shadow-xs'
                         : 'bg-white border-slate-200'
                     }`}
                   >
@@ -401,7 +401,7 @@ export function AdminMessagesOverviewPage() {
                             size="sm"
                             onClick={() => handleMarkConsultationRead(item.id)}
                             disabled={markConsultationReadMutation.isPending}
-                            className="text-xs text-blue-700 hover:text-blue-900 border-blue-200"
+                            className="text-xs text-[#1B5040] hover:text-[#000408] border-[#98F7D9]"
                           >
                             <CheckCircleIcon size={14} className="mr-1" />
                             Tandai Dibaca

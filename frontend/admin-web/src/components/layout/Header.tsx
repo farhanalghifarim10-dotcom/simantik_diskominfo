@@ -78,7 +78,7 @@ export function Header({ onOpenMobile }: HeaderProps) {
         >
           <BellIcon size={18} />
           {unreadCount > 0 && (
-            <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-sky-600 px-1 text-[10px] font-bold text-white ring-2 ring-white">
+            <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#1B5040] px-1 text-[10px] font-bold text-white ring-2 ring-white">
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}
@@ -89,7 +89,7 @@ export function Header({ onOpenMobile }: HeaderProps) {
           align="right"
           trigger={
             <div className="flex items-center gap-2.5 rounded-lg p-1.5 hover:bg-slate-50 transition-colors cursor-pointer select-none">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 font-semibold text-xs text-white">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1B5040] font-semibold text-xs text-white">
                 {user.fullName.charAt(0).toUpperCase()}
               </div>
 
@@ -98,7 +98,7 @@ export function Header({ onOpenMobile }: HeaderProps) {
                   {user.fullName}
                 </span>
                 <span className="text-[10px] text-slate-500 font-medium leading-tight">
-                  {user.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Teknisi'}
+                  {user.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Tenaga Ahli'}
                 </span>
               </div>
             </div>
@@ -114,7 +114,7 @@ export function Header({ onOpenMobile }: HeaderProps) {
                 variant={user.role === 'SUPER_ADMIN' ? 'primary' : 'secondary'}
                 size="sm"
               >
-                {user.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Teknisi'}
+                {user.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Tenaga Ahli'}
               </Badge>
             </div>
           </div>

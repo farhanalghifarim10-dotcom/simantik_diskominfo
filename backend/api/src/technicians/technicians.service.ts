@@ -106,7 +106,7 @@ export class TechniciansService {
         );
         if (!isExplicitFallbackAllowed) {
           throw new InternalServerErrorException(
-            'Gagal memuat daftar teknisi dari basis data. Silakan coba beberapa saat lagi.',
+            'Gagal memuat daftar tenaga ahli dari basis data. Silakan coba beberapa saat lagi.',
           );
         }
       } else if (data !== null && data !== undefined) {
@@ -119,7 +119,7 @@ export class TechniciansService {
         // Ambil data penugasan aktual untuk menghitung beban kerja teknisi
         const { data: assignments, error: assignmentsError } = await client
           .from('assignments')
-          .select('technician_id, is_current');
+          .select('technician_id, application_id, is_current');
 
         if (assignmentsError) {
           this.logger.warn(
@@ -127,12 +127,33 @@ export class TechniciansService {
           );
         }
 
+        const terminalStatuses = ['COMPLETED', 'CLOSED', 'REJECTED', 'CANCELLED'];
+        const appStatusMap = new Map<string, string>();
+
+        if (assignments && assignments.length > 0) {
+          const appIds = [...new Set(assignments.map((a: any) => a.application_id).filter(Boolean))];
+          if (appIds.length > 0) {
+            const { data: apps } = await client
+              .from('applications')
+              .select('id, current_status')
+              .in('id', appIds);
+
+            (apps || []).forEach((app: any) => {
+              appStatusMap.set(app.id, app.current_status);
+            });
+          }
+        }
+
         const activeCount = new Map<string, number>();
         const totalCount = new Map<string, number>();
 
         (assignments || []).forEach((a: any) => {
           totalCount.set(a.technician_id, (totalCount.get(a.technician_id) || 0) + 1);
-          if (a.is_current) {
+          const status = a.application_id ? appStatusMap.get(a.application_id) : undefined;
+          const isAppActive = appStatusMap.size === 0
+            ? true
+            : Boolean(status && !terminalStatuses.includes(status));
+          if (a.is_current && isAppActive) {
             activeCount.set(a.technician_id, (activeCount.get(a.technician_id) || 0) + 1);
           }
         });
@@ -171,7 +192,7 @@ export class TechniciansService {
       );
       if (!isExplicitFallbackAllowed) {
         throw new InternalServerErrorException(
-          'Gagal memuat daftar teknisi dari basis data. Silakan coba beberapa saat lagi.',
+          'Gagal memuat daftar tenaga ahli dari basis data. Silakan coba beberapa saat lagi.',
         );
       }
     }
@@ -218,7 +239,7 @@ export class TechniciansService {
         );
         if (!isExplicitFallbackAllowed) {
           throw new InternalServerErrorException(
-            'Gagal memuat data detail teknisi dari basis data. Silakan coba beberapa saat lagi.',
+            'Gagal memuat data detail tenaga ahli dari basis data. Silakan coba beberapa saat lagi.',
           );
         }
       } else if (profile) {
@@ -226,7 +247,7 @@ export class TechniciansService {
           .from('assignments')
           .select(`
             id, application_id, is_current, assigned_at,
-            applications:application_id ( ticket_number, title )
+            applications:application_id ( ticket_number, title, current_status )
           `)
           .eq('technician_id', id)
           .order('assigned_at', { ascending: false });
@@ -237,16 +258,20 @@ export class TechniciansService {
           );
         }
 
+        const terminalStatuses = ['COMPLETED', 'CLOSED', 'REJECTED', 'CANCELLED'];
         const mappedAssignments = (assignments || []).map((a: any) => ({
           id: a.id,
           application_id: a.application_id,
           ticket_number: a.applications?.ticket_number || 'SIM-TICKET',
           title: a.applications?.title || 'Permohonan',
+          current_status: a.applications?.current_status || null,
           is_current: a.is_current,
           assigned_at: a.assigned_at,
         }));
 
-        const activeCount = mappedAssignments.filter((a) => a.is_current).length;
+        const activeCount = mappedAssignments.filter(
+          (a) => a.is_current && a.current_status && !terminalStatuses.includes(a.current_status),
+        ).length;
 
         return {
           id: profile.id,
@@ -263,7 +288,7 @@ export class TechniciansService {
       } else {
         // Query berhasil tetapi profil tidak ditemukan di database
         if (!isExplicitFallbackAllowed) {
-          throw new NotFoundException(`Profil teknisi dengan ID "${id}" tidak ditemukan.`);
+          throw new NotFoundException(`Profil tenaga ahli dengan ID "${id}" tidak ditemukan.`);
         }
       }
     } catch (err) {
@@ -279,18 +304,18 @@ export class TechniciansService {
       );
       if (!isExplicitFallbackAllowed) {
         throw new InternalServerErrorException(
-          'Gagal memuat data detail teknisi dari basis data. Silakan coba beberapa saat lagi.',
+          'Gagal memuat data detail tenaga ahli dari basis data. Silakan coba beberapa saat lagi.',
         );
       }
     }
 
     if (!isExplicitFallbackAllowed) {
-      throw new NotFoundException(`Profil teknisi dengan ID "${id}" tidak ditemukan.`);
+      throw new NotFoundException(`Profil tenaga ahli dengan ID "${id}" tidak ditemukan.`);
     }
 
     const found = this.inMemoryTechnicians.find((t) => t.id === id);
     if (!found) {
-      throw new NotFoundException(`Profil teknisi dengan ID "${id}" tidak ditemukan.`);
+      throw new NotFoundException(`Profil tenaga ahli dengan ID "${id}" tidak ditemukan.`);
     }
 
     return {
@@ -320,7 +345,7 @@ export class TechniciansService {
     const email = dto.email.trim().toLowerCase();
 
     if (!fullName) {
-      throw new BadRequestException('Nama lengkap teknisi wajib diisi.');
+      throw new BadRequestException('Nama lengkap tenaga ahli wajib diisi.');
     }
     if (!email || !email.includes('@')) {
       throw new BadRequestException('Alamat email valid wajib diisi.');

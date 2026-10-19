@@ -62,7 +62,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             className={`w-full h-10 appearance-none rounded-md border bg-white px-3.5 pr-10 text-sm text-slate-900 transition-colors duration-150 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 focus-visible:outline-2 focus-visible:outline-offset-2 ${
               hasError
                 ? 'border-red-500 focus-visible:outline-red-600'
-                : 'border-slate-300 hover:border-slate-400 focus-visible:outline-slate-900'
+                : 'border-slate-300 hover:border-slate-400 focus-visible:outline-[#1b5040]'
             } ${className}`}
             {...props}
           >
