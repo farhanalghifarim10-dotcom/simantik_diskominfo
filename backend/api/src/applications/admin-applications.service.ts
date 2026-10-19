@@ -13,6 +13,7 @@ import { WorkflowEngine } from './workflow/workflow.engine.js';
 import { TrackingService } from '../tracking/tracking.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import type {
+  ApplicationStatus,
   ExecuteStageTransitionDto,
   ExecuteTransitionDto,
 } from './workflow/workflow.types.js';
@@ -1029,10 +1030,10 @@ export class AdminApplicationsService {
       );
     }
 
-    // 2. Validasi input alasan
-    if (!dto || typeof dto.reason !== 'string' || dto.reason.trim().length < 5) {
+    // 2. Validasi input alasan (minimal 10 karakter setelah trim, selaras dengan modal Web Admin)
+    if (!dto || typeof dto.reason !== 'string' || dto.reason.trim().length < 10) {
       throw new BadRequestException(
-        'Alasan penerbitan ulang kode pelacakan wajib diisi (minimal 5 karakter).',
+        'Alasan penerbitan ulang kode pelacakan wajib diisi (minimal 10 karakter).',
       );
     }
 
@@ -1042,7 +1043,9 @@ export class AdminApplicationsService {
     // 3. Cari aplikasi target
     let targetAppId: string | null = null;
     let targetTicketNumber: string | null = null;
+    let targetStatus: ApplicationStatus | null = null;
     let oldHash: string | null = null;
+    let foundInDb = false;
 
     try {
       const client = this.supabaseService.getClient();
@@ -1050,7 +1053,9 @@ export class AdminApplicationsService {
         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
           idOrTicket,
         );
-      let query = client.from('applications').select('id, ticket_number, tracking_code_hash');
+      let query = client
+        .from('applications')
+        .select('id, ticket_number, current_status, tracking_code_hash');
       if (isUuid) {
         query = query.eq('id', idOrTicket);
       } else {
@@ -1060,14 +1065,16 @@ export class AdminApplicationsService {
       if (!error && data) {
         targetAppId = data.id;
         targetTicketNumber = data.ticket_number;
+        targetStatus = (data.current_status as ApplicationStatus) || null;
         oldHash = data.tracking_code_hash || null;
+        foundInDb = true;
       }
     } catch {
       // Supabase tidak tersedia, gunakan in-memory fallback
     }
 
-    // Fallback in-memory
-    if (!targetAppId || !targetTicketNumber) {
+    // Fallback in-memory jika data tidak ditemukan di database
+    if (!foundInDb && (!targetAppId || !targetTicketNumber)) {
       const inMem =
         this.inMemoryRecords.get(idOrTicket) ||
         Array.from(this.inMemoryRecords.values()).find(
@@ -1077,6 +1084,7 @@ export class AdminApplicationsService {
       if (inMem) {
         targetAppId = inMem.detail.id;
         targetTicketNumber = inMem.detail.ticket_number;
+        targetStatus = inMem.detail.current_status || null;
         if (!oldHash) {
           oldHash = inMem.tracking_code_hash || null;
         }
@@ -1089,18 +1097,53 @@ export class AdminApplicationsService {
       );
     }
 
+    // 4. Validasi status permohonan resmi dan non-terminal
+    // Penerbitan ulang hanya dapat dilanjutkan apabila status permohonan berhasil
+    // dibaca dan dikenali sebagai status nonterminal yang valid.
+    const validNonTerminalStatuses: ApplicationStatus[] = [
+      'SUBMITTED',
+      'VERIFICATION',
+      'REVISION_REQUIRED',
+      'APPROVED',
+      'IN_PROGRESS',
+    ];
+    const terminalStatuses: ApplicationStatus[] = [
+      'COMPLETED',
+      'CLOSED',
+      'REJECTED',
+      'CANCELLED',
+    ];
+
+    if (!targetStatus) {
+      throw new BadRequestException(
+        `Status permohonan dengan nomor tiket [${targetTicketNumber}] tidak tersedia atau tidak dapat dibaca.`,
+      );
+    }
+
+    if (terminalStatuses.includes(targetStatus)) {
+      throw new BadRequestException(
+        `Kode pelacakan tidak dapat diterbitkan ulang untuk permohonan dengan nomor tiket [${targetTicketNumber}] karena telah berstatus terminal [${targetStatus}].`,
+      );
+    }
+
+    if (!validNonTerminalStatuses.includes(targetStatus)) {
+      throw new BadRequestException(
+        `Status permohonan [${targetStatus}] dengan nomor tiket [${targetTicketNumber}] tidak dikenal atau tidak valid dalam alur kerja SIMANTIK.`,
+      );
+    }
+
     // Pastikan hash lama tercatat dari in-memory jika belum terisi dari DB
     const memRecord = this.inMemoryRecords.get(targetAppId);
     if (!oldHash && memRecord?.tracking_code_hash) {
       oldHash = memRecord.tracking_code_hash;
     }
 
-    // 4. Generate kode pelacakan baru dengan 128-bit keacakan kriptografis (16 bytes = 32 hex chars)
+    // 5. Generate kode pelacakan baru dengan 128-bit keacakan kriptografis (16 bytes = 32 hex chars)
     const randomHex = crypto.randomBytes(16).toString('hex').toUpperCase();
     const newTrackingCode = `TRK-${randomHex}`;
     const newHash = crypto.createHash('sha256').update(newTrackingCode).digest('hex');
 
-    // 5. Perbarui database secara atomik via PostgreSQL RPC (reissue_tracking_code_atomic)
+    // 6. Perbarui database secara atomik via PostgreSQL RPC (reissue_tracking_code_atomic)
     // KEBIJAKAN KEAMANAN KETAT:
     // Tidak ada fallback dua-tahap non-atomik. Jika RPC tidak tersedia atau gagal dieksekusi,
     // operasi dibatalkan seketika dan tidak melakukan update hash melalui jalur alternatif.

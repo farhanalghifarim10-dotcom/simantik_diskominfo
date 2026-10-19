@@ -15,6 +15,7 @@ import { TrackingService } from '../tracking/tracking.service.js';
 import { TrackingTokenService } from '../tracking/tracking-token.service.js';
 import { TrackingRateLimiter } from '../tracking/tracking-rate-limiter.js';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
+import type { ApplicationStatus } from './workflow/workflow.types.js';
 
 describe('Admin Applications & Workflow Transition Engine', () => {
   let workflowEngine: WorkflowEngine;
@@ -510,7 +511,7 @@ describe('Admin Applications & Workflow Transition Engine', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('2. Validasi: harus menolak alasan kosong atau kurang dari 5 karakter dengan BadRequestException', async () => {
+    it('2. Validasi: harus menolak alasan kosong, spasi saja, atau kurang dari 10 karakter dengan BadRequestException, serta menerima >= 10 karakter', async () => {
       // Alasan kosong
       await expect(
         adminService.reissueTrackingCode(targetAppId, { reason: '' }, superAdminUser),
@@ -518,18 +519,44 @@ describe('Admin Applications & Workflow Transition Engine', () => {
 
       // Alasan hanya spasi
       await expect(
-        adminService.reissueTrackingCode(targetAppId, { reason: '    ' }, superAdminUser),
+        adminService.reissueTrackingCode(targetAppId, { reason: '          ' }, superAdminUser),
       ).rejects.toThrow(BadRequestException);
 
-      // Alasan kurang dari 5 karakter
+      // Alasan kurang dari 10 karakter (3 karakter)
       await expect(
         adminService.reissueTrackingCode(targetAppId, { reason: 'abc' }, superAdminUser),
+      ).rejects.toThrow(BadRequestException);
+
+      // Alasan 9 karakter (tepat di bawah batas minimal)
+      await expect(
+        adminService.reissueTrackingCode(targetAppId, { reason: '123456789' }, superAdminUser),
+      ).rejects.toThrow(BadRequestException);
+
+      // Alasan dengan padding spasi namun isi trimmed kurang dari 10 karakter
+      await expect(
+        adminService.reissueTrackingCode(targetAppId, { reason: '   123456789   ' }, superAdminUser),
       ).rejects.toThrow(BadRequestException);
 
       // DTO null/undefined
       await expect(
         adminService.reissueTrackingCode(targetAppId, null as any, superAdminUser),
       ).rejects.toThrow(BadRequestException);
+
+      // Alasan tepat 10 karakter setelah trim diterima
+      const validTen = await adminService.reissueTrackingCode(
+        targetAppId,
+        { reason: '1234567890' },
+        superAdminUser,
+      );
+      expect(validTen.tracking_code).toBeDefined();
+
+      // Alasan dengan spasi di awal/akhir tapi >= 10 karakter setelah trim diterima
+      const validTrimmed = await adminService.reissueTrackingCode(
+        targetAppId,
+        { reason: '   1234567890   ' },
+        superAdminUser,
+      );
+      expect(validTrimmed.tracking_code).toBeDefined();
     });
 
     it('3. Validasi: harus menolak ID atau tiket yang tidak terdaftar dengan NotFoundException', async () => {
@@ -712,6 +739,7 @@ describe('Admin Applications & Workflow Transition Engine', () => {
                   id: targetAppId,
                   ticket_number: targetTicketNumber,
                   tracking_code_hash: initialDbHash,
+                  current_status: 'SUBMITTED',
                 },
                 error: null,
               }),
@@ -781,6 +809,7 @@ describe('Admin Applications & Workflow Transition Engine', () => {
                   id: targetAppId,
                   ticket_number: targetTicketNumber,
                   tracking_code_hash: initialDbHash,
+                  current_status: 'SUBMITTED',
                 },
                 error: null,
               }),
@@ -847,6 +876,7 @@ describe('Admin Applications & Workflow Transition Engine', () => {
                   id: targetAppId,
                   ticket_number: targetTicketNumber,
                   tracking_code_hash: crypto.createHash('sha256').update('TRK-A1B2C3D4').digest('hex'),
+                  current_status: 'SUBMITTED',
                 },
                 error: null,
               }),
@@ -909,6 +939,7 @@ describe('Admin Applications & Workflow Transition Engine', () => {
                   id: targetAppId,
                   ticket_number: targetTicketNumber,
                   tracking_code_hash: crypto.createHash('sha256').update('TRK-A1B2C3D4').digest('hex'),
+                  current_status: 'SUBMITTED',
                 },
                 error: null,
               }),
@@ -981,6 +1012,284 @@ describe('Admin Applications & Workflow Transition Engine', () => {
           unauthorizedUser,
         ),
       ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('14. Validasi Status Terminal: harus menolak penerbitan ulang untuk permohonan berstatus terminal dan memastikan RPC tidak dipanggil', async () => {
+      const terminalStatuses: ApplicationStatus[] = ['COMPLETED', 'CLOSED', 'REJECTED', 'CANCELLED'];
+
+      for (const terminalStatus of terminalStatuses) {
+        const rpcSpy = vi.fn().mockResolvedValue({
+          data: { application_id: targetAppId, audit_id: 'mock-audit-id' },
+          error: null,
+        });
+
+        const mockDb = {
+          getClient: () => ({
+            from: () => {
+              const queryBuilder: any = {
+                eq: () => queryBuilder,
+                ilike: () => queryBuilder,
+                maybeSingle: async () => ({
+                  data: {
+                    id: targetAppId,
+                    ticket_number: targetTicketNumber,
+                    tracking_code_hash: crypto.createHash('sha256').update('TRK-A1B2C3D4').digest('hex'),
+                    current_status: terminalStatus,
+                  },
+                  error: null,
+                }),
+              };
+              return {
+                select: () => queryBuilder,
+              };
+            },
+            rpc: rpcSpy,
+          }),
+        } as any;
+
+        const mockConfigService = {
+          get: (k: string) => (k === 'jwt.secret' ? 'test-secret-key-for-tracking-service-test' : null),
+        } as unknown as ConfigService;
+        const tokenService = new TrackingTokenService(mockConfigService);
+        const rateLimiter = new TrackingRateLimiter();
+        const trackingService = new TrackingService(mockDb, tokenService, rateLimiter);
+
+        const service = new AdminApplicationsService(
+          mockDb,
+          workflowEngine,
+          trackingService,
+        );
+
+        await expect(
+          service.reissueTrackingCode(
+            targetAppId,
+            { reason: 'Permohonan kode tiket yang statusnya terminal' },
+            superAdminUser,
+          ),
+        ).rejects.toThrow(
+          new BadRequestException(
+            `Kode pelacakan tidak dapat diterbitkan ulang untuk permohonan dengan nomor tiket [${targetTicketNumber}] karena telah berstatus terminal [${terminalStatus}].`,
+          ),
+        );
+
+        // Pastikan RPC sama sekali TIDAK dipanggil ketika berstatus terminal
+        expect(rpcSpy).not.toHaveBeenCalled();
+      }
+
+      // Pengujian penolakan status terminal pada fallback in-memory records
+      const initialSeedRecord = (adminService as any).inMemoryRecords.get(targetAppId);
+      expect(initialSeedRecord).toBeDefined();
+
+      for (const terminalStatus of terminalStatuses) {
+        if (initialSeedRecord) {
+          initialSeedRecord.detail.current_status = terminalStatus;
+        }
+
+        await expect(
+          adminService.reissueTrackingCode(
+            targetAppId,
+            { reason: 'Alasan penerbitan ulang terverifikasi resmi' },
+            superAdminUser,
+          ),
+        ).rejects.toThrow(
+          new BadRequestException(
+            `Kode pelacakan tidak dapat diterbitkan ulang untuk permohonan dengan nomor tiket [${targetTicketNumber}] karena telah berstatus terminal [${terminalStatus}].`,
+          ),
+        );
+      }
+
+      // Kembalikan status in-memory record ke SUBMITTED
+      if (initialSeedRecord) {
+        initialSeedRecord.detail.current_status = 'SUBMITTED';
+      }
+    });
+
+    it('15. Validasi Status Tidak Tersedia dan Tidak Dikenal: harus menolak jika status kosong/tidak tersedia atau tidak dikenal, serta memastikan RPC tidak dipanggil', async () => {
+      // 1. Status kosong / tidak tersedia (null / undefined / '')
+      const missingStatuses = [null, undefined, ''];
+
+      for (const missingStatus of missingStatuses) {
+        const rpcSpy = vi.fn().mockResolvedValue({
+          data: { application_id: targetAppId, audit_id: 'mock-audit-id' },
+          error: null,
+        });
+
+        const mockDb = {
+          getClient: () => ({
+            from: () => {
+              const queryBuilder: any = {
+                eq: () => queryBuilder,
+                ilike: () => queryBuilder,
+                maybeSingle: async () => ({
+                  data: {
+                    id: targetAppId,
+                    ticket_number: targetTicketNumber,
+                    tracking_code_hash: crypto.createHash('sha256').update('TRK-A1B2C3D4').digest('hex'),
+                    current_status: missingStatus,
+                  },
+                  error: null,
+                }),
+              };
+              return {
+                select: () => queryBuilder,
+              };
+            },
+            rpc: rpcSpy,
+          }),
+        } as any;
+
+        const mockConfigService = {
+          get: (k: string) => (k === 'jwt.secret' ? 'test-secret-key-for-tracking-service-test' : null),
+        } as unknown as ConfigService;
+        const tokenService = new TrackingTokenService(mockConfigService);
+        const rateLimiter = new TrackingRateLimiter();
+        const trackingService = new TrackingService(mockDb, tokenService, rateLimiter);
+
+        const service = new AdminApplicationsService(
+          mockDb,
+          workflowEngine,
+          trackingService,
+        );
+
+        await expect(
+          service.reissueTrackingCode(
+            targetAppId,
+            { reason: 'Permohonan kode tiket tanpa status' },
+            superAdminUser,
+          ),
+        ).rejects.toThrow(
+          new BadRequestException(
+            `Status permohonan dengan nomor tiket [${targetTicketNumber}] tidak tersedia atau tidak dapat dibaca.`,
+          ),
+        );
+
+        // Pastikan RPC sama sekali TIDAK dipanggil saat status tidak tersedia
+        expect(rpcSpy).not.toHaveBeenCalled();
+      }
+
+      // 2. Status tidak dikenal / tidak valid (misal: 'UNKNOWN', 'INVALID_STATUS', 'DRAFT')
+      const unknownStatuses = ['UNKNOWN', 'INVALID_STATUS', 'DRAFT', 'ARCHIVED'];
+
+      for (const unknownStatus of unknownStatuses) {
+        const rpcSpy = vi.fn().mockResolvedValue({
+          data: { application_id: targetAppId, audit_id: 'mock-audit-id' },
+          error: null,
+        });
+
+        const mockDb = {
+          getClient: () => ({
+            from: () => {
+              const queryBuilder: any = {
+                eq: () => queryBuilder,
+                ilike: () => queryBuilder,
+                maybeSingle: async () => ({
+                  data: {
+                    id: targetAppId,
+                    ticket_number: targetTicketNumber,
+                    tracking_code_hash: crypto.createHash('sha256').update('TRK-A1B2C3D4').digest('hex'),
+                    current_status: unknownStatus,
+                  },
+                  error: null,
+                }),
+              };
+              return {
+                select: () => queryBuilder,
+              };
+            },
+            rpc: rpcSpy,
+          }),
+        } as any;
+
+        const mockConfigService = {
+          get: (k: string) => (k === 'jwt.secret' ? 'test-secret-key-for-tracking-service-test' : null),
+        } as unknown as ConfigService;
+        const tokenService = new TrackingTokenService(mockConfigService);
+        const rateLimiter = new TrackingRateLimiter();
+        const trackingService = new TrackingService(mockDb, tokenService, rateLimiter);
+
+        const service = new AdminApplicationsService(
+          mockDb,
+          workflowEngine,
+          trackingService,
+        );
+
+        await expect(
+          service.reissueTrackingCode(
+            targetAppId,
+            { reason: 'Permohonan kode tiket dengan status tidak valid' },
+            superAdminUser,
+          ),
+        ).rejects.toThrow(
+          new BadRequestException(
+            `Status permohonan [${unknownStatus}] dengan nomor tiket [${targetTicketNumber}] tidak dikenal atau tidak valid dalam alur kerja SIMANTIK.`,
+          ),
+        );
+
+        // Pastikan RPC sama sekali TIDAK dipanggil saat status tidak dikenal
+        expect(rpcSpy).not.toHaveBeenCalled();
+      }
+
+      // 3. Verifikasi seluruh status non-terminal yang valid berhasil diproses
+      const validNonTerminalStatuses: ApplicationStatus[] = [
+        'SUBMITTED',
+        'VERIFICATION',
+        'REVISION_REQUIRED',
+        'APPROVED',
+        'IN_PROGRESS',
+      ];
+
+      for (const validStatus of validNonTerminalStatuses) {
+        const rpcSpy = vi.fn().mockResolvedValue({
+          data: { application_id: targetAppId, audit_id: 'mock-audit-id' },
+          error: null,
+        });
+
+        const mockDb = {
+          getClient: () => ({
+            from: () => {
+              const queryBuilder: any = {
+                eq: () => queryBuilder,
+                ilike: () => queryBuilder,
+                maybeSingle: async () => ({
+                  data: {
+                    id: targetAppId,
+                    ticket_number: targetTicketNumber,
+                    tracking_code_hash: crypto.createHash('sha256').update('TRK-A1B2C3D4').digest('hex'),
+                    current_status: validStatus,
+                  },
+                  error: null,
+                }),
+              };
+              return {
+                select: () => queryBuilder,
+              };
+            },
+            rpc: rpcSpy,
+          }),
+        } as any;
+
+        const mockConfigService = {
+          get: (k: string) => (k === 'jwt.secret' ? 'test-secret-key-for-tracking-service-test' : null),
+        } as unknown as ConfigService;
+        const tokenService = new TrackingTokenService(mockConfigService);
+        const rateLimiter = new TrackingRateLimiter();
+        const trackingService = new TrackingService(mockDb, tokenService, rateLimiter);
+
+        const service = new AdminApplicationsService(
+          mockDb,
+          workflowEngine,
+          trackingService,
+        );
+
+        const res = await service.reissueTrackingCode(
+          targetAppId,
+          { reason: `Permohonan kode tiket status valid ${validStatus}` },
+          superAdminUser,
+        );
+
+        expect(res.tracking_code).toBeDefined();
+        expect(rpcSpy).toHaveBeenCalledTimes(1);
+      }
     });
   });
 });
