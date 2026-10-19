@@ -37,7 +37,7 @@ type AuthenticatedRequest = Request & {
   user: AuthenticatedUser;
 };
 
-@Controller('api/v1/applications/:id/lifecycle')
+@Controller('applications/:id/lifecycle')
 @UseGuards(AuthGuard, RolesGuard)
 @Roles('SUPER_ADMIN', 'TECHNICIAN')
 export class LifecycleController {

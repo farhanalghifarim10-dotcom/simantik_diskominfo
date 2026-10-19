@@ -17,3 +17,7 @@ coverage/
 # Python cache
 __pycache__/
 *.pyc
+
+# Operational & UAT scratch scripts
+supabase/simantik_comprehensive_reset_*.sql
+backend/api/src/scripts/*_backup.*

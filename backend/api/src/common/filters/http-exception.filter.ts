@@ -36,6 +36,15 @@ export class HttpExceptionFilter implements ExceptionFilter {
         errorMessage = exception.message;
         errorCode = this.resolveErrorCode(statusCode);
       }
+    } else if (
+      (exception as any)?.status === 413 ||
+      (exception as any)?.statusCode === 413 ||
+      (exception as any)?.type === 'entity.too.large'
+    ) {
+      statusCode = HttpStatus.PAYLOAD_TOO_LARGE;
+      errorCode = 'PAYLOAD_TOO_LARGE';
+      errorMessage =
+        'Ukuran total dokumen yang diunggah melebihi batas maksimum peladen (maksimal 50 MB). Harap perkecil atau kompres berkas Anda.';
     } else {
       // Uncaught / Internal / Database driver errors
       // Log the real error on the server side only - NEVER leak details to client

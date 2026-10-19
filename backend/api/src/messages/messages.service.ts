@@ -158,6 +158,26 @@ export class MessagesService {
     }
 
     const appId = session.application_id;
+
+    // Periksa apakah tiket permohonan telah ditutup
+    try {
+      const client = this.supabaseService.getClient();
+      const { data: appData } = await client
+        .from('applications')
+        .select('current_status')
+        .eq('id', appId)
+        .maybeSingle();
+      if (appData && appData.current_status === 'CLOSED') {
+        throw new ForbiddenException({
+          statusCode: 403,
+          code: 'TICKET_CLOSED',
+          message: 'Ruang komunikasi dinonaktifkan karena tiket telah resmi ditutup.',
+        });
+      }
+    } catch (err) {
+      if (err instanceof ForbiddenException) throw err;
+    }
+
     const now = new Date().toISOString();
     const id = crypto.randomUUID();
 
@@ -271,7 +291,7 @@ export class MessagesService {
       application_id: applicationId,
       sender_type: senderType,
       sender_profile_id: user.id,
-      sender_name: user.fullName || (user.role === 'SUPER_ADMIN' ? 'Admin Diskominfo' : 'Teknisi SPBE'),
+      sender_name: user.fullName || (user.role === 'SUPER_ADMIN' ? 'Admin Diskominfo' : 'Tenaga Ahli SPBE'),
       sender_email: user.email,
       visibility,
       message: messageText,

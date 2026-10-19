@@ -151,3 +151,15 @@ export interface DashboardStatsResponse {
   total: number;
   completed_closed: number;
 }
+
+export interface ReissueTrackingCodeDto {
+  reason: string;
+}
+
+export interface ReissueTrackingCodeResult {
+  application_id: string;
+  ticket_number: string;
+  tracking_code: string;
+  reissued_at: string;
+  message: string;
+}

@@ -20,7 +20,10 @@ import type {
   ExecuteTransitionDto,
   RequestRevisionDto,
 } from './workflow/workflow.types.js';
-import type { ListApplicationsQueryDto } from './admin-applications.types.js';
+import type {
+  ListApplicationsQueryDto,
+  ReissueTrackingCodeDto,
+} from './admin-applications.types.js';
 
 type AuthenticatedRequest = Request & {
   user: AuthenticatedUser;
@@ -273,6 +276,31 @@ export class AdminApplicationsController {
     return {
       success: true,
       data: result,
+    };
+  }
+
+  /**
+   * POST /api/v1/admin/applications/:id/reissue-tracking-code
+   * Menerbitkan ulang kode pelacakan untuk permohonan yang sudah ada.
+   * Hanya dapat diakses oleh SUPER_ADMIN setelah proses verifikasi identitas pemohon.
+   * Kode baru ditampilkan hanya satu kali dalam respons agar dapat disampaikan via kanal resmi.
+   */
+  @Post(':id/reissue-tracking-code')
+  @Roles('SUPER_ADMIN')
+  async reissueTrackingCode(
+    @Param('id') id: string,
+    @Body() dto: ReissueTrackingCodeDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const result = await this.adminApplicationsService.reissueTrackingCode(
+      id,
+      dto,
+      req.user,
+    );
+    return {
+      success: true,
+      data: result,
+      message: result.message,
     };
   }
 }

@@ -2,11 +2,16 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
+import * as crypto from 'crypto';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { SupabaseService } from '../supabase/supabase.service.js';
 import { WorkflowEngine } from './workflow/workflow.engine.js';
+import { TrackingService } from '../tracking/tracking.service.js';
+import { AuditService } from '../audit/audit.service.js';
 import type {
   ExecuteStageTransitionDto,
   ExecuteTransitionDto,
@@ -20,6 +25,8 @@ import type {
   InternalNoteItem,
   ListApplicationsQueryDto,
   PaginatedApplicationsResponse,
+  ReissueTrackingCodeDto,
+  ReissueTrackingCodeResult,
   StageHistoryItem,
   StatusHistoryItem,
 } from './admin-applications.types.js';
@@ -27,6 +34,7 @@ import type {
 // In-memory fallback dataset for robust automated tests & offline development
 interface InMemRecord {
   detail: ApplicationDetailResponse;
+  tracking_code_hash?: string;
 }
 
 @Injectable()
@@ -37,12 +45,16 @@ export class AdminApplicationsService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly workflowEngine: WorkflowEngine,
+    @Optional() private readonly trackingService?: TrackingService,
+    @Optional() private readonly auditService?: AuditService,
   ) {
     this.seedInitialMockData();
   }
 
   private seedInitialMockData() {
     const seedId = 'a1000000-0000-0000-0000-000000000001';
+    const plainCode = 'TRK-A1B2C3D4';
+    const seedHash = crypto.createHash('sha256').update(plainCode).digest('hex');
     const now = new Date().toISOString();
     this.inMemoryRecords.set(seedId, {
       detail: {
@@ -118,6 +130,7 @@ export class AdminApplicationsService {
         ],
         allowed_transitions: [],
       },
+      tracking_code_hash: seedHash,
     });
 
     this.inMemoryAssignedTechnicians.set(
@@ -129,8 +142,18 @@ export class AdminApplicationsService {
   /**
    * Helper untuk mendaftarkan permohonan ke in-memory store (dipanggil saat submission baru)
    */
-  registerApplicationInMemory(record: ApplicationDetailResponse) {
-    this.inMemoryRecords.set(record.id, { detail: record });
+  registerApplicationInMemory(
+    record: ApplicationDetailResponse,
+    trackingCodeHash?: string,
+  ) {
+    this.inMemoryRecords.set(record.id, {
+      detail: record,
+      tracking_code_hash: trackingCodeHash,
+    });
+  }
+
+  getInMemoryTrackingCodeHash(id: string): string | undefined {
+    return this.inMemoryRecords.get(id)?.tracking_code_hash;
   }
 
   clearInMemoryRecords(): void {
@@ -775,6 +798,17 @@ export class AdminApplicationsService {
       });
     }
 
+    // Sinkronisasi status ke trackingService in-memory jika tersedia
+    if (this.trackingService && current?.ticket_number) {
+      this.trackingService.updateInMemoryStatus(
+        current.ticket_number,
+        toStatus,
+        rule.targetStage || null,
+        dto.note || null,
+        now,
+      );
+    }
+
     return this.getApplicationDetail(id, user);
   }
 
@@ -971,6 +1005,189 @@ export class AdminApplicationsService {
       signed_url: signedUrl,
       expires_in: expiresInSeconds,
       filename: doc.original_filename,
+    };
+  }
+
+  /**
+   * Menerbitkan ulang kode pelacakan untuk permohonan yang ada.
+   * Hanya SUPER_ADMIN yang diizinkan melakukan tindakan ini.
+   * Kode baru dibuat acak dan aman (TRK-XXXXXXXX).
+   * Simpan hanya hash SHA-256 di basis data.
+   * Kode lama langsung tidak berlaku begitu hash diperbarui.
+   * Kode baru hanya dikembalikan satu kali kepada petugas untuk diverifikasi dan disampaikan ke OPD.
+   * Mencatat jejak audit tanpa menyimpan kode asli atau hash kode.
+   */
+  async reissueTrackingCode(
+    idOrTicket: string,
+    dto: ReissueTrackingCodeDto,
+    user: AuthenticatedUser,
+  ): Promise<ReissueTrackingCodeResult> {
+    // 1. Otorisasi ketat: hanya SUPER_ADMIN yang berwenang
+    if (user.role !== 'SUPER_ADMIN') {
+      throw new ForbiddenException(
+        'Hanya SUPER_ADMIN yang memiliki wewenang untuk menerbitkan ulang kode pelacakan.',
+      );
+    }
+
+    // 2. Validasi input alasan
+    if (!dto || typeof dto.reason !== 'string' || dto.reason.trim().length < 5) {
+      throw new BadRequestException(
+        'Alasan penerbitan ulang kode pelacakan wajib diisi (minimal 5 karakter).',
+      );
+    }
+
+    const trimmedReason = dto.reason.trim();
+    const now = new Date().toISOString();
+
+    // 3. Cari aplikasi target
+    let targetAppId: string | null = null;
+    let targetTicketNumber: string | null = null;
+    let oldHash: string | null = null;
+
+    try {
+      const client = this.supabaseService.getClient();
+      const isUuid =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          idOrTicket,
+        );
+      let query = client.from('applications').select('id, ticket_number, tracking_code_hash');
+      if (isUuid) {
+        query = query.eq('id', idOrTicket);
+      } else {
+        query = query.ilike('ticket_number', idOrTicket);
+      }
+      const { data, error } = await query.maybeSingle();
+      if (!error && data) {
+        targetAppId = data.id;
+        targetTicketNumber = data.ticket_number;
+        oldHash = data.tracking_code_hash || null;
+      }
+    } catch {
+      // Supabase tidak tersedia, gunakan in-memory fallback
+    }
+
+    // Fallback in-memory
+    if (!targetAppId || !targetTicketNumber) {
+      const inMem =
+        this.inMemoryRecords.get(idOrTicket) ||
+        Array.from(this.inMemoryRecords.values()).find(
+          (r) => r.detail.ticket_number.toUpperCase() === idOrTicket.toUpperCase(),
+        );
+
+      if (inMem) {
+        targetAppId = inMem.detail.id;
+        targetTicketNumber = inMem.detail.ticket_number;
+        if (!oldHash) {
+          oldHash = inMem.tracking_code_hash || null;
+        }
+      }
+    }
+
+    if (!targetAppId || !targetTicketNumber) {
+      throw new NotFoundException(
+        `Permohonan dengan ID/Nomor Tiket [${idOrTicket}] tidak ditemukan.`,
+      );
+    }
+
+    // Pastikan hash lama tercatat dari in-memory jika belum terisi dari DB
+    const memRecord = this.inMemoryRecords.get(targetAppId);
+    if (!oldHash && memRecord?.tracking_code_hash) {
+      oldHash = memRecord.tracking_code_hash;
+    }
+
+    // 4. Generate kode pelacakan baru dengan 128-bit keacakan kriptografis (16 bytes = 32 hex chars)
+    const randomHex = crypto.randomBytes(16).toString('hex').toUpperCase();
+    const newTrackingCode = `TRK-${randomHex}`;
+    const newHash = crypto.createHash('sha256').update(newTrackingCode).digest('hex');
+
+    // 5. Perbarui database secara atomik via PostgreSQL RPC (reissue_tracking_code_atomic)
+    // KEBIJAKAN KEAMANAN KETAT:
+    // Tidak ada fallback dua-tahap non-atomik. Jika RPC tidak tersedia atau gagal dieksekusi,
+    // operasi dibatalkan seketika dan tidak melakukan update hash melalui jalur alternatif.
+    const client = this.supabaseService.getClient();
+    if (client) {
+      if (typeof client.rpc !== 'function') {
+        throw new InternalServerErrorException(
+          'Transaksi penerbitan ulang kode pelacakan dibatalkan: fungsi transaksi atomik database (reissue_tracking_code_atomic) tidak didukung oleh klien basis data.',
+        );
+      }
+
+      const { data: rpcData, error: rpcError } = await client.rpc(
+        'reissue_tracking_code_atomic',
+        {
+          p_application_id: targetAppId,
+          p_new_hash: newHash,
+          p_actor_profile_id: user.id,
+          p_actor_email: user.email,
+          p_actor_name: user.fullName,
+          p_actor_role: user.role,
+          p_ticket_number: targetTicketNumber,
+          p_reason: trimmedReason,
+          p_now: now,
+        },
+      );
+
+      if (rpcError || !rpcData) {
+        throw new InternalServerErrorException(
+          `Transaksi penerbitan ulang kode pelacakan dibatalkan: fungsi transaksi atomik database tidak tersedia atau gagal dieksekusi (${rpcError?.message || rpcError?.code || 'Tidak ada respon konfirmasi dari basis data'}).`,
+        );
+      }
+    }
+
+    // 6. Sinkronisasi jejak audit ke AuditService jika terinjeksi
+    if (this.auditService) {
+      const auditPayload = {
+        actor_profile_id: user.id,
+        application_id: targetAppId,
+        action: 'TRACKING_CODE_REISSUED',
+        entity_type: 'applications',
+        entity_id: targetAppId,
+        old_data: null,
+        new_data: {
+          ticket_number: targetTicketNumber,
+          actor_id: user.id,
+          actor_email: user.email,
+          actor_name: user.fullName,
+          actor_role: user.role,
+          reason: trimmedReason,
+          reissued_at: now,
+        },
+      };
+      await this.auditService.record(auditPayload).catch(() => {});
+    }
+
+    // 7. Komit pembaruan ke in-memory store dan TrackingService HANYA setelah penyimpanan dan audit sukses
+    if (memRecord) {
+      memRecord.tracking_code_hash = newHash;
+      memRecord.detail.audit_logs.unshift({
+        id: crypto.randomUUID(),
+        action: 'TRACKING_CODE_REISSUED',
+        actor_name: user.fullName,
+        created_at: now,
+        new_data: {
+          ticket_number: targetTicketNumber,
+          reason: trimmedReason,
+          reissued_at: now,
+        },
+      });
+    }
+
+    if (this.trackingService) {
+      this.trackingService.updateInMemoryTrackingCodeHash(
+        targetTicketNumber,
+        newHash,
+        now,
+      );
+    }
+
+    // 8. Kembalikan kode baru sekali saja kepada petugas berwenang
+    return {
+      application_id: targetAppId,
+      ticket_number: targetTicketNumber,
+      tracking_code: newTrackingCode,
+      reissued_at: now,
+      message:
+        'Kode pelacakan baru berhasil diterbitkan. Harap segera sampaikan kepada pemohon OPD setelah memverifikasi identitas melalui kanal resmi.',
     };
   }
 }

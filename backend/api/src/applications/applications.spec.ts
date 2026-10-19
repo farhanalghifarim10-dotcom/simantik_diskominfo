@@ -31,18 +31,22 @@ describe('Public Application Submission Vertical Slice', () => {
     terms_version: 'v1.0-2026',
   };
 
+  const validPdfBase64 = Buffer.from('%PDF-1.4 dummy valid PDF content for unit test').toString('base64');
+
   const validDocuments = [
     {
       requirement_id: 'a1111111-1111-1111-1111-111111111111', // Surat Permohonan (Wajib)
       original_filename: 'Surat_Permohonan_Kadis.pdf',
       mime_type: 'application/pdf',
       size_bytes: 1024 * 500, // 500 KB
+      base64_data: validPdfBase64,
     },
     {
       requirement_id: 'a2222222-2222-2222-2222-222222222222', // KAK (Wajib)
       original_filename: 'Dokumen_KAK_Presensi.pdf',
       mime_type: 'application/pdf',
       size_bytes: 1024 * 1024 * 2, // 2 MB
+      base64_data: validPdfBase64,
     },
   ];
 
@@ -132,12 +136,14 @@ describe('Public Application Submission Vertical Slice', () => {
               original_filename: 'Surat_Perubahan.pdf',
               mime_type: 'application/pdf',
               size_bytes: 1000,
+              base64_data: validPdfBase64,
             },
             {
               requirement_id: 'b2222222-2222-2222-2222-222222222222',
               original_filename: 'CR.pdf',
               mime_type: 'application/pdf',
               size_bytes: 1000,
+              base64_data: validPdfBase64,
             },
           ],
         }),
@@ -164,6 +170,7 @@ describe('Public Application Submission Vertical Slice', () => {
           original_filename: 'malicious_script.exe',
           mime_type: 'application/x-msdownload',
           size_bytes: 1024,
+          base64_data: Buffer.from('dummy exe binary').toString('base64'),
         },
       ];
 
@@ -183,6 +190,7 @@ describe('Public Application Submission Vertical Slice', () => {
           original_filename: 'dokumen_catatan.txt',
           mime_type: 'text/plain',
           size_bytes: 1024,
+          base64_data: Buffer.from('plain text').toString('base64'),
         },
       ];
 
@@ -256,6 +264,7 @@ describe('Public Application Submission Vertical Slice', () => {
           original_filename: 'unsupported.txt',
           mime_type: 'text/plain',
           size_bytes: 500,
+          base64_data: Buffer.from('plain text').toString('base64'),
         },
       ];
 
@@ -277,6 +286,7 @@ describe('Public Application Submission Vertical Slice', () => {
           original_filename: 'huge_file.pdf',
           mime_type: 'application/pdf',
           size_bytes: 15 * 1024 * 1024, // 15 MB
+          base64_data: validPdfBase64,
         },
         validDocuments[1],
       ];
@@ -287,6 +297,84 @@ describe('Public Application Submission Vertical Slice', () => {
           documents: oversizedDocuments,
         }),
       ).rejects.toThrow(/melebihi batas maksimum 10 MB/);
+    });
+
+    it('should reject submission with metadata-only document (missing base64_data)', async () => {
+      const metadataOnlyDocuments = [
+        {
+          requirement_id: 'a1111111-1111-1111-1111-111111111111',
+          original_filename: 'Surat_Permohonan.pdf',
+          mime_type: 'application/pdf',
+          size_bytes: 1024,
+          // base64_data deliberately omitted
+        },
+        validDocuments[1],
+      ];
+
+      try {
+        await applicationsController.submit({
+          ...validPayload,
+          documents: metadataOnlyDocuments,
+        });
+        expect.unreachable('Should have rejected metadata-only document');
+      } catch (err: any) {
+        expect(err).toBeInstanceOf(BadRequestException);
+        const resp = err.getResponse();
+        expect(resp.code).toBe('DOCUMENT_INVALID_TYPE');
+        expect(resp.message).toContain('data konten biner');
+      }
+    });
+
+    it('should reject submission with empty base64_data string', async () => {
+      const emptyBase64Documents = [
+        {
+          requirement_id: 'a1111111-1111-1111-1111-111111111111',
+          original_filename: 'Surat_Permohonan.pdf',
+          mime_type: 'application/pdf',
+          size_bytes: 1024,
+          base64_data: '   ',
+        },
+        validDocuments[1],
+      ];
+
+      try {
+        await applicationsController.submit({
+          ...validPayload,
+          documents: emptyBase64Documents,
+        });
+        expect.unreachable('Should have rejected empty base64 string');
+      } catch (err: any) {
+        expect(err).toBeInstanceOf(BadRequestException);
+        const resp = err.getResponse();
+        expect(resp.code).toBe('DOCUMENT_INVALID_TYPE');
+        expect(resp.message).toContain('data konten biner');
+      }
+    });
+
+    it('should reject submission with filename containing control characters or null bytes', async () => {
+      const controlCharDocuments = [
+        {
+          requirement_id: 'a1111111-1111-1111-1111-111111111111',
+          original_filename: 'Surat\x00_Kadis.pdf',
+          mime_type: 'application/pdf',
+          size_bytes: 1024,
+          base64_data: validPdfBase64,
+        },
+        validDocuments[1],
+      ];
+
+      try {
+        await applicationsController.submit({
+          ...validPayload,
+          documents: controlCharDocuments,
+        });
+        expect.unreachable('Should have rejected control characters');
+      } catch (err: any) {
+        expect(err).toBeInstanceOf(BadRequestException);
+        const resp = err.getResponse();
+        expect(resp.code).toBe('DOCUMENT_INVALID_TYPE');
+        expect(resp.message).toContain('karakter kontrol atau null byte');
+      }
     });
   });
 
@@ -303,8 +391,8 @@ describe('Public Application Submission Vertical Slice', () => {
       // Ticket number check
       expect(response.data.ticket_number).toMatch(/^SIM-2026-\d{6}$/);
 
-      // Tracking code check (must be non-predictable TRK-XXXXXXX)
-      expect(response.data.tracking_code).toMatch(/^TRK-[0-9A-F]{8}$/);
+      // Tracking code check (must be non-predictable TRK-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX, 128-bit entropy)
+      expect(response.data.tracking_code).toMatch(/^TRK-[0-9A-F]{32}$/);
 
       // Initial status
       expect(response.data.current_status).toBe('SUBMITTED');
@@ -514,6 +602,384 @@ describe('Public Application Submission Vertical Slice', () => {
       expect(mockDocDelete).toHaveBeenCalled();
       expect(mockAppDelete).toHaveBeenCalled();
       expect(mockApplicantDelete).toHaveBeenCalled();
+    });
+  });
+
+  describe('6. Strict Base64 & Random UUID Storage Key Verification', () => {
+    it('should accept document with explicit Data URL base64 format', async () => {
+      const dataUrlDocuments = [
+        {
+          ...validDocuments[0],
+          base64_data: `data:application/pdf;base64,${validPdfBase64}`,
+        },
+        validDocuments[1],
+      ];
+
+      const res = await applicationsController.submit({
+        ...validPayload,
+        documents: dataUrlDocuments,
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.data.documents_count).toBe(2);
+    });
+
+    it('should reject malformed base64 with foreign characters without DB/Storage mutation', async () => {
+      const mockStorageUpload = vi.fn();
+      const mockDbInsert = vi.fn();
+
+      const customSupabase = {
+        getClient: vi.fn().mockReturnValue({
+          from: vi.fn().mockReturnValue({
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            order: vi.fn().mockResolvedValue({ data: null, error: null }),
+            insert: mockDbInsert,
+          }),
+          storage: {
+            from: vi.fn().mockReturnValue({
+              upload: mockStorageUpload,
+            }),
+          },
+        }),
+      } as unknown as SupabaseService;
+
+      const appService = new ApplicationsService(customSupabase, servicesService);
+      const controller = new ApplicationsController(appService);
+
+      const malformedDocs = [
+        {
+          ...validDocuments[0],
+          base64_data: 'JVBERi0xLjQ=!!!MALFORMED-FOREIGN-CHARS!!!',
+        },
+        validDocuments[1],
+      ];
+
+      try {
+        await controller.submit({
+          ...validPayload,
+          documents: malformedDocs,
+        });
+        expect.unreachable('Should have rejected malformed base64 with foreign characters');
+      } catch (err: any) {
+        expect(err).toBeInstanceOf(BadRequestException);
+        expect(err.getResponse().code).toBe('DOCUMENT_INVALID_TYPE');
+      }
+
+      expect(mockStorageUpload).not.toHaveBeenCalled();
+      expect(mockDbInsert).not.toHaveBeenCalled();
+    });
+
+    it('should reject non-canonical base64 encoding (e.g. non-zero padding bits) without mutation', async () => {
+      const mockStorageUpload = vi.fn();
+      const mockDbInsert = vi.fn();
+
+      const customSupabase = {
+        getClient: vi.fn().mockReturnValue({
+          from: vi.fn().mockReturnValue({
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            order: vi.fn().mockResolvedValue({ data: null, error: null }),
+            insert: mockDbInsert,
+          }),
+          storage: {
+            from: vi.fn().mockReturnValue({
+              upload: mockStorageUpload,
+            }),
+          },
+        }),
+      } as unknown as SupabaseService;
+
+      const appService = new ApplicationsService(customSupabase, servicesService);
+      const controller = new ApplicationsController(appService);
+
+      // 'AB==' has non-zero unused bits in RFC 4648
+      const nonCanonicalDocs = [
+        {
+          ...validDocuments[0],
+          base64_data: 'AB==',
+        },
+        validDocuments[1],
+      ];
+
+      try {
+        await controller.submit({
+          ...validPayload,
+          documents: nonCanonicalDocs,
+        });
+        expect.unreachable('Should have rejected non-canonical base64');
+      } catch (err: any) {
+        expect(err).toBeInstanceOf(BadRequestException);
+        expect(err.getResponse().code).toBe('DOCUMENT_INVALID_TYPE');
+      }
+
+      expect(mockStorageUpload).not.toHaveBeenCalled();
+      expect(mockDbInsert).not.toHaveBeenCalled();
+    });
+
+    it('should generate server-generated UUID storage key and completely omit original_filename from the key path', async () => {
+      const uploadedPaths: string[] = [];
+      const insertedDocRecords: any[] = [];
+
+      const customSupabase = {
+        getClient: vi.fn().mockReturnValue({
+          from: vi.fn().mockImplementation((table: string) => {
+            if (table === 'opd_units') {
+              return {
+                select: vi.fn().mockReturnThis(),
+                eq: vi.fn().mockReturnThis(),
+                order: vi.fn().mockResolvedValue({ data: null, error: null }),
+              };
+            }
+            if (table === 'application_documents') {
+              return {
+                insert: vi.fn().mockImplementation((records) => {
+                  insertedDocRecords.push(...(Array.isArray(records) ? records : [records]));
+                  return Promise.resolve({ data: records, error: null });
+                }),
+              };
+            }
+            return {
+              insert: vi.fn().mockResolvedValue({ data: null, error: null }),
+            };
+          }),
+          storage: {
+            from: vi.fn().mockReturnValue({
+              upload: vi.fn().mockImplementation((path: string) => {
+                uploadedPaths.push(path);
+                return Promise.resolve({ data: { path }, error: null });
+              }),
+            }),
+          },
+        }),
+      } as unknown as SupabaseService;
+
+      const appService = new ApplicationsService(customSupabase, servicesService);
+      const controller = new ApplicationsController(appService);
+
+      const res = await controller.submit({
+        ...validPayload,
+        documents: [
+          {
+            requirement_id: 'a1111111-1111-1111-1111-111111111111',
+            original_filename: 'Surat Permohonan Kadis Resmi DISKOMINFO.pdf',
+            mime_type: 'application/pdf',
+            size_bytes: 1024 * 100,
+            base64_data: validPdfBase64,
+          },
+          {
+            requirement_id: 'a2222222-2222-2222-2222-222222222222',
+            original_filename: 'Dokumen KAK Presensi & Kinerja 2026.pdf',
+            mime_type: 'application/pdf',
+            size_bytes: 1024 * 200,
+            base64_data: validPdfBase64,
+          },
+        ],
+      });
+
+      expect(res.success).toBe(true);
+      expect(uploadedPaths.length).toBe(2);
+
+      const ticketNumber = res.data.ticket_number;
+
+      // Check each uploaded storage path
+      for (const storagePath of uploadedPaths) {
+        // Format MUST BE applications/{ticketNumber}/{uuid}.pdf
+        const uuidRegex = new RegExp(`^applications\\/${ticketNumber}\\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\\.pdf$`);
+        expect(storagePath).toMatch(uuidRegex);
+
+        // Original filenames and sensitive words MUST NOT appear in the storage path
+        expect(storagePath).not.toContain('Surat');
+        expect(storagePath).not.toContain('Permohonan');
+        expect(storagePath).not.toContain('Kadis');
+        expect(storagePath).not.toContain('DISKOMINFO');
+        expect(storagePath).not.toContain('KAK');
+        expect(storagePath).not.toContain('Presensi');
+      }
+
+      // Check application_documents records in DB
+      expect(insertedDocRecords.length).toBe(2);
+      expect(insertedDocRecords[0].original_filename).toBe('Surat Permohonan Kadis Resmi DISKOMINFO.pdf');
+      expect(insertedDocRecords[0].storage_path).toBe(uploadedPaths[0]);
+      expect(insertedDocRecords[1].original_filename).toBe('Dokumen KAK Presensi & Kinerja 2026.pdf');
+      expect(insertedDocRecords[1].storage_path).toBe(uploadedPaths[1]);
+    });
+
+    it('should safely sanitize Unicode filename and generate clean ASCII UUID storage key', async () => {
+      const uploadedPaths: string[] = [];
+      const insertedDocRecords: any[] = [];
+
+      const customSupabase = {
+        getClient: vi.fn().mockReturnValue({
+          from: vi.fn().mockImplementation((table: string) => {
+            if (table === 'opd_units') {
+              return {
+                select: vi.fn().mockReturnThis(),
+                eq: vi.fn().mockReturnThis(),
+                order: vi.fn().mockResolvedValue({ data: null, error: null }),
+              };
+            }
+            if (table === 'application_documents') {
+              return {
+                insert: vi.fn().mockImplementation((records) => {
+                  insertedDocRecords.push(...(Array.isArray(records) ? records : [records]));
+                  return Promise.resolve({ data: records, error: null });
+                }),
+              };
+            }
+            return {
+              insert: vi.fn().mockResolvedValue({ data: null, error: null }),
+            };
+          }),
+          storage: {
+            from: vi.fn().mockReturnValue({
+              upload: vi.fn().mockImplementation((path: string) => {
+                uploadedPaths.push(path);
+                return Promise.resolve({ data: { path }, error: null });
+              }),
+            }),
+          },
+        }),
+      } as unknown as SupabaseService;
+
+      const appService = new ApplicationsService(customSupabase, servicesService);
+      const controller = new ApplicationsController(appService);
+
+      const unicodeName = 'Surat_Permohonan_📄_Bandung_Bedas_✨_Resmi.pdf';
+
+      const res = await controller.submit({
+        ...validPayload,
+        documents: [
+          {
+            requirement_id: 'a1111111-1111-1111-1111-111111111111',
+            original_filename: unicodeName,
+            mime_type: 'application/pdf',
+            size_bytes: 1024 * 100,
+            base64_data: validPdfBase64,
+          },
+          validDocuments[1],
+        ],
+      });
+
+      expect(res.success).toBe(true);
+      expect(uploadedPaths.length).toBe(2);
+
+      // Storage key must be pure ASCII UUID path
+      expect(uploadedPaths[0]).toMatch(/^applications\/SIM-2026-\d{6}\/[a-f0-9-]{36}\.pdf$/);
+      expect(uploadedPaths[0]).not.toContain('Bandung');
+      expect(uploadedPaths[0]).not.toContain('Bedas');
+      expect(uploadedPaths[0]).not.toContain('📄');
+
+      // Sanitized original filename in DB record retains natural Unicode
+      expect(insertedDocRecords[0].original_filename).toBe(unicodeName);
+      expect(insertedDocRecords[0].storage_path).toBe(uploadedPaths[0]);
+    });
+
+    it('should reject filename exceeding 255 characters without DB/Storage mutation', async () => {
+      const mockStorageUpload = vi.fn();
+      const mockDbInsert = vi.fn();
+
+      const customSupabase = {
+        getClient: vi.fn().mockReturnValue({
+          from: vi.fn().mockReturnValue({
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            order: vi.fn().mockResolvedValue({ data: null, error: null }),
+            insert: mockDbInsert,
+          }),
+          storage: {
+            from: vi.fn().mockReturnValue({
+              upload: mockStorageUpload,
+            }),
+          },
+        }),
+      } as unknown as SupabaseService;
+
+      const appService = new ApplicationsService(customSupabase, servicesService);
+      const controller = new ApplicationsController(appService);
+
+      const overlyLongFilename = 'a'.repeat(256) + '.pdf';
+
+      try {
+        await controller.submit({
+          ...validPayload,
+          documents: [
+            {
+              ...validDocuments[0],
+              original_filename: overlyLongFilename,
+            },
+            validDocuments[1],
+          ],
+        });
+        expect.unreachable('Should have rejected overly long filename');
+      } catch (err: any) {
+        expect(err).toBeInstanceOf(BadRequestException);
+        expect(err.getResponse().code).toBe('DOCUMENT_INVALID_TYPE');
+        expect(err.getResponse().message).toContain('maksimal 255 karakter');
+      }
+
+      expect(mockStorageUpload).not.toHaveBeenCalled();
+      expect(mockDbInsert).not.toHaveBeenCalled();
+    });
+
+    it('should clean up storage using the exact UUID keys when subsequent DB insert fails', async () => {
+      const uploadedPaths: string[] = [];
+      const mockStorageRemove = vi.fn().mockResolvedValue({ data: null, error: null });
+
+      const customSupabase = {
+        getClient: vi.fn().mockReturnValue({
+          from: vi.fn().mockImplementation((table: string) => {
+            if (table === 'opd_units') {
+              return {
+                select: vi.fn().mockReturnThis(),
+                eq: vi.fn().mockReturnThis(),
+                order: vi.fn().mockResolvedValue({ data: null, error: null }),
+              };
+            }
+            if (table === 'application_status_history') {
+              return {
+                insert: vi.fn().mockResolvedValue({
+                  data: null,
+                  error: { message: 'Connection dropped abruptly', code: '08006' },
+                }),
+                delete: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) }),
+              };
+            }
+            return {
+              insert: vi.fn().mockResolvedValue({ data: null, error: null }),
+              delete: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) }),
+            };
+          }),
+          storage: {
+            from: vi.fn().mockReturnValue({
+              upload: vi.fn().mockImplementation((path: string) => {
+                uploadedPaths.push(path);
+                return Promise.resolve({ data: { path }, error: null });
+              }),
+              remove: mockStorageRemove,
+            }),
+          },
+        }),
+      } as unknown as SupabaseService;
+
+      const appService = new ApplicationsService(customSupabase, servicesService);
+      const controller = new ApplicationsController(appService);
+
+      await expect(
+        controller.submit({
+          ...validPayload,
+          documents: validDocuments,
+        }),
+      ).rejects.toThrow(InternalServerErrorException);
+
+      // Verify that mockStorageRemove was called with the exact UUID paths generated
+      expect(uploadedPaths.length).toBe(2);
+      expect(mockStorageRemove).toHaveBeenCalledTimes(1);
+      const cleanedPaths = mockStorageRemove.mock.calls[0][0];
+      expect(cleanedPaths).toEqual(uploadedPaths);
+      for (const p of cleanedPaths) {
+        expect(p).toMatch(/^applications\/SIM-2026-\d{6}\/[a-f0-9-]{36}\.pdf$/);
+      }
     });
   });
 

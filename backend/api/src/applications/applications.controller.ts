@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { ApplicationsService } from './applications.service.js';
+import { parseAndValidateBase64 } from '../common/utils/file-validator.js';
 import type {
   SubmitApplicationPayload,
   UploadedDocumentInput,
@@ -47,15 +48,23 @@ export class ApplicationsController {
     // Parsing documents list
     const rawDocs = Array.isArray(body.documents) ? body.documents : [];
     const documents: UploadedDocumentInput[] = rawDocs.map(
-      (d: Record<string, unknown>) => ({
-        requirement_id: String(d.requirement_id || ''),
-        original_filename: String(d.original_filename || ''),
-        mime_type: String(d.mime_type || ''),
-        size_bytes: Number(d.size_bytes || 0),
-        buffer: d.base64_data
-          ? Buffer.from(String(d.base64_data), 'base64')
-          : undefined,
-      }),
+      (d: Record<string, unknown>) => {
+        const rawBase64 = typeof d.base64_data === 'string' ? d.base64_data : undefined;
+        const filename = String(d.original_filename || '');
+        const buf =
+          rawBase64 !== undefined
+            ? parseAndValidateBase64(rawBase64, filename)
+            : undefined;
+
+        return {
+          requirement_id: String(d.requirement_id || ''),
+          original_filename: filename,
+          mime_type: String(d.mime_type || ''),
+          size_bytes: Number(d.size_bytes || 0),
+          base64_data: rawBase64,
+          buffer: buf,
+        };
+      },
     );
 
     const data = await this.applicationsService.submitApplication(

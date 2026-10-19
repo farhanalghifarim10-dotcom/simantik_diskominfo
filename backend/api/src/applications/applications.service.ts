@@ -12,7 +12,12 @@ import { SupabaseService } from '../supabase/supabase.service.js';
 import { ServicesService } from '../services/services.service.js';
 import { TrackingService } from '../tracking/tracking.service.js';
 import { AuditService } from '../audit/audit.service.js';
-import { validateUploadedFile } from '../common/utils/file-validator.js';
+import {
+  generateSecureStorageKey,
+  parseAndValidateBase64,
+  sanitizeFilename,
+  validateUploadedFile,
+} from '../common/utils/file-validator.js';
 import type {
   ApplicationSubmissionResult,
   OpdUnitEntity,
@@ -179,8 +184,20 @@ export class ApplicationsService {
       }
     }
 
-    // Validasi tipe berkas, ekstensi, magic bytes, dan batasan per persyaratan
+    // Validasi tipe berkas, ekstensi, magic bytes, buffer biner, dan batasan per persyaratan
     for (const doc of documents) {
+      let buf = doc.buffer;
+      if (!buf && doc.base64_data !== undefined) {
+        buf = parseAndValidateBase64(doc.base64_data, doc.original_filename);
+        doc.buffer = buf;
+      }
+
+      if (!buf || buf.length === 0) {
+        throw new BadRequestException({
+          code: 'DOCUMENT_INVALID_TYPE',
+          message: `Berkas "${doc.original_filename || 'Dokumen'}" wajib memiliki data konten biner (base64_data) yang valid dan tidak kosong. Dokumen metadata-only tidak diizinkan.`,
+        });
+      }
       const associatedReq = serviceReqs.find((r) => r.id === doc.requirement_id);
       validateUploadedFile(
         {
@@ -205,8 +222,8 @@ export class ApplicationsService {
     const currentYear = new Date().getFullYear();
     const ticketNumber = `SIM-${currentYear}-${randomSuffix}`;
 
-    // Generate random secret tracking credential
-    const trackingSecret = `TRK-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+    // Generate random secret tracking credential (128-bit cryptographic entropy = 16 bytes = 32 hex chars)
+    const trackingSecret = `TRK-${crypto.randomBytes(16).toString('hex').toUpperCase()}`;
     const trackingCodeHash = crypto
       .createHash('sha256')
       .update(trackingSecret)
@@ -310,7 +327,7 @@ export class ApplicationsService {
       // c. Simpan Dokumen
       for (const doc of documents) {
         const docId = crypto.randomUUID();
-        const storagePath = `applications/${ticketNumber}/${doc.requirement_id}_${Date.now()}_${encodeURIComponent(doc.original_filename)}`;
+        const storagePath = generateSecureStorageKey(`applications/${ticketNumber}`, doc.original_filename);
 
         if (doc.buffer) {
           // Upload ke private bucket simantik-documents
@@ -338,7 +355,7 @@ export class ApplicationsService {
             id: docId,
             application_id: applicationId,
             requirement_id: doc.requirement_id,
-            original_filename: doc.original_filename,
+            original_filename: sanitizeFilename(doc.original_filename),
             storage_path: storagePath,
             mime_type: doc.mime_type,
             size_bytes: doc.size_bytes,

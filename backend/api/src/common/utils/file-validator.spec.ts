@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { BadRequestException } from '@nestjs/common';
-import { validateUploadedFile } from './file-validator.js';
+import {
+  extractSafeExtension,
+  generateSecureStorageKey,
+  parseAndValidateBase64,
+  sanitizeFilename,
+  validateUploadedFile,
+} from './file-validator.js';
 
 describe('File Validator Utility (UAT-04)', () => {
   // Safe dummy buffers
@@ -260,6 +266,220 @@ describe('File Validator Utility (UAT-04)', () => {
           pdfOnlyRequirement,
         ),
       ).not.toThrow();
+    });
+  });
+
+  describe('G. Binary buffer enforcement (Metadata-only document rejection)', () => {
+    it('should reject document with missing buffer (undefined)', () => {
+      try {
+        validateUploadedFile({
+          original_filename: 'dokumen.pdf',
+          mime_type: 'application/pdf',
+          size_bytes: 1024,
+          buffer: undefined,
+        });
+        expect.unreachable('Should have thrown BadRequestException');
+      } catch (err: any) {
+        expect(err).toBeInstanceOf(BadRequestException);
+        const resp = err.getResponse();
+        expect(resp.code).toBe('DOCUMENT_INVALID_TYPE');
+        expect(resp.message).toContain('data konten biner');
+      }
+    });
+
+    it('should reject document with empty zero-length buffer', () => {
+      try {
+        validateUploadedFile({
+          original_filename: 'dokumen.pdf',
+          mime_type: 'application/pdf',
+          size_bytes: 0,
+          buffer: Buffer.alloc(0),
+        });
+        expect.unreachable('Should have thrown BadRequestException');
+      } catch (err: any) {
+        expect(err).toBeInstanceOf(BadRequestException);
+        const resp = err.getResponse();
+        expect(resp.code).toBe('DOCUMENT_INVALID_TYPE');
+        expect(resp.message).toContain('data konten biner');
+      }
+    });
+  });
+
+  describe('H. Filename sanitation & validation', () => {
+    it('should reject filename containing null bytes', () => {
+      try {
+        validateUploadedFile({
+          original_filename: 'surat\x00_resmi.pdf',
+          mime_type: 'application/pdf',
+          size_bytes: 1024,
+          buffer: dummyPdfBuffer,
+        });
+        expect.unreachable('Should have rejected null bytes');
+      } catch (err: any) {
+        expect(err).toBeInstanceOf(BadRequestException);
+        const resp = err.getResponse();
+        expect(resp.code).toBe('DOCUMENT_INVALID_TYPE');
+        expect(resp.message).toContain('karakter kontrol atau null byte');
+      }
+    });
+
+    it('should reject filename containing control characters like newline or carriage return', () => {
+      try {
+        validateUploadedFile({
+          original_filename: 'surat\r\n_resmi.pdf',
+          mime_type: 'application/pdf',
+          size_bytes: 1024,
+          buffer: dummyPdfBuffer,
+        });
+        expect.unreachable('Should have rejected control characters');
+      } catch (err: any) {
+        expect(err).toBeInstanceOf(BadRequestException);
+        const resp = err.getResponse();
+        expect(resp.code).toBe('DOCUMENT_INVALID_TYPE');
+        expect(resp.message).toContain('karakter kontrol atau null byte');
+      }
+    });
+
+    it('should reject filename exceeding 255 characters', () => {
+      const veryLongName = 'a'.repeat(252) + '.pdf'; // 256 chars
+      try {
+        validateUploadedFile({
+          original_filename: veryLongName,
+          mime_type: 'application/pdf',
+          size_bytes: 1024,
+          buffer: dummyPdfBuffer,
+        });
+        expect.unreachable('Should have rejected overly long filename');
+      } catch (err: any) {
+        expect(err).toBeInstanceOf(BadRequestException);
+        const resp = err.getResponse();
+        expect(resp.code).toBe('DOCUMENT_INVALID_TYPE');
+        expect(resp.message).toContain('terlalu panjang');
+      }
+    });
+
+    it('should accept valid natural Indonesian filenames with spaces, parentheses, accents, and dashes', () => {
+      expect(() =>
+        validateUploadedFile({
+          original_filename: 'Surat Permohonan (Dinas Pendidikan & Kebudayaan) - Kab. Bandung 2026.pdf',
+          mime_type: 'application/pdf',
+          size_bytes: 2048,
+          buffer: dummyPdfBuffer,
+        }),
+      ).not.toThrow();
+    });
+  });
+
+  describe('I. Strict Base64 Parsing & Validation (parseAndValidateBase64)', () => {
+    it('should decode valid standard raw Base64 string', () => {
+      const base64Str = dummyPdfBuffer.toString('base64');
+      const decoded = parseAndValidateBase64(base64Str, 'test.pdf');
+      expect(decoded).toBeInstanceOf(Buffer);
+      expect(decoded.equals(dummyPdfBuffer)).toBe(true);
+    });
+
+    it('should decode valid Data URL formatted Base64 string with explicit prefix', () => {
+      const dataUrl = `data:application/pdf;base64,${dummyPdfBuffer.toString('base64')}`;
+      const decoded = parseAndValidateBase64(dataUrl, 'test.pdf');
+      expect(decoded).toBeInstanceOf(Buffer);
+      expect(decoded.equals(dummyPdfBuffer)).toBe(true);
+    });
+
+    it('should reject missing, null, undefined, or empty base64 string', () => {
+      expect(() => parseAndValidateBase64(null, 'test.pdf')).toThrow(BadRequestException);
+      expect(() => parseAndValidateBase64(undefined, 'test.pdf')).toThrow(BadRequestException);
+      expect(() => parseAndValidateBase64('', 'test.pdf')).toThrow(BadRequestException);
+      expect(() => parseAndValidateBase64('    ', 'test.pdf')).toThrow(BadRequestException);
+      expect(() => parseAndValidateBase64(12345, 'test.pdf')).toThrow(BadRequestException);
+    });
+
+    it('should reject malformed Data URL prefix', () => {
+      expect(() => parseAndValidateBase64('data:invalid-prefix', 'test.pdf')).toThrow(BadRequestException);
+      expect(() => parseAndValidateBase64('data:application/pdf;notbase64,AAAA', 'test.pdf')).toThrow(BadRequestException);
+      expect(() => parseAndValidateBase64('data:application/pdf;base64,', 'test.pdf')).toThrow(BadRequestException);
+    });
+
+    it('should reject Base64 with foreign / non-base64 characters', () => {
+      const invalidChars = 'JVBERi0xLjQK@#$%^&*()';
+      expect(() => parseAndValidateBase64(invalidChars, 'test.pdf')).toThrow(BadRequestException);
+
+      const invalidWithDash = 'JVBERi-xLjQK';
+      expect(() => parseAndValidateBase64(invalidWithDash, 'test.pdf')).toThrow(BadRequestException);
+
+      const invalidWithSpaceInside = 'JVBE Ri0x LjQK';
+      expect(() => parseAndValidateBase64(invalidWithSpaceInside, 'test.pdf')).toThrow(BadRequestException);
+    });
+
+    it('should reject Base64 with invalid padding or truncated length (not divisible by 4)', () => {
+      // Length 9 (not divisible by 4)
+      expect(() => parseAndValidateBase64('JVBERi0xL', 'test.pdf')).toThrow(BadRequestException);
+      // Length 11
+      expect(() => parseAndValidateBase64('JVBERi0xLjQ', 'test.pdf')).toThrow(BadRequestException);
+      // Invalid padding characters
+      expect(() => parseAndValidateBase64('JVBERi0x===', 'test.pdf')).toThrow(BadRequestException);
+      expect(() => parseAndValidateBase64('JVBERi0x====', 'test.pdf')).toThrow(BadRequestException);
+      expect(() => parseAndValidateBase64('JVBE=i0x', 'test.pdf')).toThrow(BadRequestException);
+    });
+
+    it('should reject Base64 with non-canonical padding bits or trailing garbage', () => {
+      // In Base64, 'AB==' has index 1 for 'B', where non-zero bits are placed in unused padding bits
+      // Buffer.from normally ignores this and decodes to 0x00, re-encoding to 'AA=='
+      expect(() => parseAndValidateBase64('AB==', 'test.pdf')).toThrow(BadRequestException);
+
+      // Trailing characters after valid 4-byte block that would normally be discarded by loose parsers
+      const validBase64 = dummyPdfBuffer.toString('base64');
+      expect(() => parseAndValidateBase64(validBase64 + 'AAAA====', 'test.pdf')).toThrow(BadRequestException);
+    });
+  });
+
+  describe('J. Secure Storage Key & Extension Utilities', () => {
+    it('should extract safe lowercase extension from valid filename', () => {
+      expect(extractSafeExtension('SURAT_PERMOHONAN.PDF')).toBe('pdf');
+      expect(extractSafeExtension('laporan.final.docx')).toBe('docx');
+      expect(extractSafeExtension('tabel.XLSX')).toBe('xlsx');
+      expect(extractSafeExtension('gambar.PNG')).toBe('png');
+    });
+
+    it('should reject unsupported or missing extension', () => {
+      expect(() => extractSafeExtension('script.exe')).toThrow(BadRequestException);
+      expect(() => extractSafeExtension('file_tanpa_ekstensi')).toThrow(BadRequestException);
+      expect(() => extractSafeExtension('berkas.')).toThrow(BadRequestException);
+    });
+
+    it('should generate secure storage key with server random UUID and safe extension without original filename', () => {
+      const prefix = 'applications/SIM-2026-000101';
+      const originalFilename = 'Surat Permohonan (Dinas Pendidikan) — Final 2026.PDF';
+
+      const key = generateSecureStorageKey(prefix, originalFilename);
+
+      // Verify prefix is preserved
+      expect(key.startsWith('applications/SIM-2026-000101/')).toBe(true);
+
+      // Verify original filename is completely absent from storage key
+      expect(key).not.toContain('Surat');
+      expect(key).not.toContain('Dinas');
+      expect(key).not.toContain('Pendidikan');
+      expect(key).not.toContain('Final');
+
+      // Verify key basename matches UUID v4 pattern and safe extension
+      const filenamePart = key.replace('applications/SIM-2026-000101/', '');
+      expect(filenamePart).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.pdf$/);
+    });
+
+    it('should safely handle extreme long or Unicode filenames in generateSecureStorageKey', () => {
+      const prefix = 'applications/SIM-2026-999999';
+      const extremeUnicodeName = 'Dokumen_Pengajuan_SPBE_Kabupaten_Bandung_Sangat_Panjang_Sekali_Untuk_Uji_Batas_Maksimal_Penyimpanan_Dan_Keamanan_Sistem_Informasi_Manajemen_Layanan_TI_Diskominfo_Jawa_Barat_Tahun_2026.docx';
+
+      const key = generateSecureStorageKey(prefix, extremeUnicodeName);
+      expect(key.startsWith('applications/SIM-2026-999999/')).toBe(true);
+      expect(key).not.toContain('Dokumen_Pengajuan');
+      const filenamePart = key.replace('applications/SIM-2026-999999/', '');
+      expect(filenamePart).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.docx$/);
+    });
+
+    it('should sanitize filename correctly preserving natural Indonesian characters', () => {
+      const sanitized = sanitizeFilename('  Surat Permohonan (Disdik) - Kab. Bandung.pdf  ');
+      expect(sanitized).toBe('Surat Permohonan (Disdik) - Kab. Bandung.pdf');
     });
   });
 });

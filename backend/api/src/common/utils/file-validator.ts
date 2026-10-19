@@ -57,34 +57,174 @@ export interface RequirementValidationRule {
  * 5. Pembatasan spesifik per persyaratan layanan (narrowing).
  * 6. Batas ukuran berkas (maksimal 10 MB atau batasan khusus per persyaratan).
  */
-export function validateUploadedFile(
-  file: FileValidationInput,
-  requirement?: RequirementValidationRule,
-): void {
-  const filename = (file.original_filename || '').trim();
-  if (!filename) {
+import * as crypto from 'crypto';
+
+/**
+ * Sanitasi nama berkas: tolak null bytes, control characters, dan panjang berlebih.
+ * Karakter Unicode dan nama natural bahasa Indonesia dipertahankan.
+ */
+export function sanitizeFilename(filename: string): string {
+  const trimmed = (filename || '').trim();
+  if (!trimmed) {
     throw new BadRequestException({
       code: 'DOCUMENT_INVALID_TYPE',
       message: 'Nama berkas tidak boleh kosong.',
     });
   }
 
-  // 1. Ekstrak dan periksa ekstensi file
-  const lastDotIndex = filename.lastIndexOf('.');
-  if (lastDotIndex === -1 || lastDotIndex === filename.length - 1) {
+  if (/[\x00-\x1F\x7F]/.test(trimmed)) {
     throw new BadRequestException({
       code: 'DOCUMENT_INVALID_TYPE',
-      message: `Format berkas "${filename}" tidak valid karena tidak memiliki ekstensi file.`,
+      message: `Nama berkas "${trimmed}" mengandung karakter kontrol atau null byte yang tidak diizinkan.`,
     });
   }
 
-  const ext = filename.slice(lastDotIndex + 1).toLowerCase();
+  if (trimmed.length > 255) {
+    throw new BadRequestException({
+      code: 'DOCUMENT_INVALID_TYPE',
+      message: 'Nama berkas terlalu panjang (maksimal 255 karakter).',
+    });
+  }
+
+  return trimmed;
+}
+
+/**
+ * Ekstrak ekstensi file dan pastikan berada dalam daftar ekstensi yang diizinkan (allowlist).
+ */
+export function extractSafeExtension(filename: string): string {
+  const sanitized = sanitizeFilename(filename);
+  const lastDotIndex = sanitized.lastIndexOf('.');
+  if (lastDotIndex === -1 || lastDotIndex === sanitized.length - 1) {
+    throw new BadRequestException({
+      code: 'DOCUMENT_INVALID_TYPE',
+      message: `Format berkas "${sanitized}" tidak valid karena tidak memiliki ekstensi file.`,
+    });
+  }
+
+  const ext = sanitized.slice(lastDotIndex + 1).toLowerCase();
   if (!ALLOWED_EXTENSIONS.includes(ext)) {
     throw new BadRequestException({
       code: 'DOCUMENT_INVALID_TYPE',
-      message: `Format berkas "${filename}" (.${ext}) tidak didukung. Harap gunakan format PDF/Word/Excel/Gambar.`,
+      message: `Format berkas "${sanitized}" (.${ext}) tidak didukung. Harap gunakan format PDF/Word/Excel/Gambar.`,
     });
   }
+
+  return ext;
+}
+
+/**
+ * Hasilkan object key penyimpanan privat di Storage berbasis UUID acak buatan server.
+ * Nama file asli sama sekali TIDAK disertakan dalam Storage object key untuk mencegah path traversal,
+ * kebocoran informasi, dan masalah encoding pada object storage.
+ * Ekstensi diambil dari ekstensi yang lolos allowlist.
+ */
+export function generateSecureStorageKey(prefix: string, filename: string): string {
+  const safeExt = extractSafeExtension(filename);
+  const randomUuid = crypto.randomUUID();
+  const cleanPrefix = prefix.replace(/\/+$/, '');
+  return `${cleanPrefix}/${randomUuid}.${safeExt}`;
+}
+
+const STRICT_BASE64_REGEX = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$/;
+
+/**
+ * Validasi ketat Base64 untuk berkas pengajuan awal dan perbaikan revisi.
+ * Memvalidasi:
+ * 1. Keberadaan input (menolak null, undefined, kosong, whitespace-only).
+ * 2. Parsing prefix Data URL (jika disertakan oleh klien).
+ * 3. Kelipatan panjang 4 (mencegah data terpotong).
+ * 4. Alfabet Base64 baku dan struktur padding '=' yang sah (menolak karakter asing).
+ * 5. Integritas decoding buffer (panjang buffer > 0).
+ * 6. Canonical encoding check (menolak bit padding non-nol dan trailing garbage yang diabaikan Buffer.from).
+ */
+export function parseAndValidateBase64(base64Input: unknown, filename?: string): Buffer {
+  const displayName = filename ? `"${filename}"` : 'Dokumen';
+
+  if (typeof base64Input !== 'string') {
+    throw new BadRequestException({
+      code: 'DOCUMENT_INVALID_TYPE',
+      message: `Berkas ${displayName} wajib memiliki data konten biner (base64_data) yang valid dan tidak kosong. Dokumen metadata-only tidak diizinkan.`,
+    });
+  }
+
+  const rawTrimmed = base64Input.trim();
+  if (rawTrimmed.length === 0) {
+    throw new BadRequestException({
+      code: 'DOCUMENT_INVALID_TYPE',
+      message: `Berkas ${displayName} wajib memiliki data konten biner (base64_data) yang valid dan tidak kosong. Dokumen metadata-only tidak diizinkan.`,
+    });
+  }
+
+  let payload = rawTrimmed;
+
+  // Jika input berupa Data URL (misal: "data:application/pdf;base64,JVBERi0xLjQK..."), lakukan parsing prefix eksplisit
+  if (rawTrimmed.startsWith('data:')) {
+    const dataUrlMatch = /^data:[a-zA-Z0-9.+/_-]+;base64,(.+)$/s.exec(rawTrimmed);
+    if (!dataUrlMatch || !dataUrlMatch[1]) {
+      throw new BadRequestException({
+        code: 'DOCUMENT_INVALID_TYPE',
+        message: `Format Data URL pada berkas ${displayName} tidak valid atau rusak.`,
+      });
+    }
+    payload = dataUrlMatch[1].trim();
+  }
+
+  if (payload.length === 0) {
+    throw new BadRequestException({
+      code: 'DOCUMENT_INVALID_TYPE',
+      message: `Konten Base64 pada berkas ${displayName} tidak boleh kosong.`,
+    });
+  }
+
+  // Validasi panjang kelipatan 4 (mencegah data terpotong)
+  if (payload.length % 4 !== 0) {
+    throw new BadRequestException({
+      code: 'DOCUMENT_INVALID_TYPE',
+      message: `Data Base64 pada berkas ${displayName} tidak valid: panjang karakter harus kelipatan 4 (terdeteksi data terpotong atau padding tidak lengkap).`,
+    });
+  }
+
+  // Validasi karakter alfabet Base64 baku dan struktur padding '='
+  if (!STRICT_BASE64_REGEX.test(payload)) {
+    throw new BadRequestException({
+      code: 'DOCUMENT_INVALID_TYPE',
+      message: `Data Base64 pada berkas ${displayName} tidak valid: mengandung karakter asing, padding salah, atau format tidak baku.`,
+    });
+  }
+
+  // Decode buffer
+  const buffer = Buffer.from(payload, 'base64');
+  if (buffer.length === 0) {
+    throw new BadRequestException({
+      code: 'DOCUMENT_INVALID_TYPE',
+      message: `Hasil decoding berkas ${displayName} menghasilkan konten kosong (0 bytes).`,
+    });
+  }
+
+  // Validasi canonical encoding (menolak bit padding non-nol dan trailing garbage yang diabaikan Buffer.from)
+  const canonicalBase64 = buffer.toString('base64');
+  if (canonicalBase64 !== payload) {
+    throw new BadRequestException({
+      code: 'DOCUMENT_INVALID_TYPE',
+      message: `Data Base64 pada berkas ${displayName} tidak valid: canonical encoding tidak sesuai (terdapat bit padding tidak baku atau trailing data).`,
+    });
+  }
+
+  return buffer;
+}
+
+/**
+ * Validasi format berkas dokumen sesuai baseline kebijakan keamanan SIMANTIK.
+ */
+export function validateUploadedFile(
+  file: FileValidationInput,
+  requirement?: RequirementValidationRule,
+): void {
+  const filename = sanitizeFilename(file.original_filename);
+
+  // 1. Ekstrak dan periksa ekstensi file
+  const ext = extractSafeExtension(filename);
 
   // 2. Periksa MIME type baseline
   const normalizedMime = (file.mime_type || '').trim().toLowerCase();
@@ -104,9 +244,15 @@ export function validateUploadedFile(
     });
   }
 
-  // 4. Periksa Magic Bytes / Binary Signatures jika buffer tersedia
-  if (file.buffer && file.buffer.length > 0) {
-    const buf = file.buffer;
+  // 4. Periksa Keberadaan dan Integritas Buffer Biner (Wajib - Mencegah Metadata-Only / Magic Byte Bypass)
+  if (!file.buffer || file.buffer.length === 0) {
+    throw new BadRequestException({
+      code: 'DOCUMENT_INVALID_TYPE',
+      message: `Berkas "${filename}" tidak memiliki data konten biner (buffer) yang valid. Dokumen metadata-only tidak diizinkan.`,
+    });
+  }
+
+  const buf = file.buffer;
 
     // Larang secara eksplisit file executable Windows (MZ header)
     if (buf.length >= 2 && buf[0] === 0x4d && buf[1] === 0x5a) {
@@ -191,7 +337,6 @@ export function validateUploadedFile(
         });
       }
     }
-  }
 
   // 5. Pembatasan spesifik per persyaratan layanan (Narrowing)
   if (requirement && requirement.allowed_file_types) {
