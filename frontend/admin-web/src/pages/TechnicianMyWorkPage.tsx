@@ -30,7 +30,7 @@ const STATUS_OPTIONS: { value: ApplicationStatus | ''; label: string }[] = [
   { value: '', label: 'Semua Status' },
   { value: 'APPROVED', label: 'APPROVED (Menunggu Mulai)' },
   { value: 'IN_PROGRESS', label: 'IN_PROGRESS (Sedang Dikerjakan)' },
-  { value: 'COMPLETED', label: 'COMPLETED (Pekerjaan Selesai)' },
+  { value: 'REVISION_REQUIRED', label: 'REVISION_REQUIRED (Perlu Revisi)' },
 ];
 
 const STAGE_OPTIONS: { value: ApplicationStage | ''; label: string }[] = [
@@ -90,10 +90,10 @@ export function TechnicianMyWorkPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              Pekerjaan Saya (Technician Workspace)
+              Pekerjaan Saya (Tenaga Ahli Workspace)
             </h1>
             <Badge variant="primary" className="text-xs font-mono">
-              Role: Teknisi TI
+              Role: Tenaga Ahli TI
             </Badge>
           </div>
           <p className="text-sm text-slate-500 mt-1">
@@ -133,15 +133,15 @@ export function TechnicianMyWorkPage() {
         </div>
 
         {/* Card 2: Sedang Dikerjakan */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between border-l-4 border-l-blue-600">
-          <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between border-l-4 border-l-[#1B5040]">
+          <span className="text-xs font-bold text-[#1B5040] uppercase tracking-wider">
             Sedang Dikerjakan
           </span>
           <div className="mt-2 flex items-baseline justify-between">
             {summaryLoading ? (
               <Skeleton className="h-8 w-12 rounded" />
             ) : (
-              <span className="text-3xl font-extrabold text-blue-700">
+              <span className="text-3xl font-extrabold text-[#1B5040]">
                 {summary?.in_progress_count ?? 0}
               </span>
             )}
@@ -152,15 +152,15 @@ export function TechnicianMyWorkPage() {
         </div>
 
         {/* Card 3: Menunggu Mulai / Analisis */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between border-l-4 border-l-indigo-600">
-          <span className="text-xs font-bold text-indigo-700 uppercase tracking-wider">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between border-l-4 border-l-[#1B5040]">
+          <span className="text-xs font-bold text-[#1B5040] uppercase tracking-wider">
             Disetujui / Telaah
           </span>
           <div className="mt-2 flex items-baseline justify-between">
             {summaryLoading ? (
               <Skeleton className="h-8 w-12 rounded" />
             ) : (
-              <span className="text-3xl font-extrabold text-indigo-700">
+              <span className="text-3xl font-extrabold text-[#1B5040]">
                 {summary?.approved_pending_count ?? 0}
               </span>
             )}
@@ -302,7 +302,7 @@ export function TechnicianMyWorkPage() {
                       <td className="px-5 py-4 whitespace-nowrap">
                         <Link
                           to={`/applications/${item.id}`}
-                          className="font-mono font-bold text-blue-600 hover:underline block"
+                          className="font-mono font-bold text-[#1B5040] hover:underline block"
                         >
                           {item.ticket_number}
                         </Link>
@@ -325,7 +325,7 @@ export function TechnicianMyWorkPage() {
                       <td className="px-5 py-4 max-w-xs">
                         <Link
                           to={`/applications/${item.id}`}
-                          className="font-semibold text-slate-900 hover:text-blue-600 line-clamp-1 block text-sm leading-snug"
+                          className="font-semibold text-slate-900 hover:text-[#1B5040] line-clamp-1 block text-sm leading-snug"
                         >
                           {item.title}
                         </Link>

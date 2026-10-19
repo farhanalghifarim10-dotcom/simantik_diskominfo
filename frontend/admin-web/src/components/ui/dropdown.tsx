@@ -101,7 +101,7 @@ export function DropdownItem({
       className={`flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors cursor-pointer select-none ${
         destructive
           ? 'text-red-600 hover:bg-red-50 hover:text-red-700'
-          : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+          : 'text-slate-700 hover:bg-[#caf3e4]/40 hover:text-[#1b5040]'
       } ${className}`}
       {...props}
     >

@@ -64,10 +64,10 @@ export function AdminLifecycleOverviewPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="flex h-6 w-6 items-center justify-center rounded-md bg-indigo-50 text-indigo-700">
+            <span className="flex h-6 w-6 items-center justify-center rounded-md bg-[#CAF3E4] text-[#1B5040]">
               <LayersIcon size={14} />
             </span>
-            <span className="text-xs font-semibold text-indigo-700 uppercase tracking-wider">
+            <span className="text-xs font-semibold text-[#1B5040] uppercase tracking-wider">
               Tata Kelola SPBE Terintegrasi
             </span>
           </div>
@@ -98,7 +98,7 @@ export function AdminLifecycleOverviewPage() {
               onClick={() => setSelectedStage(isCurrent ? '' : s.stage)}
               className={`p-3 rounded-xl border text-left transition-all ${
                 isCurrent
-                  ? 'border-indigo-600 bg-indigo-50/70 shadow-xs ring-2 ring-indigo-500/20'
+                  ? 'border-[#1B5040] bg-[#CAF3E4]/30 shadow-xs ring-2 ring-[#2BD9A5]/30'
                   : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/60'
               }`}
             >
@@ -190,7 +190,7 @@ export function AdminLifecycleOverviewPage() {
             return (
               <div
                 key={app.id}
-                className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-indigo-200 transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-4"
+                className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-[#2E8A6E]/40 transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-4"
               >
                 <div className="space-y-2 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
@@ -223,9 +223,9 @@ export function AdminLifecycleOverviewPage() {
                           title={s.label}
                           className={`h-2 rounded-full transition-all ${
                             isCurrent
-                              ? 'w-6 bg-indigo-600 ring-2 ring-indigo-200'
+                              ? 'w-6 bg-[#1B5040] ring-2 ring-[#98F7D9]'
                               : isReached
-                              ? 'w-3 bg-indigo-400'
+                              ? 'w-3 bg-[#2E8A6E]'
                               : 'w-3 bg-slate-200'
                           }`}
                         />

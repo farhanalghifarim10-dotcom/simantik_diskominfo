@@ -58,7 +58,7 @@ export function ConfirmationDialog({
           className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${
             variant === 'danger'
               ? 'bg-red-100 text-red-600'
-              : 'bg-sky-100 text-sky-700'
+              : 'bg-[#caf3e4] text-[#1b5040]'
           }`}
         >
           <AlertTriangleIcon size={20} />

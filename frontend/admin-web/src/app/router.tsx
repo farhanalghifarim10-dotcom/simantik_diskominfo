@@ -42,7 +42,7 @@ export function AppRouter() {
         <Route path="applications" element={<AdminApplicationsListPage />} />
         <Route path="applications/:id" element={<AdminApplicationDetailPage />} />
 
-        {/* Penugasan Teknisi (Khusus SUPER_ADMIN) */}
+        {/* Penugasan Tenaga Ahli (Khusus SUPER_ADMIN) */}
         <Route
           path="assignments"
           element={
@@ -52,7 +52,7 @@ export function AppRouter() {
           }
         />
 
-        {/* Lembar Kerja Teknisi / My Work (Khusus TECHNICIAN & SUPER_ADMIN) */}
+        {/* Lembar Kerja Tenaga Ahli / My Work (Khusus TECHNICIAN & SUPER_ADMIN) */}
         <Route
           path="my-work"
           element={
@@ -112,7 +112,7 @@ export function AppRouter() {
           }
         />
 
-        {/* Manajemen Teknisi (Khusus SUPER_ADMIN) */}
+        {/* Manajemen Tenaga Ahli (Khusus SUPER_ADMIN) */}
         <Route
           path="technicians"
           element={

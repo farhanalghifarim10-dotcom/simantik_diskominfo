@@ -107,8 +107,8 @@ export function AdminTechniciansPage() {
         });
         toast({
           type: 'success',
-          title: 'Profil Teknisi Diperbarui',
-          message: `Data teknisi "${formData.full_name}" berhasil disimpan.`,
+          title: 'Profil Tenaga Ahli Diperbarui',
+          message: `Data tenaga ahli "${formData.full_name}" berhasil disimpan.`,
         });
       } else {
         await createTechMutation.mutateAsync({
@@ -119,8 +119,8 @@ export function AdminTechniciansPage() {
         });
         toast({
           type: 'success',
-          title: 'Akun Teknisi Didaftarkan',
-          message: `Akun teknisi "${formData.full_name}" telah aktif di Supabase Auth & profil SIMANTIK.`,
+          title: 'Akun Tenaga Ahli Didaftarkan',
+          message: `Akun tenaga ahli "${formData.full_name}" telah aktif di Supabase Auth & profil SIMANTIK.`,
         });
       }
       setModalOpen(false);
@@ -128,7 +128,7 @@ export function AdminTechniciansPage() {
     } catch (err: unknown) {
       toast({
         type: 'danger',
-        title: 'Gagal Menyimpan Teknisi',
+        title: 'Gagal Menyimpan Tenaga Ahli',
         message: (err as Error)?.message || 'Terjadi kesalahan sistem.',
       });
     }
@@ -146,10 +146,10 @@ export function AdminTechniciansPage() {
 
       toast({
         type: 'success',
-        title: nextStatus ? 'Akun Teknisi Diaktifkan' : 'Akun Teknisi Dinonaktifkan',
+        title: nextStatus ? 'Akun Tenaga Ahli Diaktifkan' : 'Akun Tenaga Ahli Dinonaktifkan',
         message: nextStatus
-          ? `Akun teknisi "${statusDialogTech.full_name}" kini dapat login kembali dan menerima penugasan baru.`
-          : `Akun teknisi "${statusDialogTech.full_name}" dinonaktifkan. Seluruh riwayat penugasan dan catatan teknis tetap aman.`,
+          ? `Akun tenaga ahli "${statusDialogTech.full_name}" kini dapat login kembali dan menerima penugasan baru.`
+          : `Akun tenaga ahli "${statusDialogTech.full_name}" dinonaktifkan. Seluruh riwayat penugasan dan catatan teknis tetap aman.`,
       });
       setStatusDialogTech(null);
     } catch (err: unknown) {
@@ -167,14 +167,14 @@ export function AdminTechniciansPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-slate-200">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-            Manajemen Personel Teknisi
+            Manajemen Personel Tenaga Ahli
           </h1>
           <p className="text-sm text-slate-600 mt-1">
-            Pengelolaan akun teknisi internal Diskominfo yang berhak menerima penugasan pekerjaan aplikasi.
+            Pengelolaan akun tenaga ahli internal Diskominfo yang berhak menerima penugasan pekerjaan aplikasi.
           </p>
         </div>
         <Button onClick={handleOpenCreate} variant="primary" size="md">
-          + Daftarkan Teknisi Baru
+          + Daftarkan Tenaga Ahli Baru
         </Button>
       </div>
 
@@ -182,7 +182,7 @@ export function AdminTechniciansPage() {
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-3 items-center justify-between">
         <div className="w-full md:w-80">
           <Input
-            placeholder="Cari nama atau email teknisi..."
+            placeholder="Cari nama atau email tenaga ahli..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -214,21 +214,21 @@ export function AdminTechniciansPage() {
         </div>
       ) : isError ? (
         <ErrorState
-          title="Gagal Memuat Data Teknisi"
+          title="Gagal Memuat Data Tenaga Ahli"
           description={error?.message || 'Terjadi gangguan koneksi.'}
           onRetry={refetch}
         />
       ) : !technicians || technicians.length === 0 ? (
         <EmptyState
-          title="Belum Ada Personel Teknisi"
+          title="Belum Ada Personel Tenaga Ahli"
           description={
             search
-              ? `Tidak ditemukan teknisi dengan pencarian "${search}".`
-              : 'Belum ada akun teknisi yang terdaftar pada sistem.'
+              ? `Tidak ditemukan tenaga ahli dengan pencarian "${search}".`
+              : 'Belum ada akun tenaga ahli yang terdaftar pada sistem.'
           }
           action={
             <Button onClick={handleOpenCreate} variant="primary" size="sm">
-              Daftarkan Teknisi Pertama
+              Daftarkan Tenaga Ahli Pertama
             </Button>
           }
         />
@@ -251,13 +251,13 @@ export function AdminTechniciansPage() {
                   <tr key={tech.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="px-5 py-4 font-bold text-slate-900">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-[#CAF3E4] text-[#1B5040] font-bold text-xs flex items-center justify-center shrink-0">
                           {tech.full_name.slice(0, 2).toUpperCase()}
                         </div>
                         <div>
                           <span>{tech.full_name}</span>
                           <span className="block text-[11px] text-slate-500 font-normal">
-                            Role: TECHNICIAN
+                            Role: Tenaga Ahli
                           </span>
                         </div>
                       </div>
@@ -269,7 +269,7 @@ export function AdminTechniciansPage() {
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
                           tech.active_assignments_count > 0
-                            ? 'bg-blue-100 text-blue-800'
+                            ? 'bg-[#CAF3E4] text-[#1B5040]'
                             : 'bg-slate-100 text-slate-600'
                         }`}
                       >
@@ -318,18 +318,18 @@ export function AdminTechniciansPage() {
             </table>
           </div>
           <div className="bg-slate-50 px-5 py-3 border-t border-slate-200 text-xs text-slate-500 flex justify-between items-center">
-            <span>Total: <strong>{technicians.length}</strong> Personel Teknisi</span>
+            <span>Total: <strong>{technicians.length}</strong> Personel Tenaga Ahli</span>
             <span>SIMANTIK RBAC &copy; Diskominfo Kab. Bandung</span>
           </div>
         </div>
       )}
 
-      {/* Modal Tambah / Edit Teknisi */}
+      {/* Modal Tambah / Edit Tenaga Ahli */}
       <Dialog
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editingTech ? 'Edit Profil Teknisi' : 'Daftarkan Teknisi Baru'}
-        description="Akun teknisi terintegrasi langsung dengan Supabase Auth untuk otentikasi login aman."
+        title={editingTech ? 'Edit Profil Tenaga Ahli' : 'Daftarkan Tenaga Ahli Baru'}
+        description="Akun tenaga ahli terintegrasi langsung dengan Supabase Auth untuk otentikasi login aman."
       >
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div>
@@ -350,7 +350,7 @@ export function AdminTechniciansPage() {
             </label>
             <Input
               type="email"
-              placeholder="nama.teknisi@bandungkab.go.id"
+              placeholder="nama.tenagaahli@bandungkab.go.id"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               required
@@ -378,10 +378,10 @@ export function AdminTechniciansPage() {
               id="tech_is_active"
               checked={formData.is_active}
               onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              className="h-4 w-4 rounded border-slate-300 text-[#1B5040] focus:ring-[#1B5040]"
             />
             <label htmlFor="tech_is_active" className="text-xs font-semibold text-slate-700">
-              Akun Teknisi Aktif (Dapat menerima penugasan & login ke Lembar Kerja)
+              Akun Tenaga Ahli Aktif (Dapat menerima penugasan & login ke Lembar Kerja)
             </label>
           </div>
 
@@ -413,7 +413,7 @@ export function AdminTechniciansPage() {
       <Drawer
         isOpen={Boolean(selectedTechId)}
         onClose={() => setSelectedTechId(null)}
-        title={techDetail ? `Riwayat Penugasan: ${techDetail.full_name}` : 'Detail Teknisi'}
+        title={techDetail ? `Riwayat Penugasan: ${techDetail.full_name}` : 'Detail Tenaga Ahli'}
         description={`Email: ${techDetail?.email || '-'}`}
         size="lg"
       >
@@ -425,16 +425,16 @@ export function AdminTechniciansPage() {
               <Skeleton className="h-20 w-full" />
             </div>
           ) : !techDetail ? (
-            <EmptyState title="Teknisi tidak ditemukan" />
+            <EmptyState title="Tenaga Ahli tidak ditemukan" />
           ) : (
             <>
               {/* Summary Cards */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl">
-                  <span className="text-xs text-blue-700 font-semibold block mb-1">
+                <div className="bg-[#CAF3E4]/40 border border-[#98F7D9] p-4 rounded-xl">
+                  <span className="text-xs text-[#1B5040] font-semibold block mb-1">
                     Beban Kerja Aktif
                   </span>
-                  <span className="text-2xl font-bold text-blue-900">
+                  <span className="text-2xl font-bold text-[#000408]">
                     {techDetail.active_assignments_count} Tiket
                   </span>
                 </div>
@@ -462,7 +462,7 @@ export function AdminTechniciansPage() {
                       >
                         <div>
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="font-mono text-xs font-bold text-blue-700">
+                            <span className="font-mono text-xs font-bold text-[#1B5040]">
                               {asgn.ticket_number}
                             </span>
                             <Badge variant={asgn.is_current ? 'primary' : 'neutral'}>
@@ -481,7 +481,7 @@ export function AdminTechniciansPage() {
                   </div>
                 ) : (
                   <div className="text-center py-8 text-xs text-slate-500 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                    Belum ada riwayat penugasan untuk teknisi ini.
+                    Belum ada riwayat penugasan untuk tenaga ahli ini.
                   </div>
                 )}
               </div>
@@ -502,8 +502,8 @@ export function AdminTechniciansPage() {
         }
         description={
           statusDialogTech?.is_active
-            ? `Menonaktifkan akun teknisi akan mencabut hak akses login ke sistem SIMANTIK. Seluruh riwayat pekerjaan, hasil pengujian, catatan teknis, dan jejak audit terdahulu tetap 100% terjaga dan tidak akan dihapus demi integritas arsip.`
-            : `Teknisi "${statusDialogTech?.full_name}" akan dapat login kembali dan menerima penugasan pekerjaan baru.`
+            ? `Menonaktifkan akun tenaga ahli akan mencabut hak akses login ke sistem SIMANTIK. Seluruh riwayat pekerjaan, hasil pengujian, catatan teknis, dan jejak audit terdahulu tetap 100% terjaga dan tidak akan dihapus demi integritas arsip.`
+            : `Tenaga ahli "${statusDialogTech?.full_name}" akan dapat login kembali dan menerima penugasan pekerjaan baru.`
         }
         confirmLabel={
           statusDialogTech?.is_active ? 'Ya, Nonaktifkan Akun' : 'Ya, Aktifkan Akun'

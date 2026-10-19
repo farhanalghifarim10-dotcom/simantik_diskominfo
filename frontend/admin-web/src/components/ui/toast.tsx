@@ -71,14 +71,14 @@ function ToastComponent({
   onClose: () => void;
 }) {
   const icons = {
-    info: <InfoIcon size={18} className="text-sky-600 shrink-0 mt-0.5" />,
+    info: <InfoIcon size={18} className="text-[#1b5040] shrink-0 mt-0.5" />,
     success: <CheckCircleIcon size={18} className="text-emerald-600 shrink-0 mt-0.5" />,
     warning: <AlertTriangleIcon size={18} className="text-amber-600 shrink-0 mt-0.5" />,
     danger: <AlertCircleIcon size={18} className="text-red-600 shrink-0 mt-0.5" />,
   };
 
   const borders = {
-    info: 'border-sky-200',
+    info: 'border-[#98f7d9]',
     success: 'border-emerald-200',
     warning: 'border-amber-200',
     danger: 'border-red-200',

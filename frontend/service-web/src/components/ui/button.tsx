@@ -21,7 +21,7 @@ export function Button({
   ...props
 }: ButtonProps) {
   const baseStyles =
-    'inline-flex items-center justify-center font-medium transition-colors duration-150 rounded-md cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900';
+    'inline-flex items-center justify-center font-medium whitespace-nowrap transition-colors duration-150 rounded-md cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1b5040]';
 
   const sizeStyles = {
     sm: 'h-8 px-3 text-xs gap-1.5',
@@ -31,17 +31,17 @@ export function Button({
 
   const variantStyles = {
     primary:
-      'bg-slate-900 text-white hover:bg-slate-800 active:bg-slate-950 border border-transparent shadow-xs',
+      'bg-[#1b5040] text-white hover:bg-[#143d31] active:bg-[#0d2820] border border-transparent shadow-xs',
     secondary:
-      'bg-sky-700 text-white hover:bg-sky-800 active:bg-sky-900 border border-transparent shadow-xs',
+      'bg-[#2e8a6e] text-white hover:bg-[#246854] active:bg-[#1b5040] border border-transparent shadow-xs',
     outline:
-      'bg-white text-slate-800 border border-slate-300 hover:bg-slate-50 hover:border-slate-400 active:bg-slate-100 shadow-xs',
+      'bg-white text-[#1b5040] border border-slate-300 hover:bg-[#caf3e4]/30 hover:border-[#2e8a6e] active:bg-[#caf3e4] shadow-xs',
     ghost:
-      'bg-transparent text-slate-700 hover:bg-slate-100 hover:text-slate-900 active:bg-slate-200 border border-transparent',
+      'bg-transparent text-slate-700 hover:bg-[#caf3e4]/40 hover:text-[#1b5040] active:bg-[#caf3e4] border border-transparent',
     danger:
       'bg-red-700 text-white hover:bg-red-800 active:bg-red-900 border border-transparent shadow-xs',
     link:
-      'bg-transparent text-sky-700 hover:text-sky-800 hover:underline p-0 h-auto font-semibold border-none',
+      'bg-transparent text-[#1b5040] hover:text-[#2e8a6e] hover:underline p-0 h-auto font-semibold border-none',
   };
 
   return (

@@ -2,10 +2,13 @@ import { useState } from 'react';
 import {
   Badge,
   Button,
+  ChevronDownIcon,
+  ChevronUpIcon,
   Dialog,
   EmptyState,
   ErrorState,
   FileTextIcon,
+  InfoIcon,
   Input,
   Select,
   Skeleton,
@@ -13,6 +16,7 @@ import {
   useToast,
 } from '../../components/ui';
 import { LayersIcon } from '../../components/layout/NavIcons';
+import type { ApplicationDetail } from '../applications/useAdminApplications';
 import {
   fetchEvaluationAttachmentUrl,
   fetchMaintenanceAttachmentUrl,
@@ -56,6 +60,7 @@ interface LifecycleWorkspaceProps {
   applicationId: string;
   isSuperAdmin: boolean;
   onOpenStageModal?: () => void;
+  application?: ApplicationDetail;
 }
 
 type ActiveSection =
@@ -72,6 +77,7 @@ export function LifecycleWorkspace({
   applicationId,
   isSuperAdmin,
   onOpenStageModal,
+  application,
 }: LifecycleWorkspaceProps) {
   const [activeSection, setActiveSection] = useState<ActiveSection>('ANALYSIS');
 
@@ -88,11 +94,11 @@ export function LifecycleWorkspace({
   return (
     <div className="space-y-6">
       {/* 1. REGULATORY & LIFECYCLE CONCEPT BANNER */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white shadow-md border border-slate-800">
+      <div className="bg-gradient-to-r from-[#0D2820] via-[#143D31] to-[#0D2820] rounded-2xl p-6 text-white shadow-md border border-[#246854]">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="space-y-1 max-w-3xl">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-indigo-400 bg-indigo-950/60 border border-indigo-700/50 px-2 py-0.5 rounded">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#2BD9A5] bg-[#0D2820]/80 border border-[#2BD9A5]/40 px-2 py-0.5 rounded">
                 Permenkomdigi No. 6 Tahun 2025
               </span>
               <span className="text-xs text-slate-400">•</span>
@@ -101,7 +107,7 @@ export function LifecycleWorkspace({
               </span>
             </div>
             <h2 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-              <LayersIcon size={20} className="text-indigo-400" />
+              <LayersIcon size={20} className="text-[#2BD9A5]" />
               Siklus Hidup (Lifecycle) & Dokumentasi Teknis
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
@@ -120,7 +126,7 @@ export function LifecycleWorkspace({
                 <Badge variant="neutral">Belum Masuk Siklus</Badge>
               )}
             </div>
-            {onOpenStageModal && canEdit && (
+            {onOpenStageModal && canEdit && ['APPROVED', 'IN_PROGRESS'].includes(overview?.current_status || application?.current_status || '') && (
               <Button
                 variant="outline"
                 size="sm"
@@ -154,7 +160,7 @@ export function LifecycleWorkspace({
               onClick={() => setActiveSection(tab.key as ActiveSection)}
               className={`px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors flex items-center gap-1.5 ${
                 isActive
-                  ? 'bg-blue-600 text-white shadow-sm'
+                  ? 'bg-[#1B5040] text-white shadow-sm'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
               }`}
             >
@@ -194,7 +200,11 @@ export function LifecycleWorkspace({
       {!overviewLoading && !overviewError && (
         <>
           {activeSection === 'ANALYSIS' && (
-            <AnalysisSection applicationId={applicationId} canEdit={canEdit} />
+            <AnalysisSection
+              applicationId={applicationId}
+              canEdit={canEdit}
+              application={application}
+            />
           )}
           {activeSection === 'PLANNING' && (
             <PlanningSection applicationId={applicationId} canEdit={canEdit} />
@@ -224,18 +234,21 @@ export function LifecycleWorkspace({
 }
 
 // ============================================================
-// 1. ANALYSIS SECTION
+// 1. ANALYSIS SECTION (Kajian Teknis Tenaga Ahli)
 // ============================================================
 function AnalysisSection({
   applicationId,
   canEdit,
+  application,
 }: {
   applicationId: string;
   canEdit: boolean;
+  application?: ApplicationDetail;
 }) {
   const { toast } = useToast();
   const { data, isLoading } = useLifecycleAnalysis(applicationId);
   const upsertMutation = useUpsertAnalysis(applicationId);
+  const [contextOpen, setContextOpen] = useState(true);
 
   const [form, setForm] = useState({
     problems: '',
@@ -272,14 +285,14 @@ function AnalysisSection({
     try {
       await upsertMutation.mutateAsync(form);
       toast({
-        title: 'Berhasil Disimpan',
-        message: 'Dokumentasi tahap Analisis berhasil diperbarui.',
+        title: 'Kajian Teknis Berhasil Disimpan',
+        message: 'Dokumentasi kajian teknis tahap Analisis berhasil diperbarui.',
         type: 'success',
       });
     } catch (err: any) {
       toast({
         title: 'Gagal Menyimpan',
-        message: err?.message || 'Terjadi gangguan saat menyimpan data analisis.',
+        message: err?.message || 'Terjadi gangguan saat menyimpan data kajian teknis.',
         type: 'danger',
       });
     }
@@ -288,161 +301,350 @@ function AnalysisSection({
   if (isLoading) return <Skeleton className="h-64 rounded-2xl" />;
 
   return (
-    <form onSubmit={handleSave} className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-slate-100 gap-2">
-        <div>
-          <h3 className="text-base font-bold text-slate-900">
-            Tahap 1: Analisis Kebutuhan (Analysis)
-          </h3>
-          <p className="text-xs text-slate-500">
-            Dokumentasi identifikasi masalah, kebutuhan operasional OPD, pemangku kepentingan, risiko, dan sasaran implementasi.
-          </p>
-        </div>
-        {data?.updated_at && (
-          <span className="text-[11px] text-slate-400">
-            Terakhir diubah: {formatDateTime(data.updated_at)} {data.created_by_name ? `oleh ${data.created_by_name}` : ''}
-          </span>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs sm:text-sm">
-        <div>
-          <label className="font-bold text-slate-700 block mb-1">
-            Uraian Permasalahan yang Dihadapi (Problems)
-          </label>
-          <Textarea
-            rows={3}
-            placeholder="Kendala proses bisnis manual atau sistem lama..."
-            value={form.problems}
-            onChange={(e) => setForm({ ...form, problems: e.target.value })}
-            disabled={!canEdit}
-          />
-        </div>
-
-        <div>
-          <label className="font-bold text-slate-700 block mb-1">
-            Kebutuhan Solusi & Fungsional (Needs)
-          </label>
-          <Textarea
-            rows={3}
-            placeholder="Fitur atau kapabilitas sistem yang dibutuhkan..."
-            value={form.needs}
-            onChange={(e) => setForm({ ...form, needs: e.target.value })}
-            disabled={!canEdit}
-          />
-        </div>
-
-        <div>
-          <label className="font-bold text-slate-700 block mb-1">
-            Tujuan Pembangunan/Pengembangan (Objectives)
-          </label>
-          <Textarea
-            rows={3}
-            placeholder="Tujuan strategis SPBE yang ingin dicapai..."
-            value={form.objectives}
-            onChange={(e) => setForm({ ...form, objectives: e.target.value })}
-            disabled={!canEdit}
-          />
-        </div>
-
-        <div>
-          <label className="font-bold text-slate-700 block mb-1">
-            Pihak / Pemangku Kepentingan Terkait (Stakeholders)
-          </label>
-          <Textarea
-            rows={3}
-            placeholder="Diskominfo, OPD pengusul, Bagian Organisasi, BPKAD, dsb..."
-            value={form.stakeholders}
-            onChange={(e) => setForm({ ...form, stakeholders: e.target.value })}
-            disabled={!canEdit}
-          />
-        </div>
-
-        <div>
-          <label className="font-bold text-slate-700 block mb-1">
-            Ruang Lingkup Sistem (Scope)
-          </label>
-          <Textarea
-            rows={3}
-            placeholder="Batasan modul yang dibangun..."
-            value={form.scope}
-            onChange={(e) => setForm({ ...form, scope: e.target.value })}
-            disabled={!canEdit}
-          />
-        </div>
-
-        <div>
-          <label className="font-bold text-slate-700 block mb-1">
-            Identifikasi Risiko & Mitigasi (Risks)
-          </label>
-          <Textarea
-            rows={3}
-            placeholder="Risiko teknis, sumber daya, atau proses bisnis..."
-            value={form.risks}
-            onChange={(e) => setForm({ ...form, risks: e.target.value })}
-            disabled={!canEdit}
-          />
-        </div>
-
-        <div>
-          <label className="font-bold text-slate-700 block mb-1">
-            Sasaran Pengguna Sistem (Target Users)
-          </label>
-          <Input
-            placeholder="Contoh: Admin OPD, Pegawai ASN, Publik..."
-            value={form.target_users}
-            onChange={(e) => setForm({ ...form, target_users: e.target.value })}
-            disabled={!canEdit}
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="font-bold text-slate-700 block mb-1">
-              Target Waktu (Timeline)
-            </label>
-            <Input
-              placeholder="Contoh: 3 Bulan / Q4 2026..."
-              value={form.target_timeline}
-              onChange={(e) => setForm({ ...form, target_timeline: e.target.value })}
-              disabled={!canEdit}
-            />
+    <div className="space-y-6">
+      {/* A. PANEL REFERENSI USULAN OPD (READ-ONLY) */}
+      {application && (
+        <div className="bg-slate-50/90 rounded-2xl border border-slate-200/90 overflow-hidden shadow-2xs">
+          <div
+            className="p-4 sm:p-5 flex items-center justify-between cursor-pointer select-none bg-slate-100/70 hover:bg-slate-100 transition-colors"
+            onClick={() => setContextOpen(!contextOpen)}
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-[#CAF3E4] text-[#1B5040]">
+                <FileTextIcon size={18} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="font-bold text-sm text-slate-900">
+                    Konteks Usulan OPD (Referensi Read-Only)
+                  </h4>
+                  <Badge variant="neutral" className="text-[10px] font-bold">
+                    Data Pengajuan Pemohon
+                  </Badge>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Data pengajuan asli dari instansi pemohon sebagai bahan acuan penelaahan teknis Tenaga Ahli.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200/60 transition-colors"
+              aria-label="Toggle panel referensi"
+            >
+              {contextOpen ? <ChevronUpIcon size={18} /> : <ChevronDownIcon size={18} />}
+            </button>
           </div>
-          <div>
-            <label className="font-bold text-slate-700 block mb-1">
-              Lokasi Implementasi
-            </label>
-            <Input
-              placeholder="Contoh: Datacenter Pemkab Soreang..."
-              value={form.target_location}
-              onChange={(e) => setForm({ ...form, target_location: e.target.value })}
-              disabled={!canEdit}
-            />
-          </div>
-        </div>
 
-        <div className="md:col-span-2">
-          <label className="font-bold text-slate-700 block mb-1">
-            Analisis Pendukung Lainnya (Supporting Analysis)
-          </label>
-          <Textarea
-            rows={2}
-            placeholder="Kesesuaian dengan peta jalan Arsitektur SPBE Pemda atau integrasi SPLP..."
-            value={form.supporting_analysis}
-            onChange={(e) => setForm({ ...form, supporting_analysis: e.target.value })}
-            disabled={!canEdit}
-          />
-        </div>
-      </div>
+          {contextOpen && (
+            <div className="p-5 sm:p-6 border-t border-slate-200 space-y-4 text-xs sm:text-sm">
+              {/* Ringkasan Metadata OPD */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="p-3 rounded-xl bg-white border border-slate-200">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
+                    Instansi Pengusul (OPD)
+                  </span>
+                  <p className="font-bold text-slate-800">{application.applicant?.opd_name || '-'}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-white border border-slate-200">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
+                    Penanggung Jawab (PIC)
+                  </span>
+                  <p className="font-bold text-slate-800">{application.applicant?.full_name || '-'}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-white border border-slate-200">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
+                    Layanan yang Dimohon
+                  </span>
+                  <p className="font-bold text-slate-800">{application.service?.name || '-'}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-white border border-slate-200">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
+                    Target Waktu Usulan OPD
+                  </span>
+                  <p className="font-bold text-slate-800">
+                    {application.requested_deadline ? formatDate(application.requested_deadline) : 'Tidak ditentukan'}
+                  </p>
+                </div>
+              </div>
 
-      {canEdit && (
-        <div className="pt-4 border-t border-slate-100 flex justify-end">
-          <Button type="submit" variant="primary" size="md" disabled={upsertMutation.isPending}>
-            {upsertMutation.isPending ? 'Menyimpan...' : 'Simpan Dokumentasi Analisis'}
-          </Button>
+              {/* Uraian Kebutuhan & Masalah Versi OPD */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="p-3.5 rounded-xl bg-white border border-slate-200 space-y-1">
+                  <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
+                    Permasalahan yang Disampaikan Pemohon:
+                  </span>
+                  <p className="text-slate-700 whitespace-pre-wrap leading-relaxed text-xs">
+                    {application.problem_statement || '(Tidak ada data permasalahan terperinci)'}
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-white border border-slate-200 space-y-1">
+                  <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
+                    Tujuan yang Diharapkan Pemohon:
+                  </span>
+                  <p className="text-slate-700 whitespace-pre-wrap leading-relaxed text-xs">
+                    {application.objective || '(Tidak ada data tujuan terperinci)'}
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-white border border-slate-200 space-y-1">
+                  <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
+                    Ruang Lingkup Usulan Pemohon:
+                  </span>
+                  <p className="text-slate-700 whitespace-pre-wrap leading-relaxed text-xs">
+                    {application.scope || '(Tidak ada batasan ruang lingkup terperinci)'}
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-white border border-slate-200 space-y-1">
+                  <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
+                    Output / Hasil yang Diminta Pemohon:
+                  </span>
+                  <p className="text-slate-700 whitespace-pre-wrap leading-relaxed text-xs">
+                    {application.expected_output || '(Tidak ada output terperinci)'}
+                  </p>
+                </div>
+              </div>
+
+              {application.background && (
+                <div className="p-3.5 rounded-xl bg-white border border-slate-200 space-y-1">
+                  <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
+                    Latar Belakang Usulan Pemohon:
+                  </span>
+                  <p className="text-slate-700 whitespace-pre-wrap leading-relaxed text-xs">
+                    {application.background}
+                  </p>
+                </div>
+              )}
+
+              {application.documents && application.documents.length > 0 && (
+                <div className="pt-2 flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] font-bold text-slate-500">
+                    Dokumen Persyaratan Terlampir:
+                  </span>
+                  {application.documents.map((d) => (
+                    <span
+                      key={d.id}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white border border-slate-200 text-xs text-slate-700 font-mono"
+                    >
+                      <FileTextIcon size={12} className="text-[#1B5040]" />
+                      {d.original_filename}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200/80 text-xs text-blue-900 flex items-start gap-2">
+                <InfoIcon size={16} className="text-blue-700 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Perhatian:</strong> Data pada panel konteks usulan di atas bersifat referensi <em>read-only</em>. Tenaga Ahli menyusun telaah teknis independen pada formulir kajian teknis di bawah ini.
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       )}
-    </form>
+
+      {/* B. FORMULIR KAJIAN TEKNIS TENAGA AHLI */}
+      <form onSubmit={handleSave} className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-slate-100 gap-2">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#1B5040]" />
+              <h3 className="text-base font-bold text-slate-900">
+                Tahap 1: Kajian Teknis Tenaga Ahli (Analysis)
+              </h3>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Formulir pencatatan hasil telaah teknis dan analisis kebutuhan internal oleh Tenaga Ahli Diskominfo berdasarkan usulan OPD.
+            </p>
+          </div>
+          {data?.updated_at && (
+            <span className="text-[11px] text-slate-400">
+              Terakhir diubah: {formatDateTime(data.updated_at)} {data.created_by_name ? `oleh ${data.created_by_name}` : ''}
+            </span>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs sm:text-sm">
+          {/* 1. problems */}
+          <div>
+            <label className="font-bold text-slate-800 block mb-0.5">
+              Kajian Permasalahan Teknis dan Kondisi Eksisting
+            </label>
+            <span className="text-[11px] text-slate-500 block mb-1.5 leading-tight">
+              Kondisi sistem/proses saat ini, temuan teknis lapangan, kesenjangan, serta kendala yang perlu diverifikasi.
+            </span>
+            <Textarea
+              rows={3}
+              placeholder="Uraikan hasil telaah terhadap kondisi sistem/proses saat ini, temuan teknis lapangan, kesenjangan sistem, serta kendala arsitektur yang perlu diverifikasi..."
+              value={form.problems}
+              onChange={(e) => setForm({ ...form, problems: e.target.value })}
+              disabled={!canEdit}
+            />
+          </div>
+
+          {/* 2. needs */}
+          <div>
+            <label className="font-bold text-slate-800 block mb-0.5">
+              Spesifikasi Kebutuhan Teknis
+            </label>
+            <span className="text-[11px] text-slate-500 block mb-1.5 leading-tight">
+              Hasil telaah kebutuhan fungsional dan nonfungsional, validasi, keamanan, kinerja, dan integrasi.
+            </span>
+            <Textarea
+              rows={3}
+              placeholder="Uraikan hasil telaah kebutuhan fungsional dan nonfungsional, validasi spesifikasi modul, standar keamanan, kinerja, serta integrasi sesuai relevansi..."
+              value={form.needs}
+              onChange={(e) => setForm({ ...form, needs: e.target.value })}
+              disabled={!canEdit}
+            />
+          </div>
+
+          {/* 3. objectives */}
+          <div>
+            <label className="font-bold text-slate-800 block mb-0.5">
+              Target Teknis dan Kriteria Penerimaan
+            </label>
+            <span className="text-[11px] text-slate-500 block mb-1.5 leading-tight">
+              Indikator terukur untuk menilai apakah kebutuhan dan fungsi sistem terpenuhi secara objektif.
+            </span>
+            <Textarea
+              rows={3}
+              placeholder="Tentukan parameter keberhasilan teknis, target performa sistem, kriteria penerimaan fungsional, dan standar kelaikan sistem..."
+              value={form.objectives}
+              onChange={(e) => setForm({ ...form, objectives: e.target.value })}
+              disabled={!canEdit}
+            />
+          </div>
+
+          {/* 4. stakeholders */}
+          <div>
+            <label className="font-bold text-slate-800 block mb-0.5">
+              Pemetaan Pemangku Kepentingan dan Tanggung Jawab
+            </label>
+            <span className="text-[11px] text-slate-500 block mb-1.5 leading-tight">
+              Peran dan batasan tanggung jawab pihak yang benar-benar terkait pada tahap analisis teknis.
+            </span>
+            <Textarea
+              rows={3}
+              placeholder="Jelaskan peran teknis yang benar-benar terkait pada tahap analisis (OPD pemohon, Tenaga Ahli Diskominfo, admin sistem, pengelola infrastruktur)..."
+              value={form.stakeholders}
+              onChange={(e) => setForm({ ...form, stakeholders: e.target.value })}
+              disabled={!canEdit}
+            />
+          </div>
+
+          {/* 5. scope */}
+          <div>
+            <label className="font-bold text-slate-800 block mb-0.5">
+              Batasan dan Ruang Lingkup Pengerjaan Teknis
+            </label>
+            <span className="text-[11px] text-slate-500 block mb-1.5 leading-tight">
+              Diferensiasi tegas antara komponen/modul yang masuk dalam cakupan (in-scope) dan di luar cakupan (out-of-scope).
+            </span>
+            <Textarea
+              rows={3}
+              placeholder="Tegaskan batasan pengerjaan teknis, modul yang masuk dalam cakupan, serta penegasan hal-hal yang berada di luar cakupan proyek..."
+              value={form.scope}
+              onChange={(e) => setForm({ ...form, scope: e.target.value })}
+              disabled={!canEdit}
+            />
+          </div>
+
+          {/* 6. risks */}
+          <div>
+            <label className="font-bold text-slate-800 block mb-0.5">
+              Risiko Teknis, Dependensi, dan Mitigasi
+            </label>
+            <span className="text-[11px] text-slate-500 block mb-1.5 leading-tight">
+              Penilaian risiko keamanan, ketergantungan layanan luar, infrastruktur server, dan strategi mitigasi.
+            </span>
+            <Textarea
+              rows={3}
+              placeholder="Uraikan risiko keamanan informasi, ketergantungan API/layanan luar, ketersediaan server/jaringan, risiko migrasi data, serta langkah mitigasinya..."
+              value={form.risks}
+              onChange={(e) => setForm({ ...form, risks: e.target.value })}
+              disabled={!canEdit}
+            />
+          </div>
+
+          {/* 7. target_users */}
+          <div>
+            <label className="font-bold text-slate-800 block mb-0.5">
+              Profil Pengguna dan Kebutuhan Akses
+            </label>
+            <span className="text-[11px] text-slate-500 block mb-1.5 leading-tight">
+              Peran pengguna (roles), hak akses data, dan batas kewenangan sistem yang tersedia.
+            </span>
+            <Input
+              placeholder="Petakan peran pengguna (misal: Operator OPD, Verifikator, Pimpinan, Publik), estimasi beban akses, dan batas kewenangan sistem..."
+              value={form.target_users}
+              onChange={(e) => setForm({ ...form, target_users: e.target.value })}
+              disabled={!canEdit}
+            />
+          </div>
+
+          {/* 8 & 9. target_timeline & target_location */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="font-bold text-slate-800 block mb-0.5">
+                Estimasi Tahapan dan Dependensi Pelaksanaan
+              </label>
+              <span className="text-[11px] text-slate-500 block mb-1.5 leading-tight">
+                Estimasi alokasi waktu dan urutan pekerjaan pengerjaan.
+              </span>
+              <Input
+                placeholder="Contoh: 3 Bulan (Analisis 2 mgg, Koding 6 mgg, Uji 2 mgg)..."
+                value={form.target_timeline}
+                onChange={(e) => setForm({ ...form, target_timeline: e.target.value })}
+                disabled={!canEdit}
+              />
+            </div>
+            <div>
+              <label className="font-bold text-slate-800 block mb-0.5">
+                Lingkungan Implementasi dan Infrastruktur
+              </label>
+              <span className="text-[11px] text-slate-500 block mb-1.5 leading-tight">
+                Kebutuhan server, jaringan, database, dan deployment.
+              </span>
+              <Input
+                placeholder="Contoh: Datacenter Pemkab Soreang, Server VM Staging/Prod..."
+                value={form.target_location}
+                onChange={(e) => setForm({ ...form, target_location: e.target.value })}
+                disabled={!canEdit}
+              />
+            </div>
+          </div>
+
+          {/* 10. supporting_analysis */}
+          <div className="md:col-span-2">
+            <label className="font-bold text-slate-800 block mb-0.5">
+              Analisis Gap, Integrasi, Interoperabilitas, dan Kepatuhan SPBE
+            </label>
+            <span className="text-[11px] text-slate-500 block mb-1.5 leading-tight">
+              Pertimbangan arsitektur SPBE, integrasi API eksternal yang telah ditelaah, interoperabilitas, dan keamanan informasi.
+            </span>
+            <Textarea
+              rows={2}
+              placeholder="Uraikan hasil telaah terhadap kesesuaian domain arsitektur SPBE, interoperabilitas basis data (SPLP), dan standar kepatuhan regulasi terkait..."
+              value={form.supporting_analysis}
+              onChange={(e) => setForm({ ...form, supporting_analysis: e.target.value })}
+              disabled={!canEdit}
+            />
+          </div>
+        </div>
+
+        {canEdit && (
+          <div className="pt-4 border-t border-slate-100 flex justify-end">
+            <Button type="submit" variant="primary" size="md" disabled={upsertMutation.isPending}>
+              {upsertMutation.isPending ? 'Menyimpan...' : 'Simpan Kajian Teknis Tenaga Ahli'}
+            </Button>
+          </div>
+        )}
+      </form>
+    </div>
   );
 }
 
@@ -1394,7 +1596,7 @@ function TestingSection({
                     <button
                       type="button"
                       onClick={() => setDetailModalTest(t)}
-                      className="text-left hover:text-blue-600 transition-colors"
+                      className="text-left hover:text-[#1B5040] transition-colors"
                     >
                       {t.test_name}
                     </button>
@@ -1404,7 +1606,7 @@ function TestingSection({
                       </span>
                     )}
                     {t.attachment_filename && (
-                      <span className="inline-flex items-center gap-1 text-[10px] text-indigo-600 font-mono mt-0.5">
+                      <span className="inline-flex items-center gap-1 text-[10px] text-[#1B5040] font-mono mt-0.5">
                         📎 {t.attachment_filename}
                       </span>
                     )}
@@ -1428,13 +1630,13 @@ function TestingSection({
                   <td className="p-3 text-slate-600 max-w-xs">
                     <div>{t.findings || '-'}</div>
                     {t.corrective_action && (
-                      <div className="text-indigo-600 font-medium text-[11px] mt-0.5">
+                      <div className="text-[#1B5040] font-medium text-[11px] mt-0.5">
                         Tindakan: {t.corrective_action}
                       </div>
                     )}
                   </td>
                   <td className="p-3 text-slate-500 whitespace-nowrap">
-                    <div>{t.tester || t.tested_by_name || 'Teknisi'}</div>
+                    <div>{t.tester || t.tested_by_name || 'Tenaga Ahli'}</div>
                     <div className="text-[11px] text-slate-400">
                       {formatDate(t.testing_time || t.tested_at || t.created_at)}
                     </div>
@@ -1548,7 +1750,7 @@ function TestingSection({
               </div>
               <div>
                 <span className="font-bold text-slate-700 block mb-0.5">Tindakan Korektif:</span>
-                <p className="text-indigo-700 font-medium">{detailModalTest.corrective_action || '-'}</p>
+                <p className="text-[#1B5040] font-medium">{detailModalTest.corrective_action || '-'}</p>
               </div>
             </div>
 
@@ -1556,7 +1758,7 @@ function TestingSection({
               <div>
                 <span className="text-slate-500 block">Petugas Penguji:</span>
                 <span className="font-bold text-slate-800">
-                  {detailModalTest.tester || detailModalTest.tested_by_name || 'Teknisi'}
+                  {detailModalTest.tester || detailModalTest.tested_by_name || 'Tenaga Ahli'}
                 </span>
               </div>
               <div>
@@ -1568,14 +1770,14 @@ function TestingSection({
             </div>
 
             {detailModalTest.attachment_path && (
-              <div className="p-3 bg-indigo-50/60 rounded-xl border border-indigo-200 flex items-center justify-between">
+              <div className="p-3 bg-[#CAF3E4]/40 rounded-xl border border-[#98F7D9] flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-indigo-600 text-lg">📄</span>
+                  <span className="text-[#1B5040] text-lg">📄</span>
                   <div>
-                    <span className="font-bold text-indigo-950 block text-xs">
+                    <span className="font-bold text-slate-900 block text-xs">
                       {detailModalTest.attachment_filename || 'Lampiran Bukti Pengujian'}
                     </span>
-                    <span className="text-[10px] text-indigo-600 font-mono">
+                    <span className="text-[10px] text-[#1B5040] font-mono">
                       Private storage aman (15 menit token terenkripsi)
                     </span>
                   </div>
@@ -1763,7 +1965,7 @@ function TestingSection({
             </label>
             <input
               type="file"
-              className="text-xs text-slate-600 block w-full file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              className="text-xs text-slate-600 block w-full file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#CAF3E4] file:text-[#1B5040] hover:file:bg-[#98F7D9]"
               onChange={(e) => {
                 if (e.target.files && e.target.files[0]) {
                   setForm({ ...form, file: e.target.files[0] });
@@ -2053,7 +2255,7 @@ function MaintenanceSection({
                     <button
                       type="button"
                       onClick={() => setDetailRecord(m)}
-                      className="text-left hover:text-blue-600 transition-colors"
+                      className="text-left hover:text-[#1B5040] transition-colors"
                     >
                       {m.title}
                     </button>
@@ -2063,7 +2265,7 @@ function MaintenanceSection({
                       </p>
                     )}
                     {m.attachment_filename && (
-                      <span className="inline-flex items-center gap-1 text-[10px] text-indigo-600 font-mono mt-0.5">
+                      <span className="inline-flex items-center gap-1 text-[10px] text-[#1B5040] font-mono mt-0.5">
                         📎 {m.attachment_filename}
                       </span>
                     )}
@@ -2078,7 +2280,7 @@ function MaintenanceSection({
                     )}
                   </td>
                   <td className="p-3 text-slate-500 whitespace-nowrap">
-                    <div>{m.executor || m.performed_by_name || 'Teknisi'}</div>
+                    <div>{m.executor || m.performed_by_name || 'Tenaga Ahli'}</div>
                     <div className="text-[11px] text-slate-400">
                       {formatDate(m.start || m.started_at || m.created_at)} - {formatDate(m.end || m.completed_at || m.created_at)}
                     </div>
@@ -2197,14 +2399,14 @@ function MaintenanceSection({
             </div>
 
             {detailRecord.attachment_path && (
-              <div className="p-3 bg-indigo-50/60 rounded-xl border border-indigo-200 flex items-center justify-between">
+              <div className="p-3 bg-[#CAF3E4]/40 rounded-xl border border-[#98F7D9] flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-indigo-600 text-lg">📄</span>
+                  <span className="text-[#1B5040] text-lg">📄</span>
                   <div>
-                    <span className="font-bold text-indigo-950 block text-xs">
+                    <span className="font-bold text-slate-900 block text-xs">
                       {detailRecord.attachment_filename || 'Lampiran Bukti Pemeliharaan'}
                     </span>
-                    <span className="text-[10px] text-indigo-600 font-mono">
+                    <span className="text-[10px] text-[#1B5040] font-mono">
                       Private storage aman (15 menit token terenkripsi)
                     </span>
                   </div>
@@ -2340,7 +2542,7 @@ function MaintenanceSection({
               Pelaksana (Executor)
             </label>
             <Input
-              placeholder="Nama personel teknisi atau tim pelaksana..."
+              placeholder="Nama personel tenaga ahli atau tim pelaksana..."
               value={form.executor}
               onChange={(e) => setForm({ ...form, executor: e.target.value })}
             />
@@ -2352,7 +2554,7 @@ function MaintenanceSection({
             </label>
             <input
               type="file"
-              className="text-xs text-slate-600 block w-full file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              className="text-xs text-slate-600 block w-full file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#CAF3E4] file:text-[#1B5040] hover:file:bg-[#98F7D9]"
               onChange={(e) => {
                 if (e.target.files && e.target.files[0]) {
                   setForm({ ...form, file: e.target.files[0] });
@@ -3274,7 +3476,7 @@ function TechnicalDocumentsSection({
               type="file"
               onChange={handleFileChange}
               required
-              className="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              className="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#CAF3E4] file:text-[#1B5040] hover:file:bg-[#98F7D9]"
             />
           </div>
 

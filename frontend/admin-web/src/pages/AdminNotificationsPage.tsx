@@ -106,16 +106,16 @@ export function AdminNotificationsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="flex h-6 w-6 items-center justify-center rounded-md bg-sky-50 text-sky-700">
+            <span className="flex h-6 w-6 items-center justify-center rounded-md bg-[#CAF3E4] text-[#1B5040]">
               <BellIcon size={14} />
             </span>
-            <span className="text-xs font-semibold text-sky-700 uppercase tracking-wider">
+            <span className="text-xs font-semibold text-[#1B5040] uppercase tracking-wider">
               Pusat Informasi Internal
             </span>
           </div>
           <Heading level={1}>Pemberitahuan Sistem</Heading>
           <Text variant="muted" className="mt-1 max-w-2xl text-xs sm:text-sm">
-            Notifikasi permohonan baru, mutasi status, penugasan teknisi, pesan masuk, dan tindak lanjut pengujian kelaikan.
+            Notifikasi permohonan baru, mutasi status, penugasan tenaga ahli, pesan masuk, dan tindak lanjut pengujian kelaikan.
           </Text>
         </div>
 
@@ -210,7 +210,7 @@ export function AdminNotificationsPage() {
                 key={n.id}
                 className={`p-5 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-start justify-between gap-4 ${
                   isUnread
-                    ? 'bg-blue-50/40 border-blue-200 shadow-xs'
+                    ? 'bg-[#CAF3E4]/30 border-[#98F7D9] shadow-xs'
                     : 'bg-white border-slate-200'
                 }`}
               >
@@ -225,7 +225,7 @@ export function AdminNotificationsPage() {
                       </span>
                     )}
                     {isUnread && (
-                      <span className="h-2 w-2 rounded-full bg-blue-600 ring-2 ring-blue-100" />
+                      <span className="h-2 w-2 rounded-full bg-[#1B5040] ring-2 ring-[#CAF3E4]" />
                     )}
                     <span className="text-xs text-slate-400">
                       {formatDateTime(n.created_at)}

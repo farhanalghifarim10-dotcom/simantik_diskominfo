@@ -35,7 +35,7 @@ export const navigationItems: NavItem[] = [
 
   // Operasional & Lifecycle
   {
-    title: 'Penugasan Teknisi',
+    title: 'Penugasan Tenaga Ahli',
     href: '/assignments',
     iconName: 'users',
     allowedRoles: ['SUPER_ADMIN'], // Hanya SUPER_ADMIN yang menugaskan
@@ -79,7 +79,7 @@ export const navigationItems: NavItem[] = [
     section: 'administration',
   },
   {
-    title: 'Manajemen Teknisi',
+    title: 'Manajemen Tenaga Ahli',
     href: '/technicians',
     iconName: 'user-check',
     allowedRoles: ['SUPER_ADMIN'],
