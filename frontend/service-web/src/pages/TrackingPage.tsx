@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router';
+import { motion } from 'motion/react';
 import {
   Alert,
+  AlertCircleIcon,
   Badge,
   Button,
+  CheckCircleIcon,
   EmptyState,
   ErrorState,
   FileTextIcon,
@@ -88,6 +91,12 @@ export function TrackingPage() {
     return sessionStorage.getItem('simantik_tracking_token') || null;
   });
 
+  // Closed ticket notification banner state
+  const [closedTicketNotice, setClosedTicketNotice] = useState<{
+    ticketNumber: string;
+    message: string;
+  } | null>(null);
+
   // Revision form states
   const [showRevisionForm, setShowRevisionForm] = useState(false);
   const [revisionNotes, setRevisionNotes] = useState('');
@@ -143,6 +152,7 @@ export function TrackingPage() {
     setCodeInput('');
     setSearchParams({});
     setShowRevisionForm(false);
+    setClosedTicketNotice(null);
     toast({
       title: 'Sesi Berakhir',
       message: 'Anda telah keluar dari sesi pelacakan tiket.',
@@ -165,6 +175,7 @@ export function TrackingPage() {
         ticketNumber: ticket.trim().toUpperCase(),
         trackingCode: code.trim(),
       });
+      setClosedTicketNotice(null);
       setActiveTicket(res.ticket_number);
       setTrackingToken(res.tracking_token);
       sessionStorage.setItem('simantik_tracking_ticket', res.ticket_number);
@@ -176,6 +187,27 @@ export function TrackingPage() {
       });
       setSearchParams({ ticket: res.ticket_number });
     } catch (err: any) {
+      if (err?.code === 'TICKET_CLOSED' || err?.status === 403) {
+        const closedMsg =
+          err?.message ||
+          `Tiket permohonan [${ticket.trim().toUpperCase()}] telah resmi ditutup oleh Administrator. Layanan untuk nomor tiket ini sudah selesai dan tidak dapat dibuka kembali.`;
+        setClosedTicketNotice({
+          ticketNumber: ticket.trim().toUpperCase(),
+          message: closedMsg,
+        });
+        setActiveTicket(null);
+        setTrackingToken(null);
+        sessionStorage.removeItem('simantik_tracking_ticket');
+        sessionStorage.removeItem('simantik_tracking_token');
+        setSearchParams({});
+        toast({
+          title: 'Tiket Telah Ditutup',
+          message: 'Layanan untuk nomor tiket ini telah resmi ditutup dan tidak dapat dibuka kembali.',
+          type: 'danger',
+        });
+        return;
+      }
+
       let msg = err?.message || 'Nomor tiket atau kode pelacakan tidak valid.';
       if (err?.code === 'TRACKING_RATE_LIMITED' || err?.status === 429) {
         msg = 'Terlalu banyak percobaan yang gagal. Demi keamanan, silakan tunggu beberapa menit.';
@@ -195,19 +227,56 @@ export function TrackingPage() {
       verifyTrackingCredential(urlTicket, urlCode)
         .then((res) => {
           if (!isMounted) return;
+          setClosedTicketNotice(null);
           setActiveTicket(res.ticket_number);
           setTrackingToken(res.tracking_token);
           sessionStorage.setItem('simantik_tracking_ticket', res.ticket_number);
           sessionStorage.setItem('simantik_tracking_token', res.tracking_token);
         })
-        .catch(() => {
-          // ignore auto-verification error, user can manually submit
+        .catch((err: any) => {
+          if (!isMounted) return;
+          if (err?.code === 'TICKET_CLOSED' || err?.status === 403) {
+            setClosedTicketNotice({
+              ticketNumber: urlTicket.toUpperCase(),
+              message:
+                err?.message ||
+                `Tiket permohonan [${urlTicket.toUpperCase()}] telah resmi ditutup oleh Administrator. Layanan untuk nomor tiket ini sudah selesai dan tidak dapat dibuka kembali.`,
+            });
+            sessionStorage.removeItem('simantik_tracking_ticket');
+            sessionStorage.removeItem('simantik_tracking_token');
+            setActiveTicket(null);
+            setTrackingToken(null);
+          }
         });
     }
     return () => {
       isMounted = false;
     };
   }, [urlTicket, urlCode, trackingToken]);
+
+  // Guard jika sesi yang sudah tersimpan ternyata tiketnya sudah CLOSED
+  const isTicketClosed =
+    ticketError &&
+    ((ticketError as any)?.code === 'TICKET_CLOSED' ||
+      (ticketError as any)?.status === 403);
+
+  useEffect(() => {
+    if (isTicketClosed) {
+      queueMicrotask(() => {
+        setClosedTicketNotice({
+          ticketNumber: activeTicket || 'TIKET',
+          message:
+            (ticketError as any)?.message ||
+            'Tiket permohonan ini telah resmi ditutup oleh Administrator. Layanan untuk nomor tiket ini tidak dapat dibuka kembali.',
+        });
+        setActiveTicket(null);
+        setTrackingToken(null);
+        setSearchParams({});
+      });
+      sessionStorage.removeItem('simantik_tracking_ticket');
+      sessionStorage.removeItem('simantik_tracking_token');
+    }
+  }, [isTicketClosed, ticketError, activeTicket, setSearchParams]);
 
   const handleRevisionFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -310,8 +379,13 @@ export function TrackingPage() {
     <div className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto space-y-8">
         {/* HEADER SECTION */}
-        <div className="text-center space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold uppercase tracking-wider">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+          className="text-center space-y-3"
+        >
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#CAF3E4] border border-[#98F7D9] text-[#1B5040] text-xs font-semibold uppercase tracking-wider">
             <SearchIcon className="w-3.5 h-3.5" />
             <span>Portal Pelacakan Permohonan SPBE</span>
           </div>
@@ -321,13 +395,99 @@ export function TrackingPage() {
           <p className="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto">
             Pantau perkembangan telaah teknis, arsitektur, dan tahapan siklus hidup aplikasi secara transparan tanpa perlu login.
           </p>
-        </div>
+        </motion.div>
+
+        {/* CLOSED TICKET NOTICE CARD */}
+        {closedTicketNotice && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            className="bg-white rounded-2xl border-2 border-red-200/90 shadow-md p-6 sm:p-8 space-y-6 relative overflow-hidden"
+          >
+            {/* Top decorative accent bar */}
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-rose-500 via-[#1B5040] to-rose-500" />
+
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 shrink-0">
+                  <AlertCircleIcon className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-bold tracking-wider text-[#1B5040] bg-[#CAF3E4] px-2.5 py-0.5 rounded border border-[#98F7D9]">
+                      {closedTicketNotice.ticketNumber}
+                    </span>
+                    <span className="text-[11px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded border border-rose-200">
+                      Status: DITUTUP (CLOSED)
+                    </span>
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
+                    Layanan Tidak Dapat Dibuka Kembali
+                  </h2>
+                </div>
+              </div>
+              <Badge variant="danger" className="text-xs px-3 py-1 font-bold">
+                Akses Dinonaktifkan
+              </Badge>
+            </div>
+
+            <div className="space-y-3.5 text-xs sm:text-sm leading-relaxed">
+              <p className="font-semibold text-slate-800 text-sm sm:text-base">
+                {closedTicketNotice.message}
+              </p>
+              <p className="text-slate-600">
+                Sesuai dengan SOP Tata Kelola Layanan SPBE Diskominfo, tiket permohonan yang telah dinyatakan selesai dan ditutup oleh Administrator telah diarsipkan secara permanen. Anda tidak dapat lagi menggunakan nomor tiket ini untuk membuka sesi konsultasi, mengajukan revisi, ataupun melanjutkan pengerjaan.
+              </p>
+              <div className="p-4 rounded-xl bg-[#CAF3E4]/70 border border-[#98F7D9] text-xs sm:text-sm text-[#000408] flex items-start gap-3">
+                <InfoIcon className="w-5 h-5 text-[#1B5040] shrink-0 mt-0.5" />
+                <div>
+                  <strong className="block font-bold mb-0.5 text-[#1B5040]">
+                    Petunjuk Permohonan Selanjutnya:
+                  </strong>
+                  <span className="text-slate-700">
+                    Apabila OPD Anda membutuhkan layanan pengembangan lanjutan, pemeliharaan baru, atau permohonan baru lainnya, silakan ajukan formulir permohonan baru untuk mendapatkan nomor tiket baru.
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <Link to="/services" className="w-full sm:w-auto">
+                <Button
+                  variant="primary"
+                  size="md"
+                  className="w-full sm:w-auto bg-[#1B5040] hover:bg-[#143D31] text-white font-bold h-11 px-6 rounded-xl shadow-xs"
+                >
+                  Ajukan Permohonan Baru
+                </Button>
+              </Link>
+              <Button
+                variant="outline"
+                size="md"
+                onClick={() => {
+                  setClosedTicketNotice(null);
+                  setTicketInput('');
+                  setCodeInput('');
+                }}
+                className="w-full sm:w-auto bg-white hover:bg-[#CAF3E4]/30 text-[#1B5040] border border-slate-300 hover:border-[#2E8A6E] font-semibold h-11 px-5 rounded-xl shadow-xs"
+              >
+                Cari Nomor Tiket Lain
+              </Button>
+            </div>
+          </motion.div>
+        )}
 
         {/* 1. VERIFICATION / CREDENTIAL INPUT CARD */}
         {!trackingToken || isSessionExpired ? (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+            className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6"
+          >
             <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+              <div className="w-10 h-10 rounded-xl bg-[#CAF3E4] flex items-center justify-center text-[#1B5040]">
                 <ShieldIcon className="w-5 h-5" />
               </div>
               <div>
@@ -393,34 +553,40 @@ export function TrackingPage() {
 
               <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
-                  <InfoIcon className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                  <InfoIcon className="w-3.5 h-3.5 text-[#2E8A6E] shrink-0" />
                   <span>
                     Kredensial pelacakan dienkripsi dengan standar SHA-256 dan pembatasan laju akses.
                   </span>
                 </div>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="md"
-                  disabled={verifyMutation.isPending}
-                  className="w-full sm:w-auto"
-                >
-                  {verifyMutation.isPending ? 'Memverifikasi...' : 'Lacak Tiket'}
-                </Button>
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="md"
+                    disabled={verifyMutation.isPending}
+                    className="w-full sm:w-auto"
+                  >
+                    {verifyMutation.isPending ? 'Memverifikasi...' : 'Lacak Tiket'}
+                  </Button>
+                </motion.div>
               </div>
             </form>
-          </div>
+          </motion.div>
         ) : (
           /* 2. ACTIVE SESSION HEADER & CONTROLS */
-          <div className="flex items-center justify-between bg-blue-50/70 border border-blue-200 rounded-2xl p-4 px-6 text-xs">
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center justify-between bg-[#CAF3E4]/70 border border-[#98F7D9] rounded-2xl p-4 px-6 text-xs"
+          >
             <div className="flex items-center gap-3">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
               <div>
-                <span className="font-bold text-blue-950 block">
+                <span className="font-bold text-[#000408] block">
                   Sesi Pelacakan Aktif: {activeTicket}
                 </span>
-                <span className="text-blue-700 text-[11px]">
-                  Konteks terotorisasi (15 menit). Data internal teknisi terlindungi.
+                <span className="text-[#1B5040] text-[11px]">
+                  Konteks terotorisasi (15 menit). Data internal tenaga ahli terlindungi.
                 </span>
               </div>
             </div>
@@ -428,11 +594,11 @@ export function TrackingPage() {
               variant="outline"
               size="sm"
               onClick={handleClearSession}
-              className="text-xs text-blue-800 border-blue-300 hover:bg-blue-100"
+              className="text-xs text-[#1B5040] border-[#98F7D9] hover:bg-[#CAF3E4]"
             >
               Keluar Sesi
             </Button>
-          </div>
+          </motion.div>
         )}
 
         {/* 3. TICKET RESULT & DETAIL VIEW */}
@@ -629,18 +795,169 @@ export function TrackingPage() {
                   </div>
 
                   {/* Next Step Information Advisory */}
-                  <div className="p-4 rounded-xl bg-blue-50/70 border border-blue-200 text-xs sm:text-sm text-blue-900 flex items-start gap-3">
-                    <InfoIcon className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                  <div className="p-4 rounded-xl bg-[#CAF3E4]/70 border border-[#98F7D9] text-xs sm:text-sm text-[#000408] flex items-start gap-3">
+                    <InfoIcon className="w-5 h-5 text-[#1B5040] shrink-0 mt-0.5" />
                     <div>
-                      <strong className="block font-bold mb-0.5 text-blue-950">
+                      <strong className="block font-bold mb-0.5 text-[#1B5040]">
                         Instruksi & Prosedur Tahapan Berikutnya:
                       </strong>
-                      <p className="text-blue-800 leading-relaxed">
+                      <p className="text-slate-700 leading-relaxed">
                         {ticketData.next_step}
                       </p>
                     </div>
                   </div>
+
+                  {/* Panduan & Status Tindak Lanjut Pemohon (OPD) */}
+                  <div
+                    className={`p-4 sm:p-5 rounded-xl border ${
+                      ticketData.action_required_by_applicant
+                        ? 'bg-amber-50 border-amber-300 text-amber-950'
+                        : 'bg-emerald-50/70 border-emerald-200 text-emerald-950'
+                    } space-y-2`}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        {ticketData.action_required_by_applicant ? (
+                          <AlertCircleIcon className="w-5 h-5 text-amber-600 shrink-0" />
+                        ) : (
+                          <CheckCircleIcon className="w-5 h-5 text-emerald-600 shrink-0" />
+                        )}
+                        <h4 className="font-bold text-sm text-slate-900">
+                          {ticketData.action_required_by_applicant
+                            ? 'Tindakan Diperlukan oleh Instansi Pemohon'
+                            : 'Status Tindak Lanjut Instansi Pemohon'}
+                        </h4>
+                      </div>
+                      <Badge
+                        variant={ticketData.action_required_by_applicant ? 'warning' : 'success'}
+                        className="text-[11px] self-start sm:self-auto font-bold"
+                      >
+                        {ticketData.action_required_by_applicant
+                          ? 'Perlu Tindakan OPD'
+                          : 'Tidak Ada Tindakan Diperlukan'}
+                      </Badge>
+                    </div>
+                    <p className="text-xs sm:text-sm leading-relaxed text-slate-700 pl-7">
+                      {ticketData.applicant_action_message ||
+                        (ticketData.action_required_by_applicant
+                          ? 'Silakan pelajari catatan verifikator dan kirimkan dokumen perbaikan melalui formulir revisi di atas.'
+                          : 'Permohonan Anda sedang dalam proses penanganan oleh Diskominfo.')}
+                    </p>
+                  </div>
                 </div>
+
+                {/* D. PROGRES 7 TAHAP SIKLUS HIDUP SPBE */}
+                {ticketData.stage_progress && ticketData.stage_progress.length > 0 && (
+                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-[#1B5040]" />
+                          <h3 className="text-base font-bold text-slate-900">
+                            Progres Siklus Hidup Aplikasi SPBE (7 Tahapan)
+                          </h3>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Standar tata kelola siklus hidup pengembangan sistem informasi pemerintah daerah.
+                        </p>
+                      </div>
+                      {ticketData.current_stage && (
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#CAF3E4] border border-[#98F7D9] text-[#1B5040] text-xs font-bold self-start sm:self-auto">
+                          <span className="w-2 h-2 rounded-full bg-[#1B5040] animate-pulse" />
+                          <span>Tahap Aktif: {ticketData.stage_label || ticketData.current_stage}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Highlight Aktivitas Tahap Aktif */}
+                    {ticketData.current_stage && ticketData.stage_description && (
+                      <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
+                        <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                          Uraian Aktivitas pada Tahap Aktif:
+                        </div>
+                        <p className="text-xs sm:text-sm text-slate-800 leading-relaxed font-medium">
+                          {ticketData.stage_description}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* 7 Tahapan Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
+                      {ticketData.stage_progress.map((sp, idx) => {
+                        const isCurrent = sp.status === 'current';
+                        const isDone = sp.status === 'completed';
+                        const isRecorded = sp.status === 'recorded';
+
+                        return (
+                          <div
+                            key={sp.stage}
+                            className={`p-3.5 rounded-xl border transition-all flex flex-col justify-between ${
+                              isCurrent
+                                ? 'bg-[#CAF3E4]/40 border-[#1B5040] ring-2 ring-[#1B5040]/20 shadow-xs'
+                                : isDone || isRecorded
+                                ? 'bg-emerald-50/50 border-emerald-200'
+                                : 'bg-slate-50/60 border-slate-200'
+                            }`}
+                          >
+                            <div>
+                              <div className="flex items-center justify-between mb-2">
+                                <span
+                                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                                    isCurrent
+                                      ? 'bg-[#1B5040] text-white'
+                                      : isDone || isRecorded
+                                      ? 'bg-emerald-600 text-white'
+                                      : 'bg-slate-200 text-slate-600'
+                                  }`}
+                                >
+                                  {isDone || isRecorded ? '✓' : idx + 1}
+                                </span>
+                                <span
+                                  className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${
+                                    isCurrent
+                                      ? 'bg-[#1B5040] text-white'
+                                      : isDone
+                                      ? 'bg-emerald-100 text-emerald-800'
+                                      : isRecorded
+                                      ? 'bg-teal-100 text-teal-800'
+                                      : 'bg-slate-100 text-slate-500'
+                                  }`}
+                                >
+                                  {isCurrent
+                                    ? 'Aktif'
+                                    : isDone
+                                    ? 'Selesai'
+                                    : isRecorded
+                                    ? 'Tercatat'
+                                    : 'Mendatang'}
+                                </span>
+                              </div>
+                              <h4
+                                className={`font-bold text-xs sm:text-sm leading-snug ${
+                                  isCurrent
+                                    ? 'text-[#1B5040]'
+                                    : isDone || isRecorded
+                                    ? 'text-slate-900'
+                                    : 'text-slate-600'
+                                }`}
+                              >
+                                {sp.label}
+                              </h4>
+                              <p className="text-[11px] text-slate-500 leading-relaxed mt-1 line-clamp-3">
+                                {sp.description}
+                              </p>
+                            </div>
+                            {sp.recorded_at && (
+                              <div className="mt-2 pt-2 border-t border-slate-200/60 text-[10px] text-slate-400 font-mono">
+                                {formatDateTime(sp.recorded_at)}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* D. INTENTIONAL PUBLIC TIMELINE */}
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
@@ -673,7 +990,7 @@ export function TrackingPage() {
                                 isDone
                                   ? 'bg-emerald-500 border-emerald-500 text-white'
                                   : isCurr
-                                  ? 'bg-blue-600 border-blue-600 text-white ring-4 ring-blue-100'
+                                  ? 'bg-[#1B5040] border-[#1B5040] text-white ring-4 ring-[#CAF3E4]'
                                   : 'bg-white border-slate-300 text-slate-400'
                               }`}
                             >
@@ -685,7 +1002,7 @@ export function TrackingPage() {
                                 <h4
                                   className={`text-sm sm:text-base font-bold ${
                                     isCurr
-                                      ? 'text-blue-700'
+                                      ? 'text-[#1B5040]'
                                       : isDone
                                       ? 'text-slate-900'
                                       : 'text-slate-400'
@@ -743,7 +1060,7 @@ export function TrackingPage() {
                           className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/70 flex items-center justify-between gap-3"
                         >
                           <div className="flex items-center gap-2.5 overflow-hidden">
-                            <FileTextIcon className="w-5 h-5 text-blue-600 shrink-0" />
+                            <FileTextIcon className="w-5 h-5 text-[#1B5040] shrink-0" />
                             <div className="truncate">
                               <span className="font-bold text-xs text-slate-800 block truncate">
                                 {doc.original_filename}
@@ -804,7 +1121,7 @@ export function TrackingPage() {
                             className={`flex flex-col ${isApplicant ? 'items-end' : 'items-start'}`}
                           >
                             <div className="flex items-center gap-2 mb-1 text-[11px]">
-                              <span className={`font-bold ${isApplicant ? 'text-blue-700' : 'text-slate-700'}`}>
+                              <span className={`font-bold ${isApplicant ? 'text-[#1B5040]' : 'text-slate-700'}`}>
                                 {isApplicant ? 'Pemohon (Anda)' : msg.sender_name || 'Tim Teknis Diskominfo'}
                               </span>
                               <span className="text-slate-400 font-mono text-[10px]">
@@ -814,7 +1131,7 @@ export function TrackingPage() {
                             <div
                               className={`max-w-[85%] sm:max-w-[75%] p-3.5 text-xs sm:text-sm rounded-2xl leading-relaxed whitespace-pre-wrap ${
                                 isApplicant
-                                  ? 'bg-blue-600 text-white rounded-tr-sm shadow-sm'
+                                  ? 'bg-[#1B5040] text-white rounded-tr-sm shadow-sm'
                                   : 'bg-white border border-slate-200 text-slate-800 rounded-tl-sm shadow-sm'
                               }`}
                             >
@@ -827,23 +1144,32 @@ export function TrackingPage() {
                   </div>
 
                   {/* Send Message Form */}
-                  <form onSubmit={handleSendMessage} className="flex gap-2 pt-2">
-                    <Input
-                      placeholder="Ketik pesan atau pertanyaan untuk tim Diskominfo..."
-                      value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
-                      disabled={sendMessageMutation.isPending}
-                      className="text-xs sm:text-sm flex-1"
-                    />
-                    <Button
-                      type="submit"
-                      variant="primary"
-                      size="md"
-                      disabled={sendMessageMutation.isPending || !chatInput.trim()}
-                    >
-                      {sendMessageMutation.isPending ? 'Mengirim...' : 'Kirim'}
-                    </Button>
-                  </form>
+                  {ticketData.current_status === 'CLOSED' ? (
+                    <div className="p-3.5 bg-slate-100 border border-slate-200 rounded-xl text-center text-xs text-slate-600 font-medium flex items-center justify-center gap-2">
+                      <span className="text-base">🔒</span>
+                      <span>
+                        Ruang komunikasi dinonaktifkan karena tiket telah resmi ditutup dan diarsipkan oleh Administrator.
+                      </span>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleSendMessage} className="flex gap-2 pt-2">
+                      <Input
+                        placeholder="Ketik pesan atau pertanyaan untuk tim Diskominfo..."
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        disabled={sendMessageMutation.isPending}
+                        className="text-xs sm:text-sm flex-1"
+                      />
+                      <Button
+                        type="submit"
+                        variant="primary"
+                        size="md"
+                        disabled={sendMessageMutation.isPending || !chatInput.trim()}
+                      >
+                        {sendMessageMutation.isPending ? 'Mengirim...' : 'Kirim'}
+                      </Button>
+                    </form>
+                  )}
                 </div>
               </div>
             ) : (
@@ -860,7 +1186,7 @@ export function TrackingPage() {
         <div className="text-center pt-4 border-t border-slate-200 text-xs text-slate-500 space-y-2">
           <p>
             Kehilangan nomor tiket atau kode pelacakan? Hubungi helpdesk Diskominfo melalui{' '}
-            <Link to="/contact" className="text-blue-600 hover:underline font-semibold">
+            <Link to="/contact" className="text-[#1B5040] hover:underline font-semibold">
               Layanan Bantuan & Kontak
             </Link>
             .

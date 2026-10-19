@@ -352,17 +352,17 @@ export function ApplicationSubmissionPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16 space-y-8">
         <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden">
           {/* Header Banner */}
-          <div className="bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 text-white p-8 sm:p-12 text-center space-y-3">
+          <div className="bg-gradient-to-r from-[#1B5040] via-[#2E8A6E] to-[#1B5040] text-white p-8 sm:p-12 text-center space-y-3">
             <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto border border-white/20">
-              <CheckCircleIcon size={36} className="text-emerald-400" />
+              <CheckCircleIcon size={36} className="text-[#2BD9A5]" />
             </div>
-            <span className="text-xs font-bold uppercase tracking-wider text-blue-200 block">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#98F7D9] block">
               Pendaftaran Layanan SPBE Sukses
             </span>
             <h1 className="text-2xl sm:text-3xl font-black text-white">
               Permohonan Berhasil Terkirim ke Diskominfo
             </h1>
-            <p className="text-xs sm:text-sm text-blue-100 max-w-xl mx-auto">
+            <p className="text-xs sm:text-sm text-[#CAF3E4] max-w-xl mx-auto">
               Simpan Nomor Tiket dan Kode Pelacakan di bawah ini. Anda dapat menggunakannya kapan saja 
               untuk memantau status telaah dan disposisi tanpa perlu login.
             </p>
@@ -386,7 +386,7 @@ export function ApplicationSubmissionPage() {
                       navigator.clipboard.writeText(submissionResult.ticket_number);
                       toast({ type: 'info', title: 'Disalin', message: 'Nomor tiket telah disalin ke papan klip.' });
                     }}
-                    className="p-1.5 text-xs text-blue-600 hover:bg-blue-50 rounded border border-blue-200 font-semibold cursor-pointer"
+                    className="p-1.5 text-xs text-[#1B5040] hover:bg-[#CAF3E4] rounded border border-[#98F7D9] font-semibold cursor-pointer"
                   >
                     Salin
                   </button>
@@ -405,7 +405,7 @@ export function ApplicationSubmissionPage() {
                   <Badge variant="warning" className="text-[10px]">Rahasia</Badge>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-2xl font-black text-blue-700 select-all">
+                  <span className="font-mono text-2xl font-black text-[#1B5040] select-all">
                     {submissionResult.tracking_code}
                   </span>
                   <button
@@ -414,7 +414,7 @@ export function ApplicationSubmissionPage() {
                       navigator.clipboard.writeText(submissionResult.tracking_code);
                       toast({ type: 'info', title: 'Disalin', message: 'Kode pelacakan telah disalin.' });
                     }}
-                    className="p-1.5 text-xs text-blue-600 hover:bg-blue-50 rounded border border-blue-200 font-semibold cursor-pointer"
+                    className="p-1.5 text-xs text-[#1B5040] hover:bg-[#CAF3E4] rounded border border-[#98F7D9] font-semibold cursor-pointer"
                   >
                     Salin
                   </button>
@@ -459,12 +459,12 @@ export function ApplicationSubmissionPage() {
             </div>
 
             {/* Langkah Selanjutnya */}
-            <div className="p-5 rounded-xl bg-blue-50/70 border border-blue-200/80 space-y-2 text-xs sm:text-sm text-blue-950">
-              <h3 className="font-bold flex items-center gap-2 text-blue-900">
-                <InfoIcon size={16} className="text-blue-600" />
+            <div className="p-5 rounded-xl bg-[#CAF3E4]/70 border border-[#98F7D9] space-y-2 text-xs sm:text-sm text-[#000408]">
+              <h3 className="font-bold flex items-center gap-2 text-[#1B5040]">
+                <InfoIcon size={16} className="text-[#1B5040]" />
                 Tahapan Selanjutnya:
               </h3>
-              <ol className="list-decimal list-inside space-y-1 text-blue-900 pl-1 leading-relaxed">
+              <ol className="list-decimal list-inside space-y-1 text-slate-700 pl-1 leading-relaxed">
                 <li>Verifikator Diskominfo melakukan pemeriksaan administrasi dan kelengkapan dokumen permohonan.</li>
                 <li>Telaah teknis kesesuaian arsitektur SPBE dan rapat klarifikasi teknis bersama PIC OPD.</li>
                 <li>Penerbitan surat disposisi dan penetapan tim pelaksana teknis.</li>
@@ -511,7 +511,7 @@ export function ApplicationSubmissionPage() {
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-16 space-y-10">
       {/* Header Halaman */}
       <div className="border-b border-slate-200 pb-6 space-y-2">
-        <div className="flex items-center gap-2 text-xs font-semibold text-blue-600 uppercase tracking-wider">
+        <div className="flex items-center gap-2 text-xs font-semibold text-[#2E8A6E] uppercase tracking-wider">
           <Link to="/" className="hover:underline text-slate-500">Beranda</Link>
           <span className="text-slate-400">/</span>
           <span>Formulir Pengajuan Layanan</span>
@@ -539,7 +539,7 @@ export function ApplicationSubmissionPage() {
                     isDone
                       ? 'bg-emerald-600 text-white'
                       : isCurrent
-                      ? 'bg-blue-600 text-white shadow-sm ring-2 ring-blue-100'
+                      ? 'bg-[#1B5040] text-white shadow-sm ring-2 ring-[#CAF3E4]'
                       : 'bg-slate-100 text-slate-500'
                   }`}
                 >
@@ -547,7 +547,7 @@ export function ApplicationSubmissionPage() {
                 </div>
                 <span
                   className={`text-xs font-semibold whitespace-nowrap ${
-                    isCurrent ? 'text-blue-900 font-bold' : isDone ? 'text-slate-800' : 'text-slate-400'
+                    isCurrent ? 'text-[#1B5040] font-bold' : isDone ? 'text-slate-800' : 'text-slate-400'
                   }`}
                 >
                   {s.title}
@@ -569,7 +569,7 @@ export function ApplicationSubmissionPage() {
         {currentStep === 1 && (
           <div className="space-y-6">
             <div className="border-b border-slate-100 pb-4">
-              <span className="text-xs font-bold uppercase tracking-wider text-blue-600">Langkah 1 dari 6</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-[#2E8A6E]">Langkah 1 dari 6</span>
               <h2 className="text-xl font-bold text-slate-900 mt-1">Pilih Kategori Layanan</h2>
               <p className="text-xs text-slate-500">Tentukan apakah kebutuhan OPD merupakan pembangunan baru atau penyesuaian aplikasi berjalan.</p>
             </div>
@@ -591,17 +591,17 @@ export function ApplicationSubmissionPage() {
                       onClick={() => handleSelectService(srv.id)}
                       className={`p-6 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-4 ${
                         isSelected
-                          ? 'border-blue-600 bg-blue-50/40 shadow-sm ring-1 ring-blue-500'
+                          ? 'border-[#1B5040] bg-[#CAF3E4]/30 shadow-sm ring-1 ring-[#1B5040]'
                           : 'border-slate-200 hover:border-slate-300 bg-white'
                       }`}
                     >
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="font-mono text-xs font-bold text-blue-600 bg-blue-100/60 px-2 py-0.5 rounded">
+                          <span className="font-mono text-xs font-bold text-[#1B5040] bg-[#CAF3E4] px-2 py-0.5 rounded">
                             {srv.code}
                           </span>
                           <span className={`w-5 h-5 rounded-full border flex items-center justify-center text-xs ${
-                            isSelected ? 'border-blue-600 bg-blue-600 text-white font-bold' : 'border-slate-300'
+                            isSelected ? 'border-[#1B5040] bg-[#1B5040] text-white font-bold' : 'border-slate-300'
                           }`}>
                             {isSelected ? '✓' : ''}
                           </span>
@@ -627,7 +627,7 @@ export function ApplicationSubmissionPage() {
         {currentStep === 2 && (
           <div className="space-y-6">
             <div className="border-b border-slate-100 pb-4">
-              <span className="text-xs font-bold uppercase tracking-wider text-blue-600">Langkah 2 dari 6</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-[#2E8A6E]">Langkah 2 dari 6</span>
               <h2 className="text-xl font-bold text-slate-900 mt-1">Identitas Pemohon (PIC OPD)</h2>
               <p className="text-xs text-slate-500">Pejabat atau staf teknis yang berwenang sebagai narahubung utama permohonan.</p>
             </div>
@@ -731,7 +731,7 @@ export function ApplicationSubmissionPage() {
         {currentStep === 3 && (
           <div className="space-y-6">
             <div className="border-b border-slate-100 pb-4">
-              <span className="text-xs font-bold uppercase tracking-wider text-blue-600">Langkah 3 dari 6</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-[#2E8A6E]">Langkah 3 dari 6</span>
               <h2 className="text-xl font-bold text-slate-900 mt-1">Rincian Kebutuhan Aplikasi</h2>
               <p className="text-xs text-slate-500">Uraikan deskripsi fungsional sistem informasi yang diusulkan oleh OPD.</p>
             </div>
@@ -751,8 +751,8 @@ export function ApplicationSubmissionPage() {
 
               {/* Bidang khusus layanan pengembangan eksisting */}
               {selectedService?.type === 'ENHANCEMENT' && (
-                <div className="p-4 rounded-xl bg-indigo-50/70 border border-indigo-200">
-                  <label className="block text-xs font-bold text-indigo-950 mb-1">
+                <div className="p-4 rounded-xl bg-[#CAF3E4]/30 border border-[#98F7D9]">
+                  <label className="block text-xs font-bold text-[#0D2820] mb-1">
                     Nama & Akses Aplikasi Eksisting <span className="text-red-500">*</span>
                   </label>
                   <Input
@@ -761,7 +761,7 @@ export function ApplicationSubmissionPage() {
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setExistingApplicationName(e.target.value)}
                     required
                   />
-                  <p className="mt-1 text-[11px] text-indigo-800">Sebutkan nama sistem dan alamat domain atau repositori jika ada.</p>
+                  <p className="mt-1 text-[11px] text-[#1B5040]">Sebutkan nama sistem dan alamat domain atau repositori jika ada.</p>
                 </div>
               )}
 
@@ -867,19 +867,19 @@ export function ApplicationSubmissionPage() {
         {currentStep === 4 && (
           <div className="space-y-6">
             <div className="border-b border-slate-100 pb-4">
-              <span className="text-xs font-bold uppercase tracking-wider text-blue-600">Langkah 4 dari 6</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-[#2E8A6E]">Langkah 4 dari 6</span>
               <h2 className="text-xl font-bold text-slate-900 mt-1">Unggah Dokumen Persyaratan</h2>
               <p className="text-xs text-slate-500">Lampirkan dokumen resmi sesuai persyaratan layanan {selectedService?.name}.</p>
             </div>
 
             {/* Info Petunjuk Persyaratan Layanan */}
-            <div className="p-4 rounded-xl bg-blue-50/70 border border-blue-200 text-xs text-blue-900 flex items-start gap-2.5">
-              <InfoIcon size={18} className="text-blue-600 shrink-0 mt-0.5" />
+            <div className="p-4 rounded-xl bg-[#CAF3E4]/70 border border-[#98F7D9] text-xs text-[#000408] flex items-start gap-2.5">
+              <InfoIcon size={18} className="text-[#1B5040] shrink-0 mt-0.5" />
               <div>
-                <span className="font-bold block">
+                <span className="font-bold block text-[#1B5040]">
                   Ketentuan Dokumen: {selectedService?.name}
                 </span>
-                <span className="text-blue-800 leading-relaxed">
+                <span className="text-slate-700 leading-relaxed">
                   Lampirkan dokumen resmi sesuai persyaratan layanan ini. Jika Anda sebelumnya mengubah kategori layanan, berkas persyaratan disesuaikan secara otomatis.
                 </span>
               </div>
@@ -921,7 +921,7 @@ export function ApplicationSubmissionPage() {
                         {uploaded ? (
                           <div className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
                             <div className="flex items-center gap-2 text-slate-800 font-medium truncate">
-                              <FileTextIcon size={16} className="text-blue-600 shrink-0" />
+                              <FileTextIcon size={16} className="text-[#1B5040] shrink-0" />
                               <span className="truncate">{uploaded.original_filename}</span>
                               <span className="text-slate-400 font-mono shrink-0">
                                 ({(uploaded.size_bytes / 1024).toFixed(0)} KB)
@@ -942,7 +942,7 @@ export function ApplicationSubmissionPage() {
                               id={`file-${req.id}`}
                               onChange={(e) => handleFileUpload(req.id, e)}
                               accept={computeAcceptAttribute(req.allowed_file_types)}
-                              className="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+                              className="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#CAF3E4] file:text-[#1B5040] hover:file:bg-[#98F7D9] cursor-pointer"
                             />
                             <p className="mt-1 text-[11px] text-slate-400">
                               {computeFormatDescription(req.allowed_file_types, req.max_file_size_mb)}
@@ -963,7 +963,7 @@ export function ApplicationSubmissionPage() {
         {currentStep === 5 && (
           <div className="space-y-6">
             <div className="border-b border-slate-100 pb-4">
-              <span className="text-xs font-bold uppercase tracking-wider text-blue-600">Langkah 5 dari 6</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-[#2E8A6E]">Langkah 5 dari 6</span>
               <h2 className="text-xl font-bold text-slate-900 mt-1">Syarat & Ketentuan Layanan</h2>
               <p className="text-xs text-slate-500">Pernyataan kesepahaman dan komitmen penyelenggaraan SPBE Pemerintah Daerah Kabupaten Bandung.</p>
             </div>
@@ -996,13 +996,13 @@ export function ApplicationSubmissionPage() {
               </div>
 
               {/* Checkbox Explicit Consent */}
-              <div className="p-4 rounded-xl border-2 border-blue-200 bg-blue-50/40">
+              <div className="p-4 rounded-xl border-2 border-[#98F7D9] bg-[#CAF3E4]/30">
                 <label className="flex items-start gap-3 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={termsAccepted}
                     onChange={(e) => setTermsAccepted(e.target.checked)}
-                    className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    className="mt-1 h-4 w-4 rounded border-slate-300 text-[#1B5040] focus:ring-[#1B5040]"
                   />
                   <span className="text-xs sm:text-sm font-semibold text-slate-900 leading-normal">
                     Saya menyatakan telah membaca, memahami, dan menyetujui seluruh ketentuan di atas 
@@ -1020,7 +1020,7 @@ export function ApplicationSubmissionPage() {
         {currentStep === 6 && (
           <div className="space-y-6">
             <div className="border-b border-slate-100 pb-4">
-              <span className="text-xs font-bold uppercase tracking-wider text-blue-600">Langkah 6 dari 6</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-[#2E8A6E]">Langkah 6 dari 6</span>
               <h2 className="text-xl font-bold text-slate-900 mt-1">Tinjau Rekapitulasi Permohonan</h2>
               <p className="text-xs text-slate-500">Periksa kembali seluruh informasi sebelum mengirimkan berkas resmi ke Diskominfo.</p>
             </div>
@@ -1033,7 +1033,7 @@ export function ApplicationSubmissionPage() {
                   <button
                     type="button"
                     onClick={() => setCurrentStep(1)}
-                    className="text-xs font-semibold text-blue-600 hover:underline cursor-pointer"
+                    className="text-xs font-semibold text-[#1B5040] hover:underline cursor-pointer"
                   >
                     Ubah
                   </button>
@@ -1057,7 +1057,7 @@ export function ApplicationSubmissionPage() {
                   <button
                     type="button"
                     onClick={() => setCurrentStep(2)}
-                    className="text-xs font-semibold text-blue-600 hover:underline cursor-pointer"
+                    className="text-xs font-semibold text-[#1B5040] hover:underline cursor-pointer"
                   >
                     Ubah
                   </button>
@@ -1089,7 +1089,7 @@ export function ApplicationSubmissionPage() {
                   <button
                     type="button"
                     onClick={() => setCurrentStep(3)}
-                    className="text-xs font-semibold text-blue-600 hover:underline cursor-pointer"
+                    className="text-xs font-semibold text-[#1B5040] hover:underline cursor-pointer"
                   >
                     Ubah
                   </button>
@@ -1102,7 +1102,7 @@ export function ApplicationSubmissionPage() {
                   {existingApplicationName && (
                     <div>
                       <span className="text-slate-500 block text-xs">Aplikasi Eksisting:</span>
-                      <span className="font-semibold text-indigo-900">{existingApplicationName}</span>
+                      <span className="font-semibold text-[#1B5040]">{existingApplicationName}</span>
                     </div>
                   )}
                   <div>
@@ -1131,7 +1131,7 @@ export function ApplicationSubmissionPage() {
                   <button
                     type="button"
                     onClick={() => setCurrentStep(4)}
-                    className="text-xs font-semibold text-blue-600 hover:underline cursor-pointer"
+                    className="text-xs font-semibold text-[#1B5040] hover:underline cursor-pointer"
                   >
                     Ubah
                   </button>
@@ -1188,7 +1188,7 @@ export function ApplicationSubmissionPage() {
               size="lg"
               onClick={() => setConfirmDialogOpen(true)}
               isLoading={submitMutation.isPending}
-              className="font-bold shadow-lg shadow-blue-600/20 bg-blue-600 hover:bg-blue-500"
+              className="font-bold shadow-lg shadow-[#1B5040]/20 bg-[#1B5040] hover:bg-[#2E8A6E]"
             >
               Kirimkan Permohonan Resmi
               <ArrowRightIcon size={18} className="ml-2" />

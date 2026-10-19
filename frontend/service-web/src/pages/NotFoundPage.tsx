@@ -5,7 +5,7 @@ export function NotFoundPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-16 sm:py-24 text-center space-y-8">
       <div className="space-y-3">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold uppercase tracking-wider">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#CAF3E4] border border-[#98F7D9] text-[#1B5040] text-xs font-semibold uppercase tracking-wider">
           <ShieldIcon size={14} />
           <span>SIMANTIK SPBE Kab. Bandung</span>
         </div>
@@ -40,7 +40,7 @@ export function NotFoundPage() {
 
       <div className="pt-8 border-t border-slate-200 text-xs text-slate-500">
         <span>Jika Anda merasa ini adalah kesalahan sistem, silakan hubungi </span>
-        <Link to="/kontak" className="text-blue-600 font-semibold hover:underline">
+        <Link to="/kontak" className="text-[#1B5040] font-semibold hover:underline">
           Helpdesk Aptika Diskominfo
         </Link>
         <span>.</span>
