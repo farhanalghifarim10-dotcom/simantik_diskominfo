@@ -38,7 +38,7 @@ function formatDateTime(dateString?: string) {
 export function TicketDiscussionPanel({ applicationId }: TicketDiscussionPanelProps) {
   const { toast } = useToast();
   const [filterVisibility, setFilterVisibility] = useState<'ALL' | MessageVisibility>('ALL');
-  const [targetVisibility, setTargetVisibility] = useState<MessageVisibility>('PUBLIC');
+  const [targetVisibility, setTargetVisibility] = useState<MessageVisibility>('INTERNAL');
   const [messageInput, setMessageInput] = useState('');
 
   const {
@@ -194,28 +194,37 @@ export function TicketDiscussionPanel({ applicationId }: TicketDiscussionPanelPr
               <input
                 type="radio"
                 name="msgVisibility"
-                checked={targetVisibility === 'PUBLIC'}
-                onChange={() => setTargetVisibility('PUBLIC')}
-                className="text-[#1B5040] focus:ring-[#1B5040]"
+                checked={targetVisibility === 'INTERNAL'}
+                onChange={() => setTargetVisibility('INTERNAL')}
+                className="text-amber-600 focus:ring-amber-500"
               />
-              <span className="text-[#1B5040] font-bold">
-                Balasan Publik (Dikirim ke Pemohon + Notifikasi)
+              <span className="text-amber-700 font-bold">
+                🔒 Catatan Internal (Default - Khusus Staf & Tim Teknis)
               </span>
             </label>
             <label className="flex items-center gap-1.5 cursor-pointer">
               <input
                 type="radio"
                 name="msgVisibility"
-                checked={targetVisibility === 'INTERNAL'}
-                onChange={() => setTargetVisibility('INTERNAL')}
-                className="text-amber-600 focus:ring-amber-500"
+                checked={targetVisibility === 'PUBLIC'}
+                onChange={() => setTargetVisibility('PUBLIC')}
+                className="text-[#1B5040] focus:ring-[#1B5040]"
               />
-              <span className="text-amber-700 font-bold">
-                🔒 Catatan Internal (Khusus Tim Teknis Diskominfo)
+              <span className="text-[#1B5040] font-bold">
+                Balasan Publik (Dapat Dilihat Pemohon OPD)
               </span>
             </label>
           </div>
         </div>
+
+        {targetVisibility === 'PUBLIC' && (
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-start gap-2">
+            <span className="font-bold text-amber-800">⚠️ Perhatian:</span>
+            <span>
+              Pesan ini bersifat <strong>PUBLIK</strong> dan akan langsung tampil pada portal pelacakan yang dapat dibaca oleh pemohon OPD. Jangan menyertakan informasi rahasia, kredensial, atau temuan sistem yang sensitif.
+            </span>
+          </div>
+        )}
 
         <Textarea
           rows={3}

@@ -304,7 +304,17 @@ export class MessagesService {
       });
     }
 
-    const visibility = dto.visibility === 'PUBLIC' ? 'PUBLIC' : 'INTERNAL';
+    let visibility: 'PUBLIC' | 'INTERNAL' = 'INTERNAL';
+    if (dto.visibility !== undefined && dto.visibility !== null) {
+      if (dto.visibility !== 'PUBLIC' && dto.visibility !== 'INTERNAL') {
+        throw new BadRequestException({
+          statusCode: 400,
+          message: 'Visibilitas pesan tidak valid. Pilih PUBLIC atau INTERNAL.',
+        });
+      }
+      visibility = dto.visibility;
+    }
+
     const senderType = user.role === 'SUPER_ADMIN' ? 'ADMIN' : 'TECHNICIAN';
     const now = new Date().toISOString();
     const id = crypto.randomUUID();

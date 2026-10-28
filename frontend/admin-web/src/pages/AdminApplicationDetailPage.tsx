@@ -1232,6 +1232,11 @@ export function AdminApplicationDetailPage() {
                 setTransitionError('');
               }}
             />
+            {activeTransition?.to_status === 'REVISION_REQUIRED' && (
+              <p className="text-[11px] text-amber-700 font-medium pt-1">
+                Catatan revisi ini akan dikirimkan kepada pemohon melalui email dan ditampilkan pada portal pelacakan publik. Pastikan instruksi perbaikan tertulis secara jelas dan lengkap.
+              </p>
+            )}
           </div>
         </div>
       </Dialog>
