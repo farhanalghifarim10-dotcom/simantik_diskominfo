@@ -213,8 +213,10 @@ export function ApplicationSubmissionPage() {
         toast({ type: 'warning', title: 'Email Tidak Valid', message: 'Harap masukkan alamat email kedinasan yang valid.' });
         return;
       }
-      if (!applicantPhone.trim() || applicantPhone.trim().length < 8) {
-        toast({ type: 'warning', title: 'Nomor Kontak', message: 'Nomor WhatsApp / telepon aktif wajib diisi.' });
+      const phoneClean = applicantPhone.trim();
+      const phoneRegex = /^[0-9+\-\s()]{8,30}$/;
+      if (!phoneClean || !phoneRegex.test(phoneClean)) {
+        toast({ type: 'warning', title: 'Nomor Kontak Tidak Valid', message: 'Nomor WhatsApp / telepon harus 8-30 karakter (hanya angka, spasi, +, -, dan kurung).' });
         return;
       }
     } else if (currentStep === 3) {

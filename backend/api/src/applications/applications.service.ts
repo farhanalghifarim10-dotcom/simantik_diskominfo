@@ -129,11 +129,12 @@ export class ApplicationsService {
     if (payload.applicant_email.trim().length > 150) {
       throw new BadRequestException('Email pemohon melebihi batas maksimum 150 karakter.');
     }
-    if (!payload.applicant_phone || payload.applicant_phone.trim().length < 8) {
-      throw new BadRequestException('Nomor telepon / WhatsApp pemohon wajib diisi.');
-    }
-    if (payload.applicant_phone.trim().length > 30) {
-      throw new BadRequestException('Nomor telepon pemohon melebihi batas maksimum 30 karakter.');
+    const rawPhone = payload.applicant_phone ? payload.applicant_phone.trim() : '';
+    const phoneAllowedCharsRegex = /^[0-9+\-\s()]{8,30}$/;
+    if (!rawPhone || !phoneAllowedCharsRegex.test(rawPhone)) {
+      throw new BadRequestException(
+        'Nomor telepon pemohon tidak valid. Harus terdiri dari 8 hingga 30 karakter dan hanya boleh memuat angka, spasi, +, -, serta tanda kurung.',
+      );
     }
     if (!payload.applicant_position || payload.applicant_position.trim().length < 2) {
       throw new BadRequestException('Jabatan pemohon di OPD wajib diisi.');

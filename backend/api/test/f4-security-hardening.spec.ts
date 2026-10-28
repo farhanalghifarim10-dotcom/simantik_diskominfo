@@ -48,7 +48,7 @@ describe('F4: Security Hardening, Rate Limiting, Trust Proxy & Input Constraints
               name: 'Kerangka Acuan Kerja (KAK)',
               type: 'DOCUMENT',
               is_required: true,
-              allowed_file_types: 'pdf',
+              allowed_file_types: 'application/pdf',
               max_file_size_mb: 10,
             },
           ],
@@ -101,13 +101,35 @@ describe('F4: Security Hardening, Rate Limiting, Trust Proxy & Input Constraints
       ).rejects.toThrow('Email pemohon melebihi batas maksimum 150 karakter.');
     });
 
-    it('menolak jika nomor telepon pemohon melebihi 30 karakter', async () => {
+    it('menolak jika nomor telepon pemohon melebihi 30 karakter atau kurang dari 8 karakter', async () => {
       const payload = createValidPayload();
       payload.applicant_phone = '0'.repeat(31);
 
       await expect(
         applicationsService.submitApplication(payload, [createDummyDoc('req-kak')]),
-      ).rejects.toThrow('Nomor telepon pemohon melebihi batas maksimum 30 karakter.');
+      ).rejects.toThrow('Nomor telepon pemohon tidak valid');
+
+      payload.applicant_phone = '12345';
+      await expect(
+        applicationsService.submitApplication(payload, [createDummyDoc('req-kak')]),
+      ).rejects.toThrow('Nomor telepon pemohon tidak valid');
+    });
+
+    it('menolak jika nomor telepon pemohon memuat karakter selain angka, spasi, +, -, dan kurung', async () => {
+      const payload = createValidPayload();
+      payload.applicant_phone = '0812-3456-abcd';
+
+      await expect(
+        applicationsService.submitApplication(payload, [createDummyDoc('req-kak')]),
+      ).rejects.toThrow('Nomor telepon pemohon tidak valid');
+    });
+
+    it('menerima nomor telepon dengan format internasional, spasi, strip, dan kurung (8-30 karakter)', async () => {
+      const payload = createValidPayload();
+      payload.applicant_phone = '+62 (22) 123-4567';
+
+      const res = await applicationsService.submitApplication(payload, [createDummyDoc('req-kak')]);
+      expect(res).toBeDefined();
     });
 
     it('menolak jika jabatan pemohon melebihi 100 karakter', async () => {
