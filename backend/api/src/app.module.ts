@@ -30,7 +30,7 @@ import { AdminController } from './admin/admin.controller.js';
       {
         name: 'default',
         ttl: 60000, // 60 detik (1 menit)
-        limit: 120, // 120 request per menit
+        limit: 100, // 100 request per menit
       },
       {
         name: 'strict',

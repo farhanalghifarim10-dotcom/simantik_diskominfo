@@ -11,6 +11,7 @@ import type { Request } from 'express';
 import { AuthGuard } from '../auth/auth.guard.js';
 import { RolesGuard } from '../auth/roles.guard.js';
 import { Roles } from '../auth/roles.decorator.js';
+import { SkipThrottle } from '@nestjs/throttler';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { AdminApplicationsService } from '../applications/admin-applications.service.js';
 
@@ -18,6 +19,7 @@ type AuthenticatedRequest = Request & {
     user?: AuthenticatedUser;
 };
 
+@SkipThrottle()
 @Controller('admin')
 export class AdminController {
     constructor(

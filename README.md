@@ -114,7 +114,10 @@ SUPABASE_SECRET_KEY=<your-service-role-secret-key>
 # Kunci Rahasia Sesi Pelacakan Publik (WAJIB diisi, minimal 32 karakter, tanpa nilai default nyata. Aplikasi akan gagal start jika tidak diisi)
 JWT_SECRET=
 
-# Konfigurasi Reverse Proxy (Wajib diset true di produksi jika di balik reverse proxy/load balancer)
+# Konfigurasi Reverse Proxy (WAJIB diset true jika di balik Nginx, Caddy, Cloudflare, Traefik, dll.)
+# PENTING: Jika dibiarkan false di balik reverse proxy, Express tidak membaca header X-Forwarded-For,
+# sehingga seluruh request dianggap berasal dari IP proxy (127.0.0.1). Akibatnya batas rate limiter
+# (100 req/menit) akan terpakai secara global oleh semua pengguna dan memicu blokir HTTP 429 massal.
 TRUST_PROXY=false
 
 # Resend Email Integration (Opsional, fallback simulasi aktif)

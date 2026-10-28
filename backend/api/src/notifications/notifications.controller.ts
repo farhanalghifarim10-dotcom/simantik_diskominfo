@@ -6,9 +6,11 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { NotificationsService } from './notifications.service.js';
 import { AuthGuard } from '../auth/auth.guard.js';
 
+@SkipThrottle()
 @Controller('notifications')
 @UseGuards(AuthGuard)
 export class NotificationsController {

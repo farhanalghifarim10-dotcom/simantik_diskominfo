@@ -25,6 +25,8 @@ import type {
   UpdateServiceDto,
 } from './services.types.js';
 
+import { SkipThrottle } from '@nestjs/throttler';
+
 type AuthenticatedRequest = Request & {
   user?: AuthenticatedUser;
 };
@@ -32,6 +34,7 @@ type AuthenticatedRequest = Request & {
 const VALID_REQ_TYPES: RequirementType[] = ['DOCUMENT', 'DATA', 'CONFIRMATION'];
 const VALID_SERVICE_TYPES: ServiceType[] = ['DEVELOPMENT', 'ENHANCEMENT'];
 
+@SkipThrottle()
 @Controller('admin/services')
 @UseGuards(AuthGuard, RolesGuard)
 @Roles('SUPER_ADMIN')

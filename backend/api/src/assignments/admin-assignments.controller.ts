@@ -15,11 +15,13 @@ import { Roles } from '../auth/roles.decorator.js';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { AssignmentsService } from './assignments.service.js';
 import type { CreateAssignmentDto } from './assignments.types.js';
+import { SkipThrottle } from '@nestjs/throttler';
 
 type AuthenticatedRequest = Request & {
   user: AuthenticatedUser;
 };
 
+@SkipThrottle()
 @Controller('admin')
 @UseGuards(AuthGuard, RolesGuard)
 @Roles('SUPER_ADMIN')

@@ -4,6 +4,10 @@ import { ApplicationsService } from '../src/applications/applications.service.js
 import { MessagesService } from '../src/messages/messages.service.js';
 import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter.js';
 import configuration from '../src/config/configuration.js';
+import { HealthController } from '../src/health/health.controller.js';
+import { NotificationsController } from '../src/notifications/notifications.controller.js';
+import { AdminApplicationsController } from '../src/applications/admin-applications.controller.js';
+import { TechnicianWorkspaceController } from '../src/assignments/technician-workspace.controller.js';
 
 describe('F4: Security Hardening, Rate Limiting, Trust Proxy & Input Constraints', () => {
   describe('1. ApplicationsService: Batas Input Form & Pendaftaran', () => {
@@ -329,6 +333,13 @@ describe('F4: Security Hardening, Rate Limiting, Trust Proxy & Input Constraints
       process.env.TRUST_PROXY = '0';
       const configFalse = configuration();
       expect(configFalse.trustProxy).toBe(false);
+    });
+
+    it('memastikan rute internal /admin, /technician, /notifications, dan /health dikecualikan dari throttling global', () => {
+      expect(Reflect.getMetadata('THROTTLER:SKIPdefault', HealthController)).toBe(true);
+      expect(Reflect.getMetadata('THROTTLER:SKIPdefault', NotificationsController)).toBe(true);
+      expect(Reflect.getMetadata('THROTTLER:SKIPdefault', AdminApplicationsController)).toBe(true);
+      expect(Reflect.getMetadata('THROTTLER:SKIPdefault', TechnicianWorkspaceController)).toBe(true);
     });
   });
 });
