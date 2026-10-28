@@ -1,6 +1,8 @@
 import {
   BadRequestException,
   ForbiddenException,
+  HttpException,
+  HttpStatus,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -18,10 +20,56 @@ import type {
 export class HelpdeskService {
   private readonly inMemoryConsultations: Map<string, ConsultationItem> = new Map();
 
+  // Cache pembatasan laju pengajuan per penerima/email (maksimal 3 per jam)
+  private readonly consultationRateLimitMap: Map<string, number[]> = new Map();
+  private readonly RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 jam
+  private readonly RATE_LIMIT_MAX_PER_HOUR = 3;
+
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly notificationsService: NotificationsService,
   ) {}
+
+  /**
+   * Membersihkan entri yang sudah kedaluwarsa (> 1 jam) dari cache pembatasan laju
+   */
+  private cleanupExpiredRateLimits(now: number): void {
+    for (const [email, timestamps] of this.consultationRateLimitMap.entries()) {
+      const active = timestamps.filter((t) => now - t < this.RATE_LIMIT_WINDOW_MS);
+      if (active.length === 0) {
+        this.consultationRateLimitMap.delete(email);
+      } else if (active.length !== timestamps.length) {
+        this.consultationRateLimitMap.set(email, active);
+      }
+    }
+  }
+
+  /**
+   * Memeriksa dan mencatat laju pengajuan per alamat email pemohon
+   */
+  private checkAndRecordRateLimit(email: string): void {
+    const now = Date.now();
+    this.cleanupExpiredRateLimits(now);
+
+    const key = email.toLowerCase().trim();
+    const timestamps = (this.consultationRateLimitMap.get(key) || []).filter(
+      (t) => now - t < this.RATE_LIMIT_WINDOW_MS,
+    );
+
+    if (timestamps.length >= this.RATE_LIMIT_MAX_PER_HOUR) {
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.TOO_MANY_REQUESTS,
+          code: 'TOO_MANY_REQUESTS',
+          message: `Batas pengajuan konsultasi tercapai. Maksimal ${this.RATE_LIMIT_MAX_PER_HOUR} pengajuan per jam untuk alamat email ini.`,
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
+    timestamps.push(now);
+    this.consultationRateLimitMap.set(key, timestamps);
+  }
 
   /**
    * Membersihkan tag HTML untuk pencegahan injeksi / XSS
@@ -40,6 +88,13 @@ export class HelpdeskService {
    */
   clearInMemoryConsultations(): void {
     this.inMemoryConsultations.clear();
+  }
+
+  /**
+   * Helper pengujian: Mengosongkan cache pembatasan laju
+   */
+  clearRateLimitCache(): void {
+    this.consultationRateLimitMap.clear();
   }
 
   /**
@@ -175,6 +230,10 @@ export class HelpdeskService {
    */
   async submitConsultation(dto: CreateConsultationDto): Promise<ConsultationItem> {
     const validated = this.validateDto(dto);
+
+    // Periksa batas laju per email penerima (maksimal 3 per jam)
+    this.checkAndRecordRateLimit(validated.email);
+
     const now = new Date().toISOString();
 
     const notifTitle = `[Konsultasi OPD] ${validated.opdName} - ${validated.subject}`;

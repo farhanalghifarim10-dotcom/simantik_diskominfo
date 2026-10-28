@@ -2,6 +2,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { SupabaseService } from '../supabase/supabase.service.js';
 import { EmailService } from './email.service.js';
+import {
+  escapeHtml,
+  formatHtmlParagraph,
+  sanitizeEmailSubject,
+} from '../common/utils/html.utils.js';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import type {
   CreateNotificationPayload,
@@ -34,16 +39,20 @@ export class NotificationsService {
       details?: Record<string, unknown>;
     },
   ): { title: string; body: string; html: string } {
-    const ticket = params.ticketNumber || 'SIM-2026';
+    const ticket = sanitizeEmailSubject(params.ticketNumber || 'SIM-2026');
     const service = params.serviceTitle || 'Layanan SPBE';
 
     if (params.customTitle && params.customBody) {
+      const cleanTitle = sanitizeEmailSubject(params.customTitle);
+      const escapedTitle = escapeHtml(cleanTitle);
+      const formattedBody = formatHtmlParagraph(params.customBody);
+
       return {
-        title: params.customTitle,
+        title: cleanTitle,
         body: params.customBody,
         html: `<div style="font-family: sans-serif; line-height: 1.6; color: #1e293b;">
-          <h2 style="color: #0f172a;">${params.customTitle}</h2>
-          <p>${params.customBody}</p>
+          <h2 style="color: #0f172a;">${escapedTitle}</h2>
+          <p>${formattedBody}</p>
           <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
           <p style="font-size: 12px; color: #64748b;">SIMANTIK — Sistem Manajemen Layanan Teknologi Informasi Diskominfo.</p>
         </div>`,
@@ -97,17 +106,23 @@ export class NotificationsService {
         break;
     }
 
+    const cleanTitle = sanitizeEmailSubject(title);
+    const escapedTitle = escapeHtml(cleanTitle);
+    const formattedBody = formatHtmlParagraph(body);
+    const escapedTicket = escapeHtml(ticket);
+    const escapedService = escapeHtml(service);
+
     const html = `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1e293b; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
       <div style="background-color: #0f172a; padding: 24px; color: #ffffff;">
         <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; font-weight: bold;">Pemerintah Daerah — Diskominfo</span>
         <h1 style="font-size: 20px; font-weight: bold; margin: 8px 0 0 0; color: #ffffff;">SIMANTIK</h1>
       </div>
       <div style="padding: 24px; background-color: #ffffff;">
-        <h2 style="font-size: 16px; font-weight: bold; color: #0f172a; margin-top: 0;">${title}</h2>
-        <p style="font-size: 14px; color: #334155; line-height: 1.6;">${body}</p>
+        <h2 style="font-size: 16px; font-weight: bold; color: #0f172a; margin-top: 0;">${escapedTitle}</h2>
+        <p style="font-size: 14px; color: #334155; line-height: 1.6;">${formattedBody}</p>
         <div style="margin: 24px 0; padding: 16px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px;">
-          <div><strong>Nomor Tiket:</strong> <span style="font-family: monospace;">${ticket}</span></div>
-          <div><strong>Jenis Layanan:</strong> ${service}</div>
+          <div><strong>Nomor Tiket:</strong> <span style="font-family: monospace;">${escapedTicket}</span></div>
+          <div><strong>Jenis Layanan:</strong> ${escapedService}</div>
         </div>
         <p style="font-size: 13px; color: #64748b;">Untuk memeriksa rincian terkini dan menanggapi catatan, silakan buka portal pelacakan SIMANTIK.</p>
       </div>
@@ -116,7 +131,7 @@ export class NotificationsService {
       </div>
     </div>`;
 
-    return { title, body, html };
+    return { title: cleanTitle, body, html };
   }
 
   /**

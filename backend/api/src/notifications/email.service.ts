@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { sanitizeEmailSubject } from '../common/utils/html.utils.js';
 import type { EmailDeliveryResult, SendEmailOptions } from './notifications.types.js';
 
 @Injectable()
@@ -29,14 +30,15 @@ export class EmailService {
    */
   async sendEmail(options: SendEmailOptions): Promise<EmailDeliveryResult> {
     const { to, subject, html, text, idempotencyKey } = options;
+    const cleanSubject = sanitizeEmailSubject(subject);
 
     // 1. Pemeriksaan deduplikasi untuk mencegah pengiriman email ganda
-    const dedupKey = `${to.toLowerCase()}:${subject}:${idempotencyKey || ''}`;
+    const dedupKey = `${to.toLowerCase()}:${cleanSubject}:${idempotencyKey || ''}`;
     const now = Date.now();
     const lastSent = this.sentCache.get(dedupKey);
 
     if (lastSent && now - lastSent < this.deduplicationWindowMs) {
-      this.logger.warn(`Deduplikasi: Email ke [${to}] dengan subjek [${subject}] diabaikan karena baru saja dikirim.`);
+      this.logger.warn(`Deduplikasi: Email ke [${to}] dengan subjek [${cleanSubject}] diabaikan karena baru saja dikirim.`);
       return {
         id: 'deduplicated',
         status: 'SENT',
@@ -45,7 +47,7 @@ export class EmailService {
 
     // 2. Mode simulasi jika API key tidak disetel (misal: development lokal atau testing)
     if (!this.apiKey) {
-      this.logger.log(`[SIMULASI EMAIL - RESEND API KEY TIDAK DISET] To: ${to} | Subject: ${subject}`);
+      this.logger.log(`[SIMULASI EMAIL - RESEND API KEY TIDAK DISET] To: ${to} | Subject: ${cleanSubject}`);
       this.sentCache.set(dedupKey, now);
       return {
         id: `sim-${Date.now()}`,
@@ -64,7 +66,7 @@ export class EmailService {
         body: JSON.stringify({
           from: this.fromEmail,
           to: [to],
-          subject,
+          subject: cleanSubject,
           html,
           text: text || html.replace(/<[^>]*>/g, ''),
         }),
