@@ -9,6 +9,10 @@ import {
 import * as crypto from 'crypto';
 import { SupabaseService } from '../supabase/supabase.service.js';
 import { AuditService } from '../audit/audit.service.js';
+import {
+  assertSupabaseOk,
+  isInMemoryFallbackAllowed,
+} from '../common/utils/supabase.utils.js';
 import type {
   CreateTechnicianDto,
   ListTechniciansQueryDto,
@@ -67,14 +71,9 @@ export class TechniciansService {
 
   /**
    * Memeriksa apakah fallback in-memory diizinkan secara eksplisit.
-   * Hanya diaktifkan jika berada di lingkungan test dengan flag ALLOW_IN_MEMORY_FALLBACK=true.
-   * Tidak pernah diaktifkan pada lingkungan yang terhubung ke Supabase remote.
    */
   private isFallbackAllowed(): boolean {
-    return (
-      process.env.ALLOW_IN_MEMORY_FALLBACK === 'true' &&
-      process.env.NODE_ENV === 'test'
-    );
+    return isInMemoryFallbackAllowed();
   }
 
   /**
@@ -358,6 +357,7 @@ export class TechniciansService {
     }
 
     let userId: string = crypto.randomUUID();
+    let createdAuthUserId: string | null = null;
     const now = new Date().toISOString();
     const password = dto.password || `SimantikPass#${Math.random().toString(36).slice(-8)}`;
 
@@ -375,20 +375,63 @@ export class TechniciansService {
         },
       });
 
-      if (!authError && authUser?.user?.id) {
+      if (authError) {
+        if (
+          authError.message?.toLowerCase().includes('already') ||
+          (authError as any).status === 422
+        ) {
+          throw new ConflictException(`Alamat email "${email}" telah terdaftar pada sistem.`);
+        }
+        if (!this.isFallbackAllowed()) {
+          assertSupabaseOk({ data: null, error: authError }, 'Mendaftarkan akun autentikasi tenaga ahli');
+        } else {
+          this.logger.warn(`Supabase auth error pada createTechnician, fallback in-memory: ${authError.message}`);
+        }
+      }
+
+      if (authUser?.user?.id) {
         userId = authUser.user.id;
+        createdAuthUserId = authUser.user.id;
       }
 
       // Masukkan profil ke tabel profiles
-      await client.from('profiles').upsert({
+      const profileRes = await client.from('profiles').upsert({
         id: userId,
         full_name: fullName,
         email,
         role: 'TECHNICIAN',
         is_active: dto.is_active !== undefined ? dto.is_active : true,
       });
-    } catch {
-      // Fallback
+
+      if (profileRes.error) {
+        // Rollback akun autentikasi yang baru saja dibuat agar tidak menjadi akun yatim
+        if (createdAuthUserId) {
+          try {
+            await client.auth.admin.deleteUser(createdAuthUserId);
+          } catch (delErr) {
+            this.logger.warn(`Gagal kompensasi rollback user auth ${createdAuthUserId}: ${(delErr as Error).message}`);
+          }
+        }
+        if (!this.isFallbackAllowed()) {
+          assertSupabaseOk(profileRes, 'Menyimpan profil tenaga ahli');
+        } else {
+          this.logger.warn(`Supabase profile error pada createTechnician, fallback in-memory: ${profileRes.error.message}`);
+        }
+      }
+    } catch (err) {
+      if (
+        err instanceof BadRequestException ||
+        err instanceof ConflictException ||
+        err instanceof InternalServerErrorException
+      ) {
+        throw err;
+      }
+      this.logger.error(`Gagal mendaftarkan teknisi: ${err instanceof Error ? err.message : String(err)}`);
+      if (!this.isFallbackAllowed()) {
+        throw new InternalServerErrorException(
+          'Gagal mendaftarkan tenaga ahli ke basis data. Silakan coba beberapa saat lagi.',
+        );
+      }
     }
 
     const newTechnician: TechnicianAccountItem = {
@@ -453,13 +496,19 @@ export class TechniciansService {
       const client = this.supabaseService.getClient();
 
       if (dto.password) {
-        await client.auth.admin.updateUserById(id, { password: dto.password });
+        const authRes = await client.auth.admin.updateUserById(id, { password: dto.password });
+        if (authRes.error && !this.isFallbackAllowed()) {
+          assertSupabaseOk(authRes, 'Memperbarui kata sandi tenaga ahli');
+        }
       }
       if (dto.email) {
-        await client.auth.admin.updateUserById(id, { email: technician.email });
+        const authRes = await client.auth.admin.updateUserById(id, { email: technician.email });
+        if (authRes.error && !this.isFallbackAllowed()) {
+          assertSupabaseOk(authRes, 'Memperbarui email tenaga ahli');
+        }
       }
 
-      await client
+      const profRes = await client
         .from('profiles')
         .update({
           full_name: technician.full_name,
@@ -468,11 +517,28 @@ export class TechniciansService {
           updated_at: technician.updated_at,
         })
         .eq('id', id);
-    } catch {
-      // Fallback
+
+      if (profRes.error && !this.isFallbackAllowed()) {
+        assertSupabaseOk(profRes, 'Memperbarui profil tenaga ahli');
+      }
+    } catch (err) {
+      if (
+        err instanceof BadRequestException ||
+        err instanceof ConflictException ||
+        err instanceof InternalServerErrorException ||
+        err instanceof NotFoundException
+      ) {
+        throw err;
+      }
+      this.logger.error(`Gagal memperbarui profil teknisi ${id}: ${err instanceof Error ? err.message : String(err)}`);
+      if (!this.isFallbackAllowed()) {
+        throw new InternalServerErrorException(
+          'Gagal memperbarui data tenaga ahli di basis data. Silakan coba beberapa saat lagi.',
+        );
+      }
     }
 
-    // Update in-memory
+    // Update in-memory jika fallback diizinkan atau update state
     const inMemIdx = this.inMemoryTechnicians.findIndex((t) => t.id === id);
     if (inMemIdx !== -1) {
       this.inMemoryTechnicians[inMemIdx] = {
@@ -513,13 +579,17 @@ export class TechniciansService {
 
     try {
       const client = this.supabaseService.getClient();
-      await client
+      const profRes = await client
         .from('profiles')
         .update({
           is_active: isActive,
           updated_at: technician.updated_at,
         })
         .eq('id', id);
+
+      if (profRes.error && !this.isFallbackAllowed()) {
+        assertSupabaseOk(profRes, 'Mengubah status keaktifan tenaga ahli');
+      }
 
       if (!isActive) {
         // Blokir sesi Supabase Auth tanpa menghapus pengguna
@@ -534,15 +604,30 @@ export class TechniciansService {
           ban_duration: 'none',
         });
       }
-    } catch {
-      // Fallback
+    } catch (err) {
+      if (
+        err instanceof BadRequestException ||
+        err instanceof ConflictException ||
+        err instanceof InternalServerErrorException ||
+        err instanceof NotFoundException
+      ) {
+        throw err;
+      }
+      this.logger.error(`Gagal mengubah status aktif teknisi ${id}: ${err instanceof Error ? err.message : String(err)}`);
+      if (!this.isFallbackAllowed()) {
+        throw new InternalServerErrorException(
+          'Gagal memperbarui status keaktifan tenaga ahli di basis data.',
+        );
+      }
     }
 
-    // Update in-memory
-    const inMemIdx = this.inMemoryTechnicians.findIndex((t) => t.id === id);
-    if (inMemIdx !== -1) {
-      this.inMemoryTechnicians[inMemIdx].is_active = isActive;
-      this.inMemoryTechnicians[inMemIdx].updated_at = technician.updated_at;
+    // Update in-memory jika fallback diizinkan
+    if (this.isFallbackAllowed()) {
+      const inMemIdx = this.inMemoryTechnicians.findIndex((t) => t.id === id);
+      if (inMemIdx !== -1) {
+        this.inMemoryTechnicians[inMemIdx].is_active = isActive;
+        this.inMemoryTechnicians[inMemIdx].updated_at = technician.updated_at;
+      }
     }
 
     // Audit log

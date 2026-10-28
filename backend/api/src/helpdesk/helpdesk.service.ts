@@ -7,6 +7,7 @@ import {
 import * as crypto from 'crypto';
 import { SupabaseService } from '../supabase/supabase.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { isInMemoryFallbackAllowed } from '../common/utils/supabase.utils.js';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import type {
   ConsultationItem,
@@ -209,8 +210,10 @@ export class HelpdeskService {
       notification_id: notifRecord?.id,
     };
 
-    // 2. Simpan ke in-memory map
-    this.inMemoryConsultations.set(consultationId, consultationItem);
+    // 2. Simpan ke in-memory map jika fallback diizinkan
+    if (isInMemoryFallbackAllowed()) {
+      this.inMemoryConsultations.set(consultationId, consultationItem);
+    }
 
     // 3. Kirimkan email notifikasi konfirmasi ke pemohon via EmailService (opsional / background)
     try {
@@ -262,10 +265,12 @@ export class HelpdeskService {
       // Fallback
     }
 
-    // 2. Gabungkan dengan data in-memory fallback
-    for (const [id, item] of this.inMemoryConsultations.entries()) {
-      if (!itemsMap.has(id)) {
-        itemsMap.set(id, item);
+    // 2. Gabungkan dengan data in-memory fallback hanya jika fallback diizinkan
+    if (isInMemoryFallbackAllowed()) {
+      for (const [id, item] of this.inMemoryConsultations.entries()) {
+        if (!itemsMap.has(id)) {
+          itemsMap.set(id, item);
+        }
       }
     }
 
@@ -295,13 +300,15 @@ export class HelpdeskService {
       // Abaikan jika notifikasi tidak ada
     }
 
-    // 2. Update status in-memory jika ada
-    const existing = this.inMemoryConsultations.get(id);
-    if (existing) {
-      existing.status = 'READ';
-      existing.read_at = now;
-      this.inMemoryConsultations.set(id, existing);
-      return existing;
+    // 2. Update status in-memory jika ada dan diizinkan
+    if (isInMemoryFallbackAllowed()) {
+      const existing = this.inMemoryConsultations.get(id);
+      if (existing) {
+        existing.status = 'READ';
+        existing.read_at = now;
+        this.inMemoryConsultations.set(id, existing);
+        return existing;
+      }
     }
 
     // 3. Jika tidak ada di in-memory, cari di Supabase

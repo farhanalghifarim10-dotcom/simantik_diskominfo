@@ -2,11 +2,17 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { SupabaseService } from '../supabase/supabase.service.js';
 import { AuditService } from '../audit/audit.service.js';
+import {
+  assertSupabaseOk,
+  isInMemoryFallbackAllowed,
+} from '../common/utils/supabase.utils.js';
 import type {
   CreateOpdDto,
   ListOpdQueryDto,
@@ -100,6 +106,7 @@ export const DEFAULT_OPD_UNITS: OpdUnitItem[] = [
 
 @Injectable()
 export class OpdService {
+  private readonly logger = new Logger(OpdService.name);
   private inMemoryOpds: OpdUnitItem[] = [...DEFAULT_OPD_UNITS];
 
   constructor(
@@ -133,7 +140,14 @@ export class OpdService {
 
       const { data, error } = await dbQuery.order('name', { ascending: true });
 
-      if (!error && data && data.length > 0) {
+      if (error) {
+        this.logger.error(`Gagal memuat OPD dari Supabase: ${error.message}`);
+        if (!isInMemoryFallbackAllowed()) {
+          throw new InternalServerErrorException(
+            'Gagal memuat daftar Perangkat Daerah dari basis data.',
+          );
+        }
+      } else if (data !== null && data !== undefined) {
         return data.map((d: any) => ({
           id: d.id,
           code: d.code,
@@ -144,8 +158,20 @@ export class OpdService {
           updated_at: d.updated_at,
         }));
       }
-    } catch {
-      // Fallback
+    } catch (err) {
+      if (err instanceof InternalServerErrorException) {
+        throw err;
+      }
+      this.logger.error(`Error query listOpds: ${err instanceof Error ? err.message : String(err)}`);
+      if (!isInMemoryFallbackAllowed()) {
+        throw new InternalServerErrorException(
+          'Gagal memuat daftar Perangkat Daerah dari basis data.',
+        );
+      }
+    }
+
+    if (!isInMemoryFallbackAllowed()) {
+      return [];
     }
 
     // In-memory fallback
@@ -181,7 +207,14 @@ export class OpdService {
         .eq('id', id)
         .maybeSingle();
 
-      if (!error && data) {
+      if (error) {
+        this.logger.error(`Gagal memuat detail OPD ${id}: ${error.message}`);
+        if (!isInMemoryFallbackAllowed()) {
+          throw new InternalServerErrorException(
+            'Gagal memuat data Perangkat Daerah dari basis data.',
+          );
+        }
+      } else if (data) {
         return {
           id: data.id,
           code: data.code,
@@ -191,9 +224,24 @@ export class OpdService {
           created_at: data.created_at,
           updated_at: data.updated_at,
         };
+      } else {
+        if (!isInMemoryFallbackAllowed()) {
+          throw new NotFoundException(`Perangkat Daerah dengan ID "${id}" tidak ditemukan.`);
+        }
       }
-    } catch {
-      // Fallback
+    } catch (err) {
+      if (
+        err instanceof NotFoundException ||
+        err instanceof InternalServerErrorException
+      ) {
+        throw err;
+      }
+      this.logger.error(`Error getOpdDetail: ${err instanceof Error ? err.message : String(err)}`);
+      if (!isInMemoryFallbackAllowed()) {
+        throw new InternalServerErrorException(
+          'Gagal memuat data Perangkat Daerah dari basis data.',
+        );
+      }
     }
 
     const found = this.inMemoryOpds.find((o) => o.id === id);
@@ -214,7 +262,7 @@ export class OpdService {
       throw new BadRequestException('Kode dan nama Perangkat Daerah wajib diisi.');
     }
 
-    // Periksa keunikan kode
+    // Periksa keunikan kode di in-memory jika fallback
     const existing = this.inMemoryOpds.find((o) => o.code === code);
     if (existing) {
       throw new ConflictException(`Kode OPD "${code}" telah terdaftar pada sistem.`);
@@ -234,7 +282,7 @@ export class OpdService {
 
     try {
       const client = this.supabaseService.getClient();
-      const { data, error } = await client
+      const insertRes = await client
         .from('opd_units')
         .insert({
           id,
@@ -245,15 +293,35 @@ export class OpdService {
         .select()
         .single();
 
-      if (!error && data) {
-        newOpd.created_at = data.created_at;
-        newOpd.updated_at = data.updated_at;
+      if (insertRes.error) {
+        if (!isInMemoryFallbackAllowed()) {
+          assertSupabaseOk(insertRes, 'Menyimpan Perangkat Daerah baru');
+        } else {
+          this.logger.warn(`Supabase error pada createOpd, menggunakan fallback in-memory: ${insertRes.error.message}`);
+        }
+      } else if (insertRes.data) {
+        newOpd.created_at = insertRes.data.created_at;
+        newOpd.updated_at = insertRes.data.updated_at;
       }
-    } catch {
-      // Fallback
+    } catch (err) {
+      if (
+        err instanceof BadRequestException ||
+        err instanceof ConflictException ||
+        err instanceof InternalServerErrorException
+      ) {
+        throw err;
+      }
+      this.logger.error(`Gagal membuat OPD: ${err instanceof Error ? err.message : String(err)}`);
+      if (!isInMemoryFallbackAllowed()) {
+        throw new InternalServerErrorException(
+          'Gagal menyimpan data Perangkat Daerah ke basis data.',
+        );
+      }
     }
 
-    this.inMemoryOpds.push(newOpd);
+    if (isInMemoryFallbackAllowed()) {
+      this.inMemoryOpds.push(newOpd);
+    }
 
     // Audit log
     await this.auditService.record({
@@ -295,7 +363,7 @@ export class OpdService {
 
     try {
       const client = this.supabaseService.getClient();
-      await client
+      const updateRes = await client
         .from('opd_units')
         .update({
           code: current.code,
@@ -304,8 +372,36 @@ export class OpdService {
           updated_at: current.updated_at,
         })
         .eq('id', id);
-    } catch {
-      // Fallback
+
+      if (updateRes.error) {
+        if (!isInMemoryFallbackAllowed()) {
+          assertSupabaseOk(updateRes, 'Memperbarui data Perangkat Daerah');
+        } else {
+          this.logger.warn(`Supabase error pada updateOpd, fallback in-memory: ${updateRes.error.message}`);
+        }
+      }
+    } catch (err) {
+      if (
+        err instanceof BadRequestException ||
+        err instanceof ConflictException ||
+        err instanceof InternalServerErrorException ||
+        err instanceof NotFoundException
+      ) {
+        throw err;
+      }
+      this.logger.error(`Gagal memperbarui OPD ${id}: ${err instanceof Error ? err.message : String(err)}`);
+      if (!isInMemoryFallbackAllowed()) {
+        throw new InternalServerErrorException(
+          'Gagal memperbarui data Perangkat Daerah di basis data.',
+        );
+      }
+    }
+
+    if (isInMemoryFallbackAllowed()) {
+      const idx = this.inMemoryOpds.findIndex((o) => o.id === id);
+      if (idx !== -1) {
+        this.inMemoryOpds[idx] = { ...current };
+      }
     }
 
     // Audit log
@@ -332,15 +428,44 @@ export class OpdService {
 
     try {
       const client = this.supabaseService.getClient();
-      await client
+      const updateRes = await client
         .from('opd_units')
         .update({
           is_active: isActive,
           updated_at: opd.updated_at,
         })
         .eq('id', id);
-    } catch {
-      // Fallback
+
+      if (updateRes.error) {
+        if (!isInMemoryFallbackAllowed()) {
+          assertSupabaseOk(updateRes, 'Mengubah status keaktifan Perangkat Daerah');
+        } else {
+          this.logger.warn(`Supabase error pada toggleOpdStatus, fallback in-memory: ${updateRes.error.message}`);
+        }
+      }
+    } catch (err) {
+      if (
+        err instanceof BadRequestException ||
+        err instanceof ConflictException ||
+        err instanceof InternalServerErrorException ||
+        err instanceof NotFoundException
+      ) {
+        throw err;
+      }
+      this.logger.error(`Gagal mengubah status aktif OPD ${id}: ${err instanceof Error ? err.message : String(err)}`);
+      if (!isInMemoryFallbackAllowed()) {
+        throw new InternalServerErrorException(
+          'Gagal memperbarui status keaktifan Perangkat Daerah di basis data.',
+        );
+      }
+    }
+
+    if (isInMemoryFallbackAllowed()) {
+      const idx = this.inMemoryOpds.findIndex((o) => o.id === id);
+      if (idx !== -1) {
+        this.inMemoryOpds[idx].is_active = isActive;
+        this.inMemoryOpds[idx].updated_at = opd.updated_at;
+      }
     }
 
     // Audit log

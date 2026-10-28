@@ -18,6 +18,7 @@ import {
   sanitizeFilename,
   validateUploadedFile,
 } from '../common/utils/file-validator.js';
+import { isInMemoryFallbackAllowed } from '../common/utils/supabase.utils.js';
 import type {
   ApplicationSubmissionResult,
   OpdUnitEntity,
@@ -237,9 +238,7 @@ export class ApplicationsService {
     const client = this.supabaseService.getClient();
 
     // Fallback in-memory hanya diizinkan bila secara eksplisit diaktifkan untuk automated test/offline dev
-    const isExplicitFallbackAllowed =
-      process.env.ALLOW_IN_MEMORY_FALLBACK === 'true' &&
-      process.env.NODE_ENV === 'test';
+    const isExplicitFallbackAllowed = isInMemoryFallbackAllowed();
 
     let applicantInserted = false;
     let applicationInserted = false;

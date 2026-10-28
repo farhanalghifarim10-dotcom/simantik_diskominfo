@@ -18,6 +18,7 @@ import {
   sanitizeFilename,
   validateUploadedFile,
 } from '../common/utils/file-validator.js';
+import { isInMemoryFallbackAllowed } from '../common/utils/supabase.utils.js';
 import type {
   ApplicationStage,
   ApplicationStatus,
@@ -112,7 +113,9 @@ export class TrackingService {
     private readonly tokenService: TrackingTokenService,
     private readonly rateLimiter: TrackingRateLimiter,
   ) {
-    this.seedFallbackApplications();
+    if (isInMemoryFallbackAllowed()) {
+      this.seedFallbackApplications();
+    }
   }
 
   /**
@@ -301,8 +304,8 @@ export class TrackingService {
       // Supabase unavailable / fallback
     }
 
-    // 2. Coba periksa in-memory fallback jika belum ditemukan
-    if (!appRecord) {
+    // 2. Coba periksa in-memory fallback jika belum ditemukan dan diizinkan
+    if (!appRecord && isInMemoryFallbackAllowed()) {
       const mem = this.inMemoryTrackRecords.get(ticketNumber);
       if (mem) {
         const storedHash = mem.tracking_code_hash.toLowerCase();
@@ -772,17 +775,25 @@ export class TrackingService {
         throw err;
       }
 
-      const isExplicitFallbackAllowed =
-        process.env.ALLOW_IN_MEMORY_FALLBACK === 'true' &&
-        process.env.NODE_ENV === 'test';
-      if (!isExplicitFallbackAllowed) {
+      if (!isInMemoryFallbackAllowed()) {
         throw new InternalServerErrorException(
           `Gagal memproses tanggapan revisi ke basis data: ${err?.message || err}`,
         );
       }
     }
 
-    // 2. Perbarui in-memory record (sinkron untuk mode fallback testing dan query lokal)
+    if (!isInMemoryFallbackAllowed()) {
+      return {
+        ticket_number: app.ticket_number,
+        previous_status: previousStatus,
+        current_status: newStatus,
+        message:
+          'Tanggapan perbaikan berhasil dikirimkan. Permohonan Anda telah masuk kembali ke antrean verifikasi administrasi.',
+        submitted_at: now,
+      };
+    }
+
+    // 2. Perbarui in-memory record (hanya jika mode fallback diizinkan)
     app.current_status = newStatus;
     app.updated_at = now;
     if (dto.updated_title) app.title = dto.updated_title.trim();
@@ -891,6 +902,10 @@ export class TrackingService {
       }
     } catch {
       // Fallback
+    }
+
+    if (!isInMemoryFallbackAllowed()) {
+      return null;
     }
 
     return this.inMemoryTrackRecords.get(ticketNumber) || null;

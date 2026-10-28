@@ -1,8 +1,10 @@
 import {
   BadRequestException,
   ForbiddenException,
+  HttpException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
   Optional,
 } from '@nestjs/common';
@@ -12,6 +14,7 @@ import { SupabaseService } from '../supabase/supabase.service.js';
 import { WorkflowEngine } from './workflow/workflow.engine.js';
 import { TrackingService } from '../tracking/tracking.service.js';
 import { AuditService } from '../audit/audit.service.js';
+import { assertSupabaseOk, isInMemoryFallbackAllowed } from '../common/utils/supabase.utils.js';
 import type {
   ApplicationStatus,
   ExecuteStageTransitionDto,
@@ -40,6 +43,7 @@ interface InMemRecord {
 
 @Injectable()
 export class AdminApplicationsService {
+  private readonly logger = new Logger(AdminApplicationsService.name);
   private inMemoryRecords: Map<string, InMemRecord> = new Map();
   private inMemoryAssignedTechnicians: Map<string, Set<string>> = new Map();
 
@@ -53,6 +57,9 @@ export class AdminApplicationsService {
   }
 
   private seedInitialMockData() {
+    if (!isInMemoryFallbackAllowed()) {
+      return;
+    }
     const seedId = 'a1000000-0000-0000-0000-000000000001';
     const plainCode = 'TRK-A1B2C3D4';
     const seedHash = crypto.createHash('sha256').update(plainCode).digest('hex');
@@ -695,7 +702,7 @@ export class AdminApplicationsService {
       const client = this.supabaseService.getClient();
 
       // a. Update status di tabel applications
-      await client
+      const updateRes = await client
         .from('applications')
         .update({
           current_status: toStatus,
@@ -703,9 +710,10 @@ export class AdminApplicationsService {
           updated_at: now,
         })
         .eq('id', id);
+      assertSupabaseOk(updateRes, 'Gagal memperbarui status permohonan');
 
       // b. Insert riwayat di application_status_history
-      await client.from('application_status_history').insert({
+      const insertHistRes = await client.from('application_status_history').insert({
         application_id: id,
         from_status: fromStatus,
         to_status: toStatus,
@@ -713,10 +721,11 @@ export class AdminApplicationsService {
         changed_by: user.id,
         changed_at: now,
       });
+      assertSupabaseOk(insertHistRes, 'Gagal mencatat riwayat status permohonan');
 
       // c. Jika targetStage terisi baru, catat di application_stage_history
       if (rule.targetStage && rule.targetStage !== current.current_stage) {
-        await client.from('application_stage_history').insert({
+        const insertStageRes = await client.from('application_stage_history').insert({
           application_id: id,
           from_stage: current.current_stage,
           to_stage: rule.targetStage,
@@ -724,34 +733,58 @@ export class AdminApplicationsService {
           changed_by: user.id,
           changed_at: now,
         });
+        assertSupabaseOk(insertStageRes, 'Gagal mencatat riwayat tahapan');
       }
 
-      // d. Insert audit log
-      await client.from('audit_logs').insert({
-        actor_profile_id: user.id,
-        application_id: id,
-        action: 'APPLICATION_STATUS_TRANSITION',
-        entity_type: 'applications',
-        entity_id: id,
-        old_data: { status: fromStatus, stage: current.current_stage },
-        new_data: { status: toStatus, stage: targetStage, note: dto.note || null },
-        created_at: now,
-      });
-
-      // e. Jika ada catatan yang relevan, simpan juga sebagai pesan internal
-      if (dto.note && dto.note.trim()) {
-        await client.from('messages').insert({
+      // d. Insert audit log (efek samping sekunder)
+      try {
+        const auditRes = await client.from('audit_logs').insert({
+          actor_profile_id: user.id,
           application_id: id,
-          sender_type: user.role === 'SUPER_ADMIN' ? 'ADMIN' : 'TECHNICIAN',
-          sender_profile_id: user.id,
-          sender_name: user.fullName,
-          visibility: 'INTERNAL',
-          message: `[TRANSISI: ${fromStatus} -> ${toStatus}] ${dto.note.trim()}`,
+          action: 'APPLICATION_STATUS_TRANSITION',
+          entity_type: 'applications',
+          entity_id: id,
+          old_data: { status: fromStatus, stage: current.current_stage },
+          new_data: { status: toStatus, stage: targetStage, note: dto.note || null },
           created_at: now,
         });
+        if (auditRes?.error) {
+          this.logger.warn(`Gagal mencatat audit log transisi: ${auditRes.error.message}`);
+        }
+      } catch (auditErr) {
+        this.logger.warn(`Gagal mencatat audit log transisi: ${auditErr}`);
       }
-    } catch {
-      // Fallback in-memory
+
+      // e. Jika ada catatan yang relevan, simpan juga sebagai pesan internal (efek samping sekunder)
+      if (dto.note && dto.note.trim()) {
+        try {
+          const msgRes = await client.from('messages').insert({
+            application_id: id,
+            sender_type: user.role === 'SUPER_ADMIN' ? 'ADMIN' : 'TECHNICIAN',
+            sender_profile_id: user.id,
+            sender_name: user.fullName,
+            visibility: 'INTERNAL',
+            message: `[TRANSISI: ${fromStatus} -> ${toStatus}] ${dto.note.trim()}`,
+            created_at: now,
+          });
+          if (msgRes?.error) {
+            this.logger.warn(`Gagal mencatat pesan internal transisi: ${msgRes.error.message}`);
+          }
+        } catch (msgErr) {
+          this.logger.warn(`Gagal mencatat pesan internal transisi: ${msgErr}`);
+        }
+      }
+    } catch (err) {
+      if (err instanceof HttpException) {
+        throw err;
+      }
+      if (!isInMemoryFallbackAllowed()) {
+        throw new InternalServerErrorException('Gagal memproses transisi status permohonan.');
+      }
+    }
+
+    if (!isInMemoryFallbackAllowed()) {
+      return this.getApplicationDetail(id, user);
     }
 
     // Update in-memory record jika ada
@@ -837,15 +870,16 @@ export class AdminApplicationsService {
     try {
       const client = this.supabaseService.getClient();
 
-      await client
+      const updateRes = await client
         .from('applications')
         .update({
           current_stage: toStage,
           updated_at: now,
         })
         .eq('id', id);
+      assertSupabaseOk(updateRes, 'Gagal memperbarui tahapan permohonan');
 
-      await client.from('application_stage_history').insert({
+      const stageHistRes = await client.from('application_stage_history').insert({
         application_id: id,
         from_stage: fromStage,
         to_stage: toStage,
@@ -853,19 +887,36 @@ export class AdminApplicationsService {
         changed_by: user.id,
         changed_at: now,
       });
+      assertSupabaseOk(stageHistRes, 'Gagal mencatat riwayat tahapan');
 
-      await client.from('audit_logs').insert({
-        actor_profile_id: user.id,
-        application_id: id,
-        action: 'APPLICATION_STAGE_TRANSITION',
-        entity_type: 'applications',
-        entity_id: id,
-        old_data: { stage: fromStage },
-        new_data: { stage: toStage, note: dto.note || null },
-        created_at: now,
-      });
-    } catch {
-      // Fallback
+      try {
+        const auditRes = await client.from('audit_logs').insert({
+          actor_profile_id: user.id,
+          application_id: id,
+          action: 'APPLICATION_STAGE_TRANSITION',
+          entity_type: 'applications',
+          entity_id: id,
+          old_data: { stage: fromStage },
+          new_data: { stage: toStage, note: dto.note || null },
+          created_at: now,
+        });
+        if (auditRes?.error) {
+          this.logger.warn(`Gagal mencatat audit log stage transition: ${auditRes.error.message}`);
+        }
+      } catch (auditErr) {
+        this.logger.warn(`Gagal mencatat audit log stage transition: ${auditErr}`);
+      }
+    } catch (err) {
+      if (err instanceof HttpException) {
+        throw err;
+      }
+      if (!isInMemoryFallbackAllowed()) {
+        throw new InternalServerErrorException('Gagal memproses pemindahan tahapan permohonan.');
+      }
+    }
+
+    if (!isInMemoryFallbackAllowed()) {
+      return this.getApplicationDetail(id, user);
     }
 
     const inMem = this.inMemoryRecords.get(id);

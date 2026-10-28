@@ -1,6 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { SupabaseService } from '../supabase/supabase.service.js';
+import { isInMemoryFallbackAllowed } from '../common/utils/supabase.utils.js';
 import type {
   AuditLogListItem,
   ListAuditLogsQueryDto,
@@ -14,7 +15,9 @@ export class AuditService {
   private inMemoryAuditLogs: AuditLogListItem[] = [];
 
   constructor(private readonly supabaseService: SupabaseService) {
-    this.seedInitialLogs();
+    if (isInMemoryFallbackAllowed()) {
+      this.seedInitialLogs();
+    }
   }
 
   private seedInitialLogs() {
@@ -93,7 +96,9 @@ export class AuditService {
         .single();
 
       if (!error && data) {
-        this.inMemoryAuditLogs.unshift(newLog);
+        if (isInMemoryFallbackAllowed()) {
+          this.inMemoryAuditLogs.unshift(newLog);
+        }
         return newLog;
       }
 
@@ -106,7 +111,9 @@ export class AuditService {
       this.logger.debug(`Audit record fallback to memory: ${(err as Error).message}`);
     }
 
-    this.inMemoryAuditLogs.unshift(newLog);
+    if (isInMemoryFallbackAllowed()) {
+      this.inMemoryAuditLogs.unshift(newLog);
+    }
     return newLog;
   }
 
@@ -139,7 +146,12 @@ export class AuditService {
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
 
-      if (!error && data) {
+      if (error) {
+        this.logger.error(`Gagal memuat log audit dari Supabase: ${error.message}`);
+        if (!isInMemoryFallbackAllowed()) {
+          throw new InternalServerErrorException('Gagal memuat log audit dari basis data.');
+        }
+      } else if (data !== null && data !== undefined) {
         const total = count || data.length;
         const items: AuditLogListItem[] = data.map((row: any) => ({
           id: row.id,
@@ -175,8 +187,19 @@ export class AuditService {
           },
         };
       }
-    } catch {
-      // Fallback
+    } catch (err) {
+      if (err instanceof InternalServerErrorException) throw err;
+      this.logger.error(`Error listLogs: ${err instanceof Error ? err.message : String(err)}`);
+      if (!isInMemoryFallbackAllowed()) {
+        throw new InternalServerErrorException('Gagal memuat log audit dari basis data.');
+      }
+    }
+
+    if (!isInMemoryFallbackAllowed()) {
+      return {
+        items: [],
+        pagination: { page, limit, total: 0, total_pages: 0 },
+      };
     }
 
     // In-memory filter
