@@ -114,6 +114,9 @@ SUPABASE_SECRET_KEY=<your-service-role-secret-key>
 # Kunci Rahasia Sesi Pelacakan Publik (WAJIB diisi, minimal 32 karakter, tanpa nilai default nyata. Aplikasi akan gagal start jika tidak diisi)
 JWT_SECRET=
 
+# Konfigurasi Reverse Proxy (Wajib diset true di produksi jika di balik reverse proxy/load balancer)
+TRUST_PROXY=false
+
 # Resend Email Integration (Opsional, fallback simulasi aktif)
 RESEND_API_KEY=re_your_api_key_here
 RESEND_FROM_EMAIL=SIMANTIK Diskominfo <noreply@simantik.bandungkab.go.id>
