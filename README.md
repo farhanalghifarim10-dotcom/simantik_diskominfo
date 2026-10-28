@@ -111,8 +111,8 @@ CORS_ORIGINS=http://localhost:5173,http://localhost:5174
 SUPABASE_URL=https://<project-ref>.supabase.co
 SUPABASE_SECRET_KEY=<your-service-role-secret-key>
 
-# Kunci Rahasia Sesi Pelacakan Publik (HMAC-SHA256, Minimal 32 Karakter)
-JWT_SECRET=simantik-production-tracking-secret-key-min-32chars!
+# Kunci Rahasia Sesi Pelacakan Publik (WAJIB diisi, minimal 32 karakter, tanpa nilai default nyata. Aplikasi akan gagal start jika tidak diisi)
+JWT_SECRET=
 
 # Resend Email Integration (Opsional, fallback simulasi aktif)
 RESEND_API_KEY=re_your_api_key_here
