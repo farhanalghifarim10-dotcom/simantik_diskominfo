@@ -42,6 +42,17 @@ $env:SUPABASE_SECRET_KEY = $status.SERVICE_ROLE_KEY
 $env:PORT = "3001"
 $env:CORS_ORIGINS = "http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174"
 
+# Generate JWT_SECRET acak kuat (32 bytes = 64 karakter hex) khusus sesi lokal jika belum diset
+if ([string]::IsNullOrWhiteSpace($env:JWT_SECRET) -or $env:JWT_SECRET.Trim().Length -lt 32) {
+    $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    $bytes = New-Object byte[] 32
+    $rng.GetBytes($bytes)
+    $env:JWT_SECRET = -join ($bytes | ForEach-Object { "{0:x2}" -f $_ })
+    Write-Host "[OK] JWT_SECRET: [DIBUAT OTOMATIS SECARA ACAK UNTUK SESI INI]" -ForegroundColor Green
+} else {
+    Write-Host "[OK] JWT_SECRET: [TERKONFIGURASI SECARA AMAN DARI ENV]" -ForegroundColor Green
+}
+
 Write-Host "[OK] Port API: 3001" -ForegroundColor Green
 Write-Host "[OK] Fail-safe lokal: AKTIF (REQUIRE_LOCAL_SUPABASE=true)" -ForegroundColor Green
 Write-Host "[OK] Service-role key: [TERKONFIGURASI SECARA AMAN]" -ForegroundColor Green
