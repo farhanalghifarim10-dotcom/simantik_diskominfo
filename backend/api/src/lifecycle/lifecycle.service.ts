@@ -1257,11 +1257,45 @@ export class LifecycleService {
     user: AuthenticatedUser,
   ): Promise<void> {
     await this.assertLifecycleAccess(applicationId, user);
+    const existing = await this.getTest(applicationId, testId, user).catch(() => null);
 
     try {
       const client = this.supabaseService.getClient();
-      const deleteRes = await client.from('test_records').delete().eq('id', testId).eq('application_id', applicationId);
+      const deleteRes = await client
+        .from('test_records')
+        .delete()
+        .eq('id', testId)
+        .eq('application_id', applicationId);
       assertSupabaseOk(deleteRes, 'Gagal menghapus catatan pengujian');
+
+      if (existing?.attachment_path) {
+        try {
+          await client.storage.from('simantik-documents').remove([existing.attachment_path]);
+        } catch (storageErr) {
+          this.logger.warn(`Gagal menghapus berkas lampiran test dari storage: ${storageErr}`);
+        }
+      }
+
+      try {
+        await client.from('audit_logs').insert({
+          actor_profile_id: user.id,
+          application_id: applicationId,
+          action: 'LIFECYCLE_TEST_DELETED',
+          entity_type: 'test_records',
+          entity_id: testId,
+          old_data: existing
+            ? {
+                test_name: existing.test_name,
+                test_type: existing.test_type,
+                result: existing.result,
+                attachment_path: existing.attachment_path,
+              }
+            : null,
+          created_at: new Date().toISOString(),
+        });
+      } catch (auditErr) {
+        this.logger.warn(`Gagal mencatat audit log delete test: ${auditErr}`);
+      }
     } catch (err) {
       if (err instanceof HttpException) {
         throw err;
@@ -1653,11 +1687,44 @@ export class LifecycleService {
     user: AuthenticatedUser,
   ): Promise<void> {
     await this.assertLifecycleAccess(applicationId, user);
+    const existing = await this.getMaintenanceRecord(applicationId, recordId, user).catch(() => null);
 
     try {
       const client = this.supabaseService.getClient();
-      const deleteRes = await client.from('maintenance_records').delete().eq('id', recordId).eq('application_id', applicationId);
+      const deleteRes = await client
+        .from('maintenance_records')
+        .delete()
+        .eq('id', recordId)
+        .eq('application_id', applicationId);
       assertSupabaseOk(deleteRes, 'Gagal menghapus catatan pemeliharaan');
+
+      if (existing?.attachment_path) {
+        try {
+          await client.storage.from('simantik-documents').remove([existing.attachment_path]);
+        } catch (storageErr) {
+          this.logger.warn(`Gagal menghapus berkas lampiran pemeliharaan dari storage: ${storageErr}`);
+        }
+      }
+
+      try {
+        await client.from('audit_logs').insert({
+          actor_profile_id: user.id,
+          application_id: applicationId,
+          action: 'LIFECYCLE_MAINTENANCE_DELETED',
+          entity_type: 'maintenance_records',
+          entity_id: recordId,
+          old_data: existing
+            ? {
+                title: existing.title,
+                maintenance_type: existing.maintenance_type,
+                attachment_path: existing.attachment_path,
+              }
+            : null,
+          created_at: new Date().toISOString(),
+        });
+      } catch (auditErr) {
+        this.logger.warn(`Gagal mencatat audit log delete maintenance: ${auditErr}`);
+      }
     } catch (err) {
       if (err instanceof HttpException) {
         throw err;
@@ -2013,11 +2080,42 @@ export class LifecycleService {
     user: AuthenticatedUser,
   ): Promise<void> {
     await this.assertLifecycleAccess(applicationId, user);
+    const existing = await this.getEvaluation(applicationId, evalId, user).catch(() => null);
 
     try {
       const client = this.supabaseService.getClient();
       const deleteRes = await client.from('evaluations').delete().eq('id', evalId).eq('application_id', applicationId);
       assertSupabaseOk(deleteRes, 'Gagal menghapus evaluasi');
+
+      if (existing?.attachment_path) {
+        try {
+          await client.storage.from('simantik-documents').remove([existing.attachment_path]);
+        } catch (storageErr) {
+          this.logger.warn(`Gagal menghapus berkas lampiran evaluasi dari storage: ${storageErr}`);
+        }
+      }
+
+      try {
+        await client.from('audit_logs').insert({
+          actor_profile_id: user.id,
+          application_id: applicationId,
+          action: 'LIFECYCLE_EVALUATION_DELETED',
+          entity_type: 'evaluations',
+          entity_id: evalId,
+          old_data: existing
+            ? {
+                evaluation_date: existing.evaluation_date,
+                success_indicator: existing.success_indicator,
+                findings: existing.findings,
+                recommendations: existing.recommendations,
+                attachment_path: existing.attachment_path,
+              }
+            : null,
+          created_at: new Date().toISOString(),
+        });
+      } catch (auditErr) {
+        this.logger.warn(`Gagal mencatat audit log delete evaluation: ${auditErr}`);
+      }
     } catch (err) {
       if (err instanceof HttpException) {
         throw err;
@@ -2282,11 +2380,42 @@ export class LifecycleService {
     user: AuthenticatedUser,
   ): Promise<void> {
     await this.assertLifecycleAccess(applicationId, user);
+    const docs = await this.getTechnicalDocuments(applicationId, user).catch(() => []);
+    const existing = docs.find((d) => d.id === docId) || null;
 
     try {
       const client = this.supabaseService.getClient();
       const deleteRes = await client.from('technical_documents').delete().eq('id', docId).eq('application_id', applicationId);
       assertSupabaseOk(deleteRes, 'Gagal menghapus dokumen teknis');
+
+      if (existing?.storage_path) {
+        try {
+          await client.storage.from('simantik-documents').remove([existing.storage_path]);
+        } catch (storageErr) {
+          this.logger.warn(`Gagal menghapus berkas dokumen teknis dari storage: ${storageErr}`);
+        }
+      }
+
+      try {
+        await client.from('audit_logs').insert({
+          actor_profile_id: user.id,
+          application_id: applicationId,
+          action: 'LIFECYCLE_TECHNICAL_DOCUMENT_DELETED',
+          entity_type: 'technical_documents',
+          entity_id: docId,
+          old_data: existing
+            ? {
+                title: existing.title,
+                document_type: existing.document_type,
+                original_filename: existing.original_filename,
+                storage_path: existing.storage_path,
+              }
+            : null,
+          created_at: new Date().toISOString(),
+        });
+      } catch (auditErr) {
+        this.logger.warn(`Gagal mencatat audit log delete technical document: ${auditErr}`);
+      }
     } catch (err) {
       if (err instanceof HttpException) {
         throw err;
