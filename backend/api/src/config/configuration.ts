@@ -29,5 +29,9 @@ export default () => {
                 process.env.RESEND_FROM_EMAIL ??
                 'SIMANTIK Diskominfo <noreply@simantik.bandungkab.go.id>',
         },
+
+        trustProxy:
+            process.env.TRUST_PROXY === 'true' ||
+            process.env.TRUST_PROXY === '1',
     };
 };

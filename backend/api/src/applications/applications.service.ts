@@ -119,35 +119,71 @@ export class ApplicationsService {
     if (!payload.applicant_name || payload.applicant_name.trim().length < 3) {
       throw new BadRequestException('Nama lengkap pemohon wajib diisi (minimal 3 karakter).');
     }
+    if (payload.applicant_name.trim().length > 150) {
+      throw new BadRequestException('Nama pemohon melebihi batas maksimum 150 karakter.');
+    }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!payload.applicant_email || !emailRegex.test(payload.applicant_email.trim())) {
       throw new BadRequestException('Alamat email pemohon tidak valid.');
     }
+    if (payload.applicant_email.trim().length > 150) {
+      throw new BadRequestException('Email pemohon melebihi batas maksimum 150 karakter.');
+    }
     if (!payload.applicant_phone || payload.applicant_phone.trim().length < 8) {
       throw new BadRequestException('Nomor telepon / WhatsApp pemohon wajib diisi.');
     }
+    if (payload.applicant_phone.trim().length > 30) {
+      throw new BadRequestException('Nomor telepon pemohon melebihi batas maksimum 30 karakter.');
+    }
     if (!payload.applicant_position || payload.applicant_position.trim().length < 2) {
       throw new BadRequestException('Jabatan pemohon di OPD wajib diisi.');
+    }
+    if (payload.applicant_position.trim().length > 100) {
+      throw new BadRequestException('Jabatan pemohon melebihi batas maksimum 100 karakter.');
     }
 
     // 5. Validasi Rincian Permohonan
     if (!payload.title || payload.title.trim().length < 5) {
       throw new BadRequestException('Judul permohonan wajib diisi (minimal 5 karakter).');
     }
+    if (payload.title.trim().length > 200) {
+      throw new BadRequestException('Judul usulan melebihi batas maksimum 200 karakter.');
+    }
     if (!payload.background || payload.background.trim().length < 10) {
       throw new BadRequestException('Latar belakang permohonan wajib diisi (minimal 10 karakter).');
+    }
+    if (payload.background.trim().length > 5000) {
+      throw new BadRequestException('Uraian usulan melebihi batas maksimum 5000 karakter.');
     }
     if (!payload.problem_statement || payload.problem_statement.trim().length < 10) {
       throw new BadRequestException('Rumusan masalah wajib diisi (minimal 10 karakter).');
     }
+    if (payload.problem_statement.trim().length > 5000) {
+      throw new BadRequestException('Uraian usulan melebihi batas maksimum 5000 karakter.');
+    }
     if (!payload.objective || payload.objective.trim().length < 10) {
       throw new BadRequestException('Maksud dan tujuan wajib diisi (minimal 10 karakter).');
+    }
+    if (payload.objective.trim().length > 5000) {
+      throw new BadRequestException('Uraian usulan melebihi batas maksimum 5000 karakter.');
     }
     if (!payload.scope || payload.scope.trim().length < 10) {
       throw new BadRequestException('Ruang lingkup sistem wajib diisi (minimal 10 karakter).');
     }
+    if (payload.scope.trim().length > 5000) {
+      throw new BadRequestException('Uraian usulan melebihi batas maksimum 5000 karakter.');
+    }
     if (!payload.expected_output || payload.expected_output.trim().length < 5) {
       throw new BadRequestException('Keluaran (output) yang diharapkan wajib diisi.');
+    }
+    if (payload.expected_output.trim().length > 5000) {
+      throw new BadRequestException('Uraian usulan melebihi batas maksimum 5000 karakter.');
+    }
+    if ((payload as any).description && (payload as any).description.trim().length > 5000) {
+      throw new BadRequestException('Deskripsi usulan melebihi batas maksimum 5000 karakter.');
+    }
+    if (payload.additional_notes && payload.additional_notes.trim().length > 2000) {
+      throw new BadRequestException('Catatan melebihi batas maksimum 2000 karakter.');
     }
 
     // Jika layanan peningkatan/enhancement, wajib ada informasi aplikasi eksisting
@@ -170,6 +206,25 @@ export class ApplicationsService {
     }
 
     // 7. Validasi Dokumen Persyaratan
+    if (documents.length > 10) {
+      throw new BadRequestException(
+        'Jumlah dokumen yang diunggah melebihi batas maksimum (maksimal 10 dokumen per permohonan).',
+      );
+    }
+
+    // Larang duplikasi requirement_id
+    const seenReqIds = new Set<string>();
+    for (const doc of documents) {
+      if (doc.requirement_id) {
+        if (seenReqIds.has(doc.requirement_id)) {
+          throw new BadRequestException(
+            'Terdapat persyaratan dokumen ganda. Setiap persyaratan hanya boleh diunggah satu dokumen.',
+          );
+        }
+        seenReqIds.add(doc.requirement_id);
+      }
+    }
+
     const serviceReqs = service.requirements || [];
     const requiredDocumentReqs = serviceReqs.filter(
       (r) => r.is_required && r.type === 'DOCUMENT',
@@ -185,7 +240,10 @@ export class ApplicationsService {
       }
     }
 
-    // Validasi tipe berkas, ekstensi, magic bytes, buffer biner, dan batasan per persyaratan
+    // Validasi tipe berkas, ekstensi, magic bytes, buffer biner, dan batasan total ukuran (maks 35 MB)
+    const MAX_TOTAL_DECODE_BYTES = 35 * 1024 * 1024; // 35 MB
+    let totalDecodedBytes = 0;
+
     for (const doc of documents) {
       let buf = doc.buffer;
       if (!buf && doc.base64_data !== undefined) {
@@ -199,6 +257,17 @@ export class ApplicationsService {
           message: `Berkas "${doc.original_filename || 'Dokumen'}" wajib memiliki data konten biner (base64_data) yang valid dan tidak kosong. Dokumen metadata-only tidak diizinkan.`,
         });
       }
+
+      totalDecodedBytes += buf.length;
+    }
+
+    if (totalDecodedBytes > MAX_TOTAL_DECODE_BYTES) {
+      throw new BadRequestException(
+        'Total ukuran seluruh dokumen yang diunggah melebihi batas maksimum 35 MB.',
+      );
+    }
+
+    for (const doc of documents) {
       const associatedReq = serviceReqs.find((r) => r.id === doc.requirement_id);
       validateUploadedFile(
         {
@@ -210,7 +279,9 @@ export class ApplicationsService {
         associatedReq
           ? {
               name: associatedReq.name,
-              allowed_file_types: associatedReq.allowed_file_types,
+              allowed_file_types: Array.isArray(associatedReq.allowed_file_types)
+                ? associatedReq.allowed_file_types.join(',')
+                : associatedReq.allowed_file_types,
               max_file_size_mb: associatedReq.max_file_size_mb,
             }
           : undefined,

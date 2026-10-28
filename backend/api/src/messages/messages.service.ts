@@ -297,6 +297,13 @@ export class MessagesService {
       });
     }
 
+    if (messageText.length > 2000) {
+      throw new BadRequestException({
+        statusCode: 400,
+        message: 'Pesan melebihi batas maksimum 2000 karakter.',
+      });
+    }
+
     const visibility = dto.visibility === 'PUBLIC' ? 'PUBLIC' : 'INTERNAL';
     const senderType = user.role === 'SUPER_ADMIN' ? 'ADMIN' : 'TECHNICIAN';
     const now = new Date().toISOString();

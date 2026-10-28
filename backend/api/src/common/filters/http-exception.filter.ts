@@ -36,6 +36,17 @@ export class HttpExceptionFilter implements ExceptionFilter {
         errorMessage = exception.message;
         errorCode = this.resolveErrorCode(statusCode);
       }
+
+      if (statusCode === HttpStatus.TOO_MANY_REQUESTS) {
+        if (
+          !errorMessage ||
+          errorMessage === 'ThrottlerException: Too Many Requests' ||
+          errorMessage === 'Too Many Requests'
+        ) {
+          errorMessage =
+            'Terlalu banyak permintaan. Silakan tunggu beberapa saat sebelum mencoba kembali.';
+        }
+      }
     } else if (
       (exception as any)?.status === 413 ||
       (exception as any)?.statusCode === 413 ||

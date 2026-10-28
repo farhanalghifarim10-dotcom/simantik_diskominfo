@@ -7,6 +7,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { HelpdeskService } from './helpdesk.service.js';
 import { AuthGuard } from '../auth/auth.guard.js';
 import type { CreateConsultationDto } from './helpdesk.types.js';
@@ -20,6 +21,7 @@ export class HelpdeskController {
   // ------------------------------------------------------------
 
   @Post('public/helpdesk/consultations')
+  @Throttle({ default: { limit: 3, ttl: 600000 } })
   async submitPublicConsultation(@Body() body: CreateConsultationDto) {
     const data = await this.helpdeskService.submitConsultation(body);
     return {
@@ -31,6 +33,7 @@ export class HelpdeskController {
 
   // Alias endpoint jika dipanggil tanpa prefix public
   @Post('helpdesk/consultations')
+  @Throttle({ default: { limit: 3, ttl: 600000 } })
   async submitConsultationAlias(@Body() body: CreateConsultationDto) {
     return this.submitPublicConsultation(body);
   }
