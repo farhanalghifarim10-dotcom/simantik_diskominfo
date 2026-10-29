@@ -7,7 +7,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { Throttle } from '@nestjs/throttler';
+import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import { HelpdeskService } from './helpdesk.service.js';
 import { AuthGuard } from '../auth/auth.guard.js';
 import type { CreateConsultationDto } from './helpdesk.types.js';
@@ -43,6 +43,7 @@ export class HelpdeskController {
   // ------------------------------------------------------------
 
   @Get('admin/helpdesk/consultations')
+  @SkipThrottle()
   @UseGuards(AuthGuard)
   async getAdminConsultations(@Req() req: any) {
     const user = req.user;
@@ -54,6 +55,7 @@ export class HelpdeskController {
   }
 
   @Post('admin/helpdesk/consultations/:id/read')
+  @SkipThrottle()
   @UseGuards(AuthGuard)
   async markAdminConsultationRead(@Param('id') id: string, @Req() req: any) {
     const user = req.user;
@@ -67,12 +69,14 @@ export class HelpdeskController {
 
   // Aliases for /helpdesk/consultations when called by internal client
   @Get('helpdesk/consultations')
+  @SkipThrottle()
   @UseGuards(AuthGuard)
   async getConsultationsInternalAlias(@Req() req: any) {
     return this.getAdminConsultations(req);
   }
 
   @Post('helpdesk/consultations/:id/read')
+  @SkipThrottle()
   @UseGuards(AuthGuard)
   async markConsultationReadAlias(@Param('id') id: string, @Req() req: any) {
     return this.markAdminConsultationRead(id, req);

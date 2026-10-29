@@ -8,6 +8,8 @@ import { HealthController } from '../src/health/health.controller.js';
 import { NotificationsController } from '../src/notifications/notifications.controller.js';
 import { AdminApplicationsController } from '../src/applications/admin-applications.controller.js';
 import { TechnicianWorkspaceController } from '../src/assignments/technician-workspace.controller.js';
+import { MessagesController } from '../src/messages/messages.controller.js';
+import { HelpdeskController } from '../src/helpdesk/helpdesk.controller.js';
 
 describe('F4: Security Hardening, Rate Limiting, Trust Proxy & Input Constraints', () => {
   describe('1. ApplicationsService: Batas Input Form & Pendaftaran', () => {
@@ -340,6 +342,31 @@ describe('F4: Security Hardening, Rate Limiting, Trust Proxy & Input Constraints
       expect(Reflect.getMetadata('THROTTLER:SKIPdefault', NotificationsController)).toBe(true);
       expect(Reflect.getMetadata('THROTTLER:SKIPdefault', AdminApplicationsController)).toBe(true);
       expect(Reflect.getMetadata('THROTTLER:SKIPdefault', TechnicianWorkspaceController)).toBe(true);
+    });
+
+    it('memastikan rute staf MessagesController dan HelpdeskController dikecualikan dari throttling global sedangkan rute publik tetap dibatasi', () => {
+      // Rute staf internal di MessagesController dilewati (SkipThrottle: true)
+      expect(Reflect.getMetadata('THROTTLER:SKIPdefault', MessagesController.prototype.getInternalMessages)).toBe(true);
+      expect(Reflect.getMetadata('THROTTLER:SKIPdefault', MessagesController.prototype.sendInternalMessage)).toBe(true);
+      expect(Reflect.getMetadata('THROTTLER:SKIPdefault', MessagesController.prototype.getAdminMessages)).toBe(true);
+      expect(Reflect.getMetadata('THROTTLER:SKIPdefault', MessagesController.prototype.sendAdminMessage)).toBe(true);
+      expect(Reflect.getMetadata('THROTTLER:SKIPdefault', MessagesController.prototype.getTechMessages)).toBe(true);
+      expect(Reflect.getMetadata('THROTTLER:SKIPdefault', MessagesController.prototype.sendTechMessage)).toBe(true);
+
+      // Rute publik di MessagesController TIDAK dikecualikan (SkipThrottle: undefined / falsy)
+      expect(Reflect.getMetadata('THROTTLER:SKIPdefault', MessagesController.prototype.getPublicMessages)).toBeFalsy();
+      expect(Reflect.getMetadata('THROTTLER:SKIPdefault', MessagesController.prototype.sendPublicMessage)).toBeFalsy();
+
+      // Rute admin di HelpdeskController dilewati
+      expect(Reflect.getMetadata('THROTTLER:SKIPdefault', HelpdeskController.prototype.getAdminConsultations)).toBe(true);
+      expect(Reflect.getMetadata('THROTTLER:SKIPdefault', HelpdeskController.prototype.markAdminConsultationRead)).toBe(true);
+      expect(Reflect.getMetadata('THROTTLER:SKIPdefault', HelpdeskController.prototype.getConsultationsInternalAlias)).toBe(true);
+      expect(Reflect.getMetadata('THROTTLER:SKIPdefault', HelpdeskController.prototype.markConsultationReadAlias)).toBe(true);
+
+      // Rute publik di HelpdeskController TIDAK dilewati dan memiliki batas ketat (@Throttle)
+      expect(Reflect.getMetadata('THROTTLER:SKIPdefault', HelpdeskController.prototype.submitPublicConsultation)).toBeFalsy();
+      expect(Reflect.getMetadata('THROTTLER:LIMITdefault', HelpdeskController.prototype.submitPublicConsultation)).toBe(3);
+      expect(Reflect.getMetadata('THROTTLER:TTLdefault', HelpdeskController.prototype.submitPublicConsultation)).toBe(600000);
     });
   });
 });
