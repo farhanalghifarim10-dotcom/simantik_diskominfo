@@ -369,4 +369,177 @@ describe('F4: Security Hardening, Rate Limiting, Trust Proxy & Input Constraints
       expect(Reflect.getMetadata('THROTTLER:TTLdefault', HelpdeskController.prototype.submitPublicConsultation)).toBe(600000);
     });
   });
+
+  describe('3. M4: Perbaikan Cache Idempotency ApplicationsService & Proteksi In-Memory', () => {
+    let applicationsService: ApplicationsService;
+    let mockSupabase: any;
+    let mockServices: any;
+
+    beforeEach(() => {
+      mockSupabase = {
+        getClient: vi.fn().mockReturnValue({
+          from: vi.fn((table: string) => {
+            if (table === 'opd_units') {
+              return {
+                select: vi.fn().mockReturnValue({
+                  eq: vi.fn().mockReturnValue({
+                    order: vi.fn().mockResolvedValue({
+                      data: [{ id: 'opd-1', code: 'DISKOMINFO', name: 'Diskominfo', is_active: true }],
+                      error: null,
+                    }),
+                  }),
+                }),
+              };
+            }
+            if (table === 'applications') {
+              return {
+                insert: vi.fn().mockReturnValue({
+                  select: vi.fn().mockReturnValue({
+                    single: vi.fn().mockResolvedValue({
+                      data: { id: 'app-uuid-1', ticket_number: 'SIM-2026-000001' },
+                      error: null,
+                    }),
+                  }),
+                }),
+              };
+            }
+            if (table === 'applicants') {
+              return {
+                insert: vi.fn().mockReturnValue({
+                  select: vi.fn().mockReturnValue({
+                    single: vi.fn().mockResolvedValue({
+                      data: { id: 'applicant-uuid-1' },
+                      error: null,
+                    }),
+                  }),
+                }),
+              };
+            }
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              insert: vi.fn().mockResolvedValue({ error: null }),
+            };
+          }),
+        }),
+      };
+
+      mockServices = {
+        getPublicServiceBySlugOrId: vi.fn().mockResolvedValue({
+          id: 'srv-1',
+          name: 'Pembangunan Aplikasi',
+          requirements: [],
+        }),
+      };
+
+      applicationsService = new ApplicationsService(mockSupabase, mockServices);
+    });
+
+    const createPayload = () => ({
+      service_id: 'srv-1',
+      opd_unit_id: 'opd-1',
+      applicant_name: 'Budi Santoso',
+      applicant_position: 'Kasi Aplikasi',
+      applicant_email: 'budi@bandungkab.go.id',
+      applicant_phone: '081234567890',
+      title: 'Permohonan SPBE',
+      background: 'Latar belakang pengujian',
+      problem_statement: 'Rumusan masalah pengujian',
+      objective: 'Tujuan pengujian',
+      scope: 'Ruang lingkup pengujian',
+      expected_output: 'Hasil pengujian',
+      terms_accepted: true,
+      terms_version: 'v1.0',
+    });
+
+    it('mengembalikan hasil cache saat idempotency_key yang sama dikirim ulang', async () => {
+      const payload = { ...createPayload(), idempotency_key: 'idem-key-1' };
+
+      const res1 = await applicationsService.submitApplication(payload as any);
+      expect(applicationsService.getIdempotencyCacheSize()).toBe(1);
+
+      const res2 = await applicationsService.submitApplication(payload as any);
+      expect(res2).toEqual(res1);
+      expect(applicationsService.getIdempotencyCacheSize()).toBe(1);
+    });
+
+    it('mengosongkan entri saat TTL 10 menit telah lewat', async () => {
+      vi.useFakeTimers();
+      try {
+        const payload = { ...createPayload(), idempotency_key: 'idem-key-ttl' };
+
+        const res1 = await applicationsService.submitApplication(payload as any);
+        expect(applicationsService.getIdempotencyCacheSize()).toBe(1);
+
+        // Majukan waktu 10 menit 1 detik (601.000 ms)
+        vi.advanceTimersByTime(10 * 60 * 1000 + 1000);
+
+        // Setelah TTL lewat, panggilan dengan key yang sama akan dieksekusi ulang ke database
+        const res2 = await applicationsService.submitApplication(payload as any);
+        expect(res2).toBeDefined();
+        // ID baru dibuat karena cache kedaluwarsa
+        expect(res2.id).not.toBe(res1.id);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('membatasi ukuran maksimal 1000 entri dan membuang entri tertua (FIFO eviction)', async () => {
+      applicationsService.clearIdempotencyCache();
+      const basePayload = createPayload();
+
+      // Masukkan 1005 entri unik
+      for (let i = 1; i <= 1005; i++) {
+        await applicationsService.submitApplication({
+          ...basePayload,
+          idempotency_key: `key-bulk-${i}`,
+        } as any);
+      }
+
+      // Kapasitas cache tetap tepat 1000
+      expect(applicationsService.getIdempotencyCacheSize()).toBe(1000);
+
+      // Entri tertua (key-bulk-1) sudah dibuang sehingga saat dipanggil kembali akan disubmit ulang
+      const resEvicted = await applicationsService.submitApplication({
+        ...basePayload,
+        idempotency_key: 'key-bulk-1',
+      } as any);
+      expect(resEvicted).toBeDefined();
+      expect(applicationsService.getIdempotencyCacheSize()).toBe(1000);
+    });
+
+    it('memastikan inMemoryApplications dan registerInMemoryApplication TIDAK ditulis saat di luar mode test', async () => {
+      const originalEnv = process.env.ALLOW_IN_MEMORY_FALLBACK;
+      const originalNodeEnv = process.env.NODE_ENV;
+      try {
+        delete process.env.ALLOW_IN_MEMORY_FALLBACK;
+        process.env.NODE_ENV = 'production';
+
+        const mockTracking = {
+          registerInMemoryApplication: vi.fn(),
+        };
+
+        const prodAppService = new ApplicationsService(
+          mockSupabase,
+          mockServices,
+          mockTracking as any,
+        );
+
+        const payload = createPayload();
+        await prodAppService.submitApplication(payload as any);
+
+        // inMemoryApplications tidak ditulis
+        expect(prodAppService.getInMemoryApplicationsCount()).toBe(0);
+        // registerInMemoryApplication tidak dipanggil
+        expect(mockTracking.registerInMemoryApplication).not.toHaveBeenCalled();
+      } finally {
+        if (originalEnv !== undefined) {
+          process.env.ALLOW_IN_MEMORY_FALLBACK = originalEnv;
+        } else {
+          delete process.env.ALLOW_IN_MEMORY_FALLBACK;
+        }
+        process.env.NODE_ENV = originalNodeEnv;
+      }
+    });
+  });
 });

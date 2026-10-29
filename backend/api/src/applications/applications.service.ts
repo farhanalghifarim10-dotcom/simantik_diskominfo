@@ -42,13 +42,21 @@ const DEFAULT_OPD_UNITS: OpdUnitEntity[] = [
   { id: 'cddddddd-dddd-dddd-dddd-dddddddddddd', code: 'SATPOLPP', name: 'Satuan Polisi Pamong Praja', is_active: true },
 ];
 
+interface IdempotencyCacheEntry {
+  result: ApplicationSubmissionResult;
+  createdAt: number;
+}
+
+const IDEMPOTENCY_TTL_MS = 10 * 60 * 1000; // 10 menit
+const MAX_IDEMPOTENCY_ENTRIES = 1000;
+
 @Injectable()
 export class ApplicationsService {
   private readonly logger = new Logger(ApplicationsService.name);
 
   // In-memory application store for idempotency and fallback testing
   private inMemoryApplications: Map<string, ApplicationSubmissionResult> = new Map();
-  private inMemoryIdempotencyKeys: Map<string, ApplicationSubmissionResult> = new Map();
+  private inMemoryIdempotencyKeys: Map<string, IdempotencyCacheEntry> = new Map();
 
   constructor(
     private readonly supabaseService: SupabaseService,
@@ -56,6 +64,71 @@ export class ApplicationsService {
     @Optional() private readonly trackingService?: TrackingService,
     @Optional() private readonly auditService?: AuditService,
   ) {}
+
+  /**
+   * Membersihkan entri cache idempotency yang sudah melewati TTL 10 menit
+   */
+  private cleanupExpiredIdempotencyKeys(now = Date.now()): void {
+    for (const [key, entry] of this.inMemoryIdempotencyKeys.entries()) {
+      if (now - entry.createdAt > IDEMPOTENCY_TTL_MS) {
+        this.inMemoryIdempotencyKeys.delete(key);
+      }
+    }
+  }
+
+  /**
+   * Menyimpan entri ke cache idempotency dengan TTL 10 menit dan batas maksimal 1000 entri (FIFO eviction)
+   */
+  private setIdempotencyKey(key: string, result: ApplicationSubmissionResult): void {
+    const now = Date.now();
+    this.cleanupExpiredIdempotencyKeys(now);
+    if (this.inMemoryIdempotencyKeys.size >= MAX_IDEMPOTENCY_ENTRIES) {
+      const oldestKey = this.inMemoryIdempotencyKeys.keys().next().value;
+      if (oldestKey !== undefined) {
+        this.inMemoryIdempotencyKeys.delete(oldestKey);
+      }
+    }
+    this.inMemoryIdempotencyKeys.set(key, {
+      result,
+      createdAt: now,
+    });
+  }
+
+  /**
+   * Mengambil entri dari cache idempotency, mengembalikan null jika tidak ada atau kedaluwarsa
+   */
+  private getIdempotencyKey(key: string): ApplicationSubmissionResult | null {
+    const entry = this.inMemoryIdempotencyKeys.get(key);
+    if (!entry) {
+      return null;
+    }
+    if (Date.now() - entry.createdAt > IDEMPOTENCY_TTL_MS) {
+      this.inMemoryIdempotencyKeys.delete(key);
+      return null;
+    }
+    return entry.result;
+  }
+
+  /**
+   * Helper pengujian: Mengembalikan jumlah entri cache idempotency
+   */
+  getIdempotencyCacheSize(): number {
+    return this.inMemoryIdempotencyKeys.size;
+  }
+
+  /**
+   * Helper pengujian: Mengosongkan cache idempotency
+   */
+  clearIdempotencyCache(): void {
+    this.inMemoryIdempotencyKeys.clear();
+  }
+
+  /**
+   * Helper pengujian: Mengembalikan jumlah in-memory applications
+   */
+  getInMemoryApplicationsCount(): number {
+    return this.inMemoryApplications.size;
+  }
 
   /**
    * Mengambil daftar OPD unit aktif untuk dropdown pemohon.
@@ -86,10 +159,10 @@ export class ApplicationsService {
     payload: SubmitApplicationPayload,
     documents: UploadedDocumentInput[] = [],
   ): Promise<ApplicationSubmissionResult> {
-    // 1. Idempotency Check
+    // 1. Idempotency Check (hanya membaca jika key disediakan)
     if (payload.idempotency_key && payload.idempotency_key.trim()) {
       const key = payload.idempotency_key.trim();
-      const existing = this.inMemoryIdempotencyKeys.get(key);
+      const existing = this.getIdempotencyKey(key);
       if (existing) {
         return existing;
       }
@@ -549,42 +622,44 @@ export class ApplicationsService {
         '[IMPLEMENTATION ASSUMPTION] Format nomor tiket menggunakan format SIM-2026-XXXXXX sementara menunggu ketetapan resmi SOP Diskominfo.',
     };
 
-    // Simpan di in-memory cache untuk idempotensi dan testing
-    this.inMemoryApplications.set(applicationId, result);
+    // Simpan di in-memory cache untuk idempotensi bila key disediakan
     if (payload.idempotency_key && payload.idempotency_key.trim()) {
-      this.inMemoryIdempotencyKeys.set(payload.idempotency_key.trim(), result);
+      this.setIdempotencyKey(payload.idempotency_key.trim(), result);
     }
 
-    // Jika mode test fallback dan trackingService terhubung, daftarkan agar dapat dilacak pada testing
-    if (this.trackingService) {
-      this.trackingService.registerInMemoryApplication({
-        id: applicationId,
-        ticket_number: ticketNumber,
-        tracking_code_hash: trackingCodeHash,
-        title: payload.title.trim(),
-        service_name: service.name,
-        opd_name: opd?.name || 'Pemerintah Kabupaten Bandung',
-        applicant_name: payload.applicant_name.trim(),
-        applicant_email: payload.applicant_email.trim(),
-        current_status: 'SUBMITTED',
-        current_stage: 'ANALYSIS',
-        submitted_at: submissionTime,
-        updated_at: submissionTime,
-        documents: documents.map((d) => ({
-          requirement_name: 'Dokumen Persyaratan',
-          original_filename: d.original_filename,
-          size_bytes: d.size_bytes,
-          uploaded_at: submissionTime,
-        })),
-        status_history: [
-          {
-            from_status: null,
-            to_status: 'SUBMITTED',
-            note: 'Permohonan berhasil didaftarkan oleh pemohon OPD.',
-            changed_at: submissionTime,
-          },
-        ],
-      });
+    // inMemoryApplications dan trackingService hanya ditulis jika fallback diperbolehkan (mode test)
+    if (isExplicitFallbackAllowed) {
+      this.inMemoryApplications.set(applicationId, result);
+      if (this.trackingService) {
+        this.trackingService.registerInMemoryApplication({
+          id: applicationId,
+          ticket_number: ticketNumber,
+          tracking_code_hash: trackingCodeHash,
+          title: payload.title.trim(),
+          service_name: service.name,
+          opd_name: opd?.name || 'Pemerintah Kabupaten Bandung',
+          applicant_name: payload.applicant_name.trim(),
+          applicant_email: payload.applicant_email.trim(),
+          current_status: 'SUBMITTED',
+          current_stage: 'ANALYSIS',
+          submitted_at: submissionTime,
+          updated_at: submissionTime,
+          documents: documents.map((d) => ({
+            requirement_name: 'Dokumen Persyaratan',
+            original_filename: d.original_filename,
+            size_bytes: d.size_bytes,
+            uploaded_at: submissionTime,
+          })),
+          status_history: [
+            {
+              from_status: null,
+              to_status: 'SUBMITTED',
+              note: 'Permohonan berhasil didaftarkan oleh pemohon OPD.',
+              changed_at: submissionTime,
+            },
+          ],
+        });
+      }
     }
 
     return result;
