@@ -34,6 +34,9 @@ Dokumen ini mencatat seluruh rangkaian perbaikan kode yang dilakukan pada branch
 | **L4** | `48a86c5dc7b2922c5e6fc40804dbf5662778b5b2` | `fix` | **Rapikan Pengecualian Throttling Rute Staf vs Publik**<br>- Mengecualikan rute staf di `MessagesController` (`/applications/:id/messages`, `/admin/applications/:id/messages`, `/technician/applications/:id/messages`) menggunakan `@SkipThrottle()`.<br>- Mengecualikan rute admin di `HelpdeskController` (`/admin/helpdesk/consultations`) menggunakan `@SkipThrottle()`.<br>- Mempertahankan batas laju rute publik (`/public/tickets/:ticket_number/messages`, `/public/helpdesk/consultations`).<br>- Test baru di `test/f4-security-hardening.spec.ts`. |
 | **L6** | `471f2602b86100bc6fba6eb5aee864b3adc2a793` | `docs` | **Rekomendasi Angka Hop Proxy untuk Mencegah IP Spoofing**<br>- Memperbarui `README.md`, `.env.example`, dan `backend/api/.env.example`.<br>- Merekomendasikan nilai angka hop proxy (misal: `TRUST_PROXY=1`) dan melarang boolean `true` guna mencegah pemalsuan header `X-Forwarded-For`. |
 | **L2** | `367971c5217a99064011daf378836af1ccd7d1d9` | `fix` | **Isolasi Ketat Fallback In-Memory dari Lingkungan Non-Test**<br>- Menambahkan pengujian di `test/f2-database-safeguards.spec.ts`:<br>  1. Tanpa `ALLOW_IN_MEMORY_FALLBACK`, `verifyCredential` tiket & kode contoh menghasilkan 401 Unauthorized.<br>  2. `listTechnicians` saat database error melempar 5xx InternalServerError (bukan data seed).<br>  3. `listLogs` saat database error melempar 5xx InternalServerError (bukan data seed). |
+| **Docs L1** | `4b8c4b5dca6bf62b58ee9d1a3371a546ce36e637` | `docs` | **Pembaruan Panduan Rollback & Koreksi L1**<br>- Sinkronisasi tabel commit lengkap untuk L2, L3, L4, L6 dan instruksi rollback. |
+| **M4** | `3640be81ea8194b5621d921485c95bf6560f967e` | `fix` | **Cache Idempotency TTL 10 Menit & Proteksi In-Memory**<br>- Memberikan TTL 10 menit dan batas kapasitas 1000 entri (FIFO eviction) pada `inMemoryIdempotencyKeys`.<br>- Mencegah penulisan ke `inMemoryApplications` dan `registerInMemoryApplication` di luar mode test.<br>- Test baru di `test/f4-security-hardening.spec.ts`. |
+| **M5** | `cb24f30b6809a89531554f31d4ddde3596978c70` | `fix` | **RBAC RolesGuard pada Rute Pembacaan Helpdesk**<br>- Memasang `@UseGuards(AuthGuard, RolesGuard)` dan `@Roles('SUPER_ADMIN', 'TECHNICIAN')` pada endpoint baca dan penandaan konsultasi di `HelpdeskController`.<br>- Test baru di `src/helpdesk/helpdesk.spec.ts`. |
 
 ---
 
@@ -44,8 +47,8 @@ Dokumen ini mencatat seluruh rangkaian perbaikan kode yang dilakukan pada branch
 Jika ingin membatalkan satu commit tertentu tanpa memengaruhi perbaikan lainnya, jalankan `git revert <hash>` menggunakan hash penuh dari tabel di atas:
 
 ```powershell
-# Contoh: membatalkan L4 saja
-git revert 48a86c5dc7b2922c5e6fc40804dbf5662778b5b2 --no-edit
+# Contoh: membatalkan M5 saja
+git revert cb24f30b6809a89531554f31d4ddde3596978c70 --no-edit
 
 # Verifikasi test dan build ulang pasca-revert
 $env:Path += ";C:\Program Files\nodejs"
@@ -62,6 +65,9 @@ Jika ingin membatalkan seluruh commit perbaikan secara bersih dan teratur:
 git branch --show-current
 
 # 2. Revert commit secara berurutan mundur dari yang terbaru ke terlama:
+git revert --no-commit cb24f30b6809a89531554f31d4ddde3596978c70 # M5
+git revert --no-commit 3640be81ea8194b5621d921485c95bf6560f967e # M4
+git revert --no-commit 4b8c4b5dca6bf62b58ee9d1a3371a546ce36e637 # Docs L1
 git revert --no-commit 367971c5217a99064011daf378836af1ccd7d1d9 # L2
 git revert --no-commit 471f2602b86100bc6fba6eb5aee864b3adc2a793 # L6
 git revert --no-commit 48a86c5dc7b2922c5e6fc40804dbf5662778b5b2 # L4
