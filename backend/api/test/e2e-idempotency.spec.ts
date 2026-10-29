@@ -88,7 +88,7 @@ describe('E2E Idempotency Regression & Safeguard Tests', () => {
   });
 
   describe('B. Read-Only Integration Tests: Terhadap Skema Supabase Lokal Nyata', () => {
-    it('4. Memverifikasi query yang diperbaiki dapat mendeteksi tiket lokal tanpa error kolom', async () => {
+    it('4. Memverifikasi query yang diperbaiki dapat mendeteksi tiket lokal tanpa error kolom', async (ctx) => {
       // Ambil konfigurasi lokal in-memory
       const out = execSync('npx supabase status -o json', { cwd: 'd:/Projects/simantik' }).toString();
       const jsonStart = out.indexOf('{');
@@ -102,17 +102,17 @@ describe('E2E Idempotency Regression & Safeguard Tests', () => {
       });
 
       // Jalankan fungsi findExistingE2EApplication terhadap instance lokal nyata
-      // Memverifikasi bahwa query dieksekusi sukses tanpa error kolom 42703 (skema valid)
       const existingApp = await findExistingE2EApplication(adminClient as any);
 
-      if (existingApp !== null) {
-        expect(existingApp.ticket_number).toMatch(/^SIM-2026-\d{6}$/);
-        expect(existingApp.current_status).toBe('SUBMITTED');
-        expect(existingApp.title).toContain('UJI E2E LOKAL');
-      } else {
-        // Pada basis data lokal yang baru direset, query sukses mengembalikan null tanpa melempar error kolom
-        expect(existingApp).toBeNull();
+      if (!existingApp) {
+        ctx.skip('fixture UJI E2E LOKAL tidak ada di DB lokal; jalankan submission-workflow.e2e-spec terlebih dahulu');
+        return;
       }
+
+      expect(existingApp).not.toBeNull();
+      expect(existingApp.ticket_number).toMatch(/^SIM-2026-\d{6}$/);
+      expect(existingApp.current_status).toBe('SUBMITTED');
+      expect(existingApp.title).toContain('UJI E2E LOKAL');
     });
 
     it('5. Membuktikan bahwa query dengan kolom tracking_code pada DB nyata pasti memicu proteksi error', async () => {
