@@ -41,6 +41,8 @@ Dokumen ini mencatat seluruh rangkaian perbaikan kode yang dilakukan pada branch
 | **M6** | `023fc5ee16d6db1c86cb50aff30dc54f2a0cf418` | `docs` | **Rekomendasi Batas Ukuran Body Reverse Proxy & Panduan Rollback**<br>- Dokumentasi batas `client_max_body_size 50m` vs `2m` dan koreksi eksekusi body-parser sebelum throttler di `README.md`. |
 | **N1** | `81303b67f74fcde136a825610be52f0a10592aab` | `test` | **Asersi Ketat e2e-idempotency & Skip Eksplisit Tanpa Fixture**<br>- Mengembalikan asersi ketat format tiket, status, dan judul serta melewati pengujian secara eksplisit via `ctx.skip` bila fixture lokal belum tersedia di basis data. |
 | **N3** | `0c29466c6fe801504072e1d3fd5f9573b5485fa4` | `fix` | **Proteksi 5xx & Isolasi Fallback Admin Applications, Assignments & Notifications**<br>- Melempar `InternalServerErrorException` (5xx) saat basis data error dan fallback dinonaktifkan.<br>- Mencegah kebocoran data contoh dan pembacaan in-memory tanpa izin.<br>- Test baru di `test/f2-database-safeguards.spec.ts`. |
+| **N4** | `0c9ac009fc828165373f4b8d587491b2ebe7bb84` | `docs` | **Rute Berkas Reverse Proxy POST/PUT & Risiko Residual Idempotency Plaintext**<br>- Dokumentasi whitelist ukuran 50 MB mencakup metode POST & PUT pada seluruh rute berkas pendaftaran dan siklus hidup di `README.md`.<br>- Pencatatan risiko residual cache idempotency plaintext pada `docs/ROLLBACK.md`. |
+| **Docs 3** | `845daa7885e477356044591e9bf1758ef8496801` | `docs` | **Pembersihan Berkas Snapshot Historis**<br>- Menghapus berkas usang `SIMANTIK_CURRENT_STATE.md` dan `SIMANTIK_FILE_MAP.md`.<br>- Menyelaraskan struktur berkas resmi aktif pada `docs/SIMANTIK_SYSTEM_CONTEXT.md`. |
 
 ---
 

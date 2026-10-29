@@ -211,6 +211,11 @@ npm run build
 2. **Ketiadaan Pemindaian Antivirus Otomatis pada Berkas Unggahan**:  
    *`[IMPLEMENTATION ASSUMPTION]`*: Sistem saat ini memvalidasi ekstensi berkas, ukuran (10 MB), dan MIME type, namun belum menjalankan *antivirus scanning engine* (ClamAV) sebelum berkas disimpan.  
    *Saran Mitigasi*: Tambahkan *worker pipeline* untuk pemindaian virus berkas sebelum berkas ditandai sah.
+3. **Konfigurasi Batas Body Reverse Proxy (50 MB vs 2 MB)**:  
+   *`[TECHNICAL IMPLEMENTATION]`*: Backend Express mengizinkan parsing body hingga 50 MB guna mendukung transmisi dokumen lampiran Base64.  
+   *Saran Mitigasi*: Lapisan reverse proxy (Nginx/Cloudflare) wajib dikonfigurasi membatasi rute umum ke `2m` dan hanya mengizinkan `50m` pada rute berkas pendaftaran dan siklus hidup (metode POST dan PUT) sesuai panduan di `README.md`.
+4. **Risiko Tersisa Cache Idempotency Plaintext**:  
+   *`[TECHNICAL IMPLEMENTATION]`*: Cache idempotency memori menyimpan `tracking_code` teks polos selama jendela waktu TTL 10 menit (maksimal 1000 entri) demi mendukung replay pengiriman ulang yang identik pada jaringan tidak stabil.
 
 ### B. Pertanyaan Terbuka untuk Pemangku Kepentingan Diskominfo (*Open Questions*)
 1. **`[OPEN QUESTION]` Integrasi Single Sign-On (SSO) ASN Pemerintah Daerah**:  
@@ -228,7 +233,7 @@ npm run build
 | :--- | :--- | :--- | :---: |
 | **Typecheck** | Bebas dari galat TypeScript pada backend dan kedua frontend (`tsc -b`, `nest build`) | 0 type errors | **PASS** |
 | **Build Bundles** | Kompilasi bundel produksi sukses (`vite build`, `nest build`) | 0 build errors | **PASS** |
-| **Automated Tests** | Seluruh test suite vitest backend lulus 100% | 125 passed / 12 test suites | **PASS** |
+| **Automated Tests** | Seluruh test suite vitest backend lulus 100% | 359 passed / 23 test suites (1 skipped: fixture E2E lokal) | **PASS** |
 | **No Secret Exposed** | Tidak ada API key rahasia, JWT secret, atau Resend key di bundel klien | 0 leaks (diverifikasi via ripgrep) | **PASS** |
 | **Migration State** | Urutan 14 migrasi SQL terdefinisi jelas dan teruji | Terdefinisi di `supabase/migrations/` | **PASS** |
 | **Storage State** | Bucket `simantik-documents` privat, akses unduh via signed URL | Privat, default deny aktif | **PASS** |
@@ -238,7 +243,7 @@ npm run build
 | **Public/Internal Separation** | Catatan internal tidak bocor ke endpoint pelacakan publik | Terverifikasi via unit test | **PASS** |
 | **Responsive Verification** | Tampilan adaptif pada layar Mobile (360px), Tablet (768px), dan Desktop | Terverifikasi pada shell layout | **PASS** |
 | **Accessibility Review** | Kontras warna, penanda fokus, label input, dialog ARIA modal | Terverifikasi pada komponen UI | **PASS** |
-| **Remaining Risks** | Risiko sisa didokumentasikan secara jujur dan transparan | Tercantum pada Bagian 11 | **PASS** |
+| **Remaining Risks** | Risiko sisa didokumentasikan secara jujur dan transparan | Tercantum pada Bagian 11 & docs/ROLLBACK.md | **PASS** |
 
 ---
 
