@@ -1,4 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  HttpException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import * as crypto from 'crypto';
 import { SupabaseService } from '../supabase/supabase.service.js';
 import { EmailService } from './email.service.js';
@@ -7,6 +12,7 @@ import {
   formatHtmlParagraph,
   sanitizeEmailSubject,
 } from '../common/utils/html.utils.js';
+import { isInMemoryFallbackAllowed } from '../common/utils/supabase.utils.js';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import type {
   CreateNotificationPayload,
@@ -189,7 +195,7 @@ export class NotificationsService {
     // 2. Simpan ke database Supabase
     try {
       const client = this.supabaseService.getClient();
-      await client.from('notifications').insert({
+      const insertRes = await client.from('notifications').insert({
         id: record.id,
         recipient_profile_id: record.recipient_profile_id,
         recipient_email: record.recipient_email,
@@ -203,11 +209,26 @@ export class NotificationsService {
         delivery_error: record.delivery_error,
         created_at: record.created_at,
       });
-    } catch {
-      // Fallback in-memory
+
+      if (insertRes?.error) {
+        if (!isInMemoryFallbackAllowed()) {
+          throw new InternalServerErrorException(
+            `Gagal menyimpan notifikasi ke basis data: ${insertRes.error.message || JSON.stringify(insertRes.error)}`,
+          );
+        }
+      }
+    } catch (err: any) {
+      if (err instanceof HttpException) throw err;
+      if (!isInMemoryFallbackAllowed()) {
+        throw new InternalServerErrorException(
+          `Gagal menyimpan notifikasi ke basis data: ${err?.message || 'Database error'}`,
+        );
+      }
     }
 
-    this.inMemoryNotifications.set(id, record);
+    if (isInMemoryFallbackAllowed()) {
+      this.inMemoryNotifications.set(id, record);
+    }
     return record;
   }
 
@@ -268,14 +289,31 @@ export class NotificationsService {
 
       const { data, error } = await query;
 
+      if (error) {
+        if (!isInMemoryFallbackAllowed()) {
+          throw new InternalServerErrorException(
+            `Gagal memuat notifikasi dari basis data: ${error.message || JSON.stringify(error)}`,
+          );
+        }
+      }
+
       if (!error && Array.isArray(data)) {
         return data.map((row: any) => ({
           ...row,
           ticket_number: row.applications?.ticket_number || row.ticket_number || undefined,
         })) as NotificationItem[];
       }
-    } catch {
-      // Fallback in-memory
+    } catch (err: any) {
+      if (err instanceof HttpException) throw err;
+      if (!isInMemoryFallbackAllowed()) {
+        throw new InternalServerErrorException(
+          `Gagal memuat notifikasi dari basis data: ${err?.message || 'Database error'}`,
+        );
+      }
+    }
+
+    if (!isInMemoryFallbackAllowed()) {
+      throw new InternalServerErrorException('Gagal memuat notifikasi dari basis data.');
     }
 
     return Array.from(this.inMemoryNotifications.values())

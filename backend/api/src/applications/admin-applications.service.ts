@@ -209,17 +209,34 @@ export class AdminApplicationsService {
           .eq('is_current', true)
           .maybeSingle();
 
+        if (error) {
+          if (!isInMemoryFallbackAllowed()) {
+            throw new InternalServerErrorException(
+              `Gagal memeriksa penugasan teknisi dari basis data: ${error.message || JSON.stringify(error)}`,
+            );
+          }
+        }
+
         if (!error && data) {
           return;
         }
-      } catch {
-        // Fallback ke pengecekan in-memory
+      } catch (err: any) {
+        if (err instanceof HttpException) {
+          throw err;
+        }
+        if (!isInMemoryFallbackAllowed()) {
+          throw new InternalServerErrorException(
+            `Gagal memeriksa penugasan teknisi dari basis data: ${err?.message || 'Database error'}`,
+          );
+        }
       }
 
-      // 2. Pengecekan in-memory fallback
-      const assigned = this.inMemoryAssignedTechnicians.get(applicationId);
-      if (assigned && assigned.has(user.id)) {
-        return;
+      // 2. Pengecekan in-memory fallback (HANYA BILA FALLBACK DIIZINKAN)
+      if (isInMemoryFallbackAllowed()) {
+        const assigned = this.inMemoryAssignedTechnicians.get(applicationId);
+        if (assigned && assigned.has(user.id)) {
+          return;
+        }
       }
 
       throw new ForbiddenException(
@@ -330,8 +347,25 @@ export class AdminApplicationsService {
           total_pages: Math.ceil(count / pageSize),
         };
       }
-    } catch {
-      // Fallback ke in-memory store
+
+      if (error) {
+        if (!isInMemoryFallbackAllowed()) {
+          throw new InternalServerErrorException(
+            `Gagal memuat daftar permohonan dari basis data: ${error.message || JSON.stringify(error)}`,
+          );
+        }
+      }
+    } catch (err: any) {
+      if (err instanceof HttpException) throw err;
+      if (!isInMemoryFallbackAllowed()) {
+        throw new InternalServerErrorException(
+          `Gagal memuat daftar permohonan dari basis data: ${err?.message || 'Database error'}`,
+        );
+      }
+    }
+
+    if (!isInMemoryFallbackAllowed()) {
+      throw new InternalServerErrorException('Gagal memuat daftar permohonan dari basis data.');
     }
 
     // In-memory fallback
@@ -655,8 +689,29 @@ export class AdminApplicationsService {
           allowed_transitions: allowedTransitions,
         };
       }
-    } catch {
-      // Fallback ke in-memory
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          if (!isInMemoryFallbackAllowed()) {
+            throw new NotFoundException(`Permohonan dengan ID [${id}] tidak ditemukan.`);
+          }
+        } else if (!isInMemoryFallbackAllowed()) {
+          throw new InternalServerErrorException(
+            `Gagal memuat detail permohonan dari basis data: ${error.message || JSON.stringify(error)}`,
+          );
+        }
+      }
+    } catch (err: any) {
+      if (err instanceof HttpException) throw err;
+      if (!isInMemoryFallbackAllowed()) {
+        throw new InternalServerErrorException(
+          `Gagal memuat detail permohonan dari basis data: ${err?.message || 'Database error'}`,
+        );
+      }
+    }
+
+    if (!isInMemoryFallbackAllowed()) {
+      throw new NotFoundException(`Permohonan dengan ID [${id}] tidak ditemukan.`);
     }
 
     const inMem = this.inMemoryRecords.get(id);

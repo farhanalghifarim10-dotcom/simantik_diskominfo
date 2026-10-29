@@ -13,6 +13,8 @@ import { TrackingService } from '../src/tracking/tracking.service.js';
 import { TrackingTokenService } from '../src/tracking/tracking-token.service.js';
 import { TrackingRateLimiter } from '../src/tracking/tracking-rate-limiter.js';
 import { AssignmentsService } from '../src/assignments/assignments.service.js';
+import { AdminApplicationsService } from '../src/applications/admin-applications.service.js';
+import { NotificationsService } from '../src/notifications/notifications.service.js';
 import { LifecycleService } from '../src/lifecycle/lifecycle.service.js';
 import { TechniciansService } from '../src/technicians/technicians.service.js';
 import { OpdService } from '../src/opd/opd.service.js';
@@ -596,6 +598,203 @@ describe('F2: Database Safeguards & Supabase Error Handling', () => {
         expect(err.getStatus()).toBe(500);
         expect(err.message).toContain('Gagal memuat log audit dari basis data');
       }
+    });
+
+    it('N3: dengan fallback nonaktif, getApplicationDetail saat DB error melempar 5xx InternalServerError, bukan data contoh', async () => {
+      process.env.ALLOW_IN_MEMORY_FALLBACK = 'false';
+      process.env.NODE_ENV = 'production';
+
+      const mockClient = {
+        from: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({
+                data: null,
+                error: { message: 'Database connection failed: ECONNREFUSED' },
+              }),
+            }),
+          }),
+        }),
+      };
+
+      const mockSupabase = { getClient: vi.fn().mockReturnValue(mockClient) };
+      const mockWorkflow = { getAllowedTransitions: vi.fn().mockReturnValue([]) };
+
+      const adminAppsService = new AdminApplicationsService(
+        mockSupabase as any,
+        mockWorkflow as any,
+      );
+
+      const superAdminUser = { id: 'admin-1', role: 'SUPER_ADMIN' } as any;
+
+      await expect(
+        adminAppsService.getApplicationDetail('a1000000-0000-0000-0000-000000000001', superAdminUser),
+      ).rejects.toThrow(InternalServerErrorException);
+    });
+
+    it('N3: dengan fallback nonaktif, listApplications saat DB error melempar 5xx InternalServerError, bukan data contoh', async () => {
+      process.env.ALLOW_IN_MEMORY_FALLBACK = 'false';
+      process.env.NODE_ENV = 'production';
+
+      const mockClient = {
+        from: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            order: vi.fn().mockReturnValue({
+              range: vi.fn().mockResolvedValue({
+                data: null,
+                count: null,
+                error: { message: 'Database error on applications query' },
+              }),
+            }),
+          }),
+        }),
+      };
+
+      const mockSupabase = { getClient: vi.fn().mockReturnValue(mockClient) };
+      const mockWorkflow = { getAllowedTransitions: vi.fn().mockReturnValue([]) };
+
+      const adminAppsService = new AdminApplicationsService(
+        mockSupabase as any,
+        mockWorkflow as any,
+      );
+
+      const superAdminUser = { id: 'admin-1', role: 'SUPER_ADMIN' } as any;
+
+      await expect(
+        adminAppsService.listApplications({}, superAdminUser),
+      ).rejects.toThrow(InternalServerErrorException);
+    });
+
+    it('N3: dengan fallback nonaktif, assertTechnicianAssignment saat DB error melempar 5xx InternalServerError, bukan Forbidden (403) dan bukan lolos', async () => {
+      process.env.ALLOW_IN_MEMORY_FALLBACK = 'false';
+      process.env.NODE_ENV = 'production';
+
+      const mockClient = {
+        from: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  maybeSingle: vi.fn().mockResolvedValue({
+                    data: null,
+                    error: { message: 'Database connection timeout on assignments' },
+                  }),
+                }),
+              }),
+            }),
+          }),
+        }),
+      };
+
+      const mockSupabase = { getClient: vi.fn().mockReturnValue(mockClient) };
+      const mockWorkflow = { getAllowedTransitions: vi.fn().mockReturnValue([]) };
+
+      const adminAppsService = new AdminApplicationsService(
+        mockSupabase as any,
+        mockWorkflow as any,
+      );
+
+      const techUser = { id: 'tech-1', role: 'TECHNICIAN' } as any;
+
+      await expect(
+        adminAppsService.assertTechnicianAssignment('a1000000-0000-0000-0000-000000000001', techUser),
+      ).rejects.toThrow(InternalServerErrorException);
+    });
+
+    it('N3: dengan fallback nonaktif, assignTechnician saat DB error melempar 5xx InternalServerError, bukan data contoh', async () => {
+      process.env.ALLOW_IN_MEMORY_FALLBACK = 'false';
+      process.env.NODE_ENV = 'production';
+
+      const mockClient = {
+        from: vi.fn().mockImplementation((table: string) => {
+          if (table === 'profiles') {
+            const thenable: any = {
+              then: (resolve: any) =>
+                resolve({
+                  data: [{ id: 'tech-1', full_name: 'Teknisi 1', role: 'TECHNICIAN', is_active: true }],
+                  error: null,
+                }),
+            };
+            return {
+              select: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  eq: vi.fn().mockReturnValue(thenable),
+                }),
+              }),
+            };
+          }
+          if (table === 'assignments') {
+            return {
+              select: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  order: vi.fn().mockResolvedValue({ data: [], error: null }),
+                }),
+              }),
+              insert: vi.fn().mockResolvedValue({
+                data: null,
+                error: { message: 'Database failure on insert assignment' },
+              }),
+            };
+          }
+          return {
+            select: vi.fn().mockReturnThis(),
+            insert: vi.fn().mockResolvedValue({ error: null }),
+          };
+        }),
+      };
+
+      const mockSupabase = { getClient: vi.fn().mockReturnValue(mockClient) };
+      const mockAdminApps = {
+        getApplicationDetail: vi.fn().mockResolvedValue({
+          id: 'app-1',
+          ticket_number: 'SIM-2026-000001',
+          current_status: 'SUBMITTED',
+        }),
+        unassignTechniciansInMemory: vi.fn(),
+        assignTechnicianInMemory: vi.fn(),
+      };
+
+      const assignmentsService = new AssignmentsService(
+        mockSupabase as any,
+        mockAdminApps as any,
+      );
+
+      const adminUser = { id: 'admin-1', role: 'SUPER_ADMIN', fullName: 'Admin' } as any;
+
+      await expect(
+        assignmentsService.assignTechnician('app-1', { technician_id: 'tech-1' }, adminUser),
+      ).rejects.toThrow(InternalServerErrorException);
+    });
+
+    it('N3: dengan fallback nonaktif, notifications.notify saat DB error melempar 5xx InternalServerError, bukan menelan galat', async () => {
+      process.env.ALLOW_IN_MEMORY_FALLBACK = 'false';
+      process.env.NODE_ENV = 'production';
+
+      const mockClient = {
+        from: vi.fn().mockReturnValue({
+          insert: vi.fn().mockResolvedValue({
+            data: null,
+            error: { message: 'Database connection failed on notifications insert' },
+          }),
+        }),
+      };
+
+      const mockSupabase = { getClient: vi.fn().mockReturnValue(mockClient) };
+      const mockEmail = { sendEmail: vi.fn().mockResolvedValue({ status: 'SENT' }) };
+
+      const notificationsService = new NotificationsService(
+        mockSupabase as any,
+        mockEmail as any,
+      );
+
+      await expect(
+        notificationsService.notify({
+          type: 'SYSTEM',
+          channel: 'IN_APP',
+          title: 'Uji Notifikasi',
+          body: 'Isi pesan',
+        }),
+      ).rejects.toThrow(InternalServerErrorException);
     });
   });
 });

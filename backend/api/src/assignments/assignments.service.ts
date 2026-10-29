@@ -148,8 +148,25 @@ export class AssignmentsService {
           active_assignments_count: countMap.get(t.id) || 0,
         }));
       }
-    } catch {
-      // Fallback
+
+      if (error) {
+        if (!isInMemoryFallbackAllowed()) {
+          throw new InternalServerErrorException(
+            `Gagal memuat daftar teknisi dari basis data: ${error.message || JSON.stringify(error)}`,
+          );
+        }
+      }
+    } catch (err: any) {
+      if (err instanceof HttpException) throw err;
+      if (!isInMemoryFallbackAllowed()) {
+        throw new InternalServerErrorException(
+          `Gagal memuat daftar teknisi dari basis data: ${err?.message || 'Database error'}`,
+        );
+      }
+    }
+
+    if (!isInMemoryFallbackAllowed()) {
+      throw new InternalServerErrorException('Gagal memuat daftar teknisi dari basis data.');
     }
 
     // In-memory fallback: hitung beban kerja aktif
@@ -234,8 +251,25 @@ export class AssignmentsService {
           assignment_history: history,
         };
       }
-    } catch {
-      // Fallback
+
+      if (error) {
+        if (!isInMemoryFallbackAllowed()) {
+          throw new InternalServerErrorException(
+            `Gagal memuat riwayat penugasan dari basis data: ${error.message || JSON.stringify(error)}`,
+          );
+        }
+      }
+    } catch (err: any) {
+      if (err instanceof HttpException) throw err;
+      if (!isInMemoryFallbackAllowed()) {
+        throw new InternalServerErrorException(
+          `Gagal memuat riwayat penugasan dari basis data: ${err?.message || 'Database error'}`,
+        );
+      }
+    }
+
+    if (!isInMemoryFallbackAllowed()) {
+      throw new InternalServerErrorException('Gagal memuat riwayat penugasan dari basis data.');
     }
 
     const list = this.inMemoryAssignments.get(applicationId) || [];
