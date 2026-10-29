@@ -93,7 +93,7 @@ describe('F3: Keamanan Email, Sanitasi HTML, dan Pembatasan Laju Helpdesk', () =
     });
   });
 
-  describe('3. EmailService: Sanitasi Subjek Email Sebelum Pengiriman', () => {
+  describe('3. EmailService: Sanitasi Subjek & Pembatasan Laju (Rate Limiting) per Penerima', () => {
     it('membersihkan baris baru dari subjek saat dikirimkan ke Resend API', async () => {
       const mockConfigService = {
         get: vi.fn().mockReturnValue(null),
@@ -109,6 +109,100 @@ describe('F3: Keamanan Email, Sanitasi HTML, dan Pembatasan Laju Helpdesk', () =
 
       expect(result.status).toBe('SENT');
       expect(result.id).toBeDefined();
+    });
+
+    it('mengizinkan hingga 3 pengiriman email per jam untuk penerima yang sama', async () => {
+      const mockConfigService = {
+        get: vi.fn().mockReturnValue(null),
+      };
+      const emailService = new EmailService(mockConfigService as any);
+
+      const recipient = 'pemohon@bandungkab.go.id';
+      const res1 = await emailService.sendEmail({
+        to: recipient,
+        subject: 'Email Notifikasi 1',
+        html: '<p>Pesan 1</p>',
+      });
+      const res2 = await emailService.sendEmail({
+        to: recipient,
+        subject: 'Email Notifikasi 2',
+        html: '<p>Pesan 2</p>',
+      });
+      const res3 = await emailService.sendEmail({
+        to: recipient,
+        subject: 'Email Notifikasi 3',
+        html: '<p>Pesan 3</p>',
+      });
+
+      expect(res1.status).toBe('SENT');
+      expect(res2.status).toBe('SENT');
+      expect(res3.status).toBe('SENT');
+    });
+
+    it('menolak pengiriman email ke-4 ke penerima yang sama dalam kurun waktu 1 jam', async () => {
+      const mockConfigService = {
+        get: vi.fn().mockReturnValue(null),
+      };
+      const emailService = new EmailService(mockConfigService as any);
+
+      const recipient = 'pemohon.kuota@bandungkab.go.id';
+      await emailService.sendEmail({ to: recipient, subject: 'Subjek 1', html: '<p>1</p>' });
+      await emailService.sendEmail({ to: recipient, subject: 'Subjek 2', html: '<p>2</p>' });
+      await emailService.sendEmail({ to: recipient, subject: 'Subjek 3', html: '<p>3</p>' });
+
+      const res4 = await emailService.sendEmail({
+        to: recipient,
+        subject: 'Subjek 4',
+        html: '<p>4</p>',
+      });
+
+      expect(res4.status).toBe('FAILED');
+      expect(res4.error).toContain('Batas pengiriman email terlampaui (maksimal 3 email per penerima per jam)');
+    });
+
+    it('tidak membatasi pengiriman email ke alamat penerima yang berbeda', async () => {
+      const mockConfigService = {
+        get: vi.fn().mockReturnValue(null),
+      };
+      const emailService = new EmailService(mockConfigService as any);
+
+      const recipientA = 'kadis@bandungkab.go.id';
+      const recipientB = 'sekretaris@bandungkab.go.id';
+
+      // 3 email ke Kadis
+      await emailService.sendEmail({ to: recipientA, subject: 'A1', html: '<p>A1</p>' });
+      await emailService.sendEmail({ to: recipientA, subject: 'A2', html: '<p>A2</p>' });
+      await emailService.sendEmail({ to: recipientA, subject: 'A3', html: '<p>A3</p>' });
+
+      // Kadis ditolak pada email ke-4
+      const resA4 = await emailService.sendEmail({ to: recipientA, subject: 'A4', html: '<p>A4</p>' });
+      expect(resA4.status).toBe('FAILED');
+
+      // Penerima B tetap sukses terkirim
+      const resB = await emailService.sendEmail({ to: recipientB, subject: 'B1', html: '<p>B1</p>' });
+      expect(resB.status).toBe('SENT');
+    });
+
+    it('mereset kuota pengiriman ketika clearRateLimitCache() dipanggil', async () => {
+      const mockConfigService = {
+        get: vi.fn().mockReturnValue(null),
+      };
+      const emailService = new EmailService(mockConfigService as any);
+
+      const recipient = 'staf@bandungkab.go.id';
+      await emailService.sendEmail({ to: recipient, subject: '1', html: '<p>1</p>' });
+      await emailService.sendEmail({ to: recipient, subject: '2', html: '<p>2</p>' });
+      await emailService.sendEmail({ to: recipient, subject: '3', html: '<p>3</p>' });
+
+      const blocked = await emailService.sendEmail({ to: recipient, subject: '4', html: '<p>4</p>' });
+      expect(blocked.status).toBe('FAILED');
+
+      // Reset cache
+      emailService.clearRateLimitCache();
+
+      // Sekarang dapat mengirim lagi
+      const successAfterReset = await emailService.sendEmail({ to: recipient, subject: '5', html: '<p>5</p>' });
+      expect(successAfterReset.status).toBe('SENT');
     });
   });
 
