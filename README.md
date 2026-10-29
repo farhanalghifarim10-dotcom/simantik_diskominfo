@@ -114,11 +114,14 @@ SUPABASE_SECRET_KEY=<your-service-role-secret-key>
 # Kunci Rahasia Sesi Pelacakan Publik (WAJIB diisi, minimal 32 karakter, tanpa nilai default nyata. Aplikasi akan gagal start jika tidak diisi)
 JWT_SECRET=
 
-# Konfigurasi Reverse Proxy (WAJIB diset true jika di balik Nginx, Caddy, Cloudflare, Traefik, dll.)
-# PENTING: Jika dibiarkan false di balik reverse proxy, Express tidak membaca header X-Forwarded-For,
-# sehingga seluruh request dianggap berasal dari IP proxy (127.0.0.1). Akibatnya batas rate limiter
-# (100 req/menit) akan terpakai secara global oleh semua pengguna dan memicu blokir HTTP 429 massal.
-TRUST_PROXY=false
+# Konfigurasi Reverse Proxy (Wajib diset jika di balik Nginx, Caddy, Cloudflare, Traefik, dsb.)
+# REKOMENDASI KEAMANAN: Isi dengan JUMLAH HOP PROXY yang tepat (misal: 1 untuk 1 lapis reverse proxy).
+# JANGAN gunakan nilai boolean "true", karena Express akan mempercayai seluruh hop X-Forwarded-For tanpa batas,
+# sehingga klien berpotensi memalsukan IP asal (IP spoofing) untuk menghindari rate limiting.
+# PENTING: Jika dibiarkan false (0) di balik reverse proxy, seluruh request dianggap berasal dari IP proxy lokal
+# (127.0.0.1) sehingga kuota global rate limiter (100 req/menit) akan terpakai bersamaan dan memicu blokir 429 massal.
+# Nilai: 0 atau false (tanpa proxy lokal), 1 (1 lapis proxy seperti Nginx tunggal), atau 2 (misal Cloudflare + Nginx).
+TRUST_PROXY=0
 
 # Resend Email Integration (Opsional, fallback simulasi aktif)
 RESEND_API_KEY=re_your_api_key_here
