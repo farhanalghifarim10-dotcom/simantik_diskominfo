@@ -202,17 +202,22 @@ Backend API mengonfigurasi batas parsing body Express sebesar `50mb` (`express.j
 > * **Rekomendasi Mitigasi di Reverse Proxy (Nginx / Caddy / Cloudflare):**
 >   Wajib mengonfigurasi batas ukuran body yang ketat dan granular di lapisan reverse proxy:
 >   1. **Rute Standar (Default):** Terapkan `client_max_body_size 2m;` (atau `1m`) untuk rute baca, login/otentikasi, helpdesk, dan pesan teks.
->   2. **Rute Pengunggahan Berkas (Whitelisted):** Berikan izin `client_max_body_size 50m;` **hanya** pada rute yang membutuhkan transmisi dokumen:
+>   2. **Rute Pengunggahan Berkas (Whitelisted - Metode POST & PUT):** Berikan izin `client_max_body_size 50m;` **hanya** pada rute yang membutuhkan transmisi dokumen Base64:
 >      - `POST /api/v1/applications` (Pendaftaran permohonan baru publik)
 >      - `POST /api/v1/public/tickets/:ticket_number/revision` (Pengiriman berkas revisi pemohon)
->      - `POST /api/v1/applications/:id/lifecycle/*` (Unggah dokumen teknis dan pengujian lifecycle internal)
+>      - `POST /api/v1/applications/:id/lifecycle/technical-documents` (Unggah dokumen teknis permohonan)
+>      - `POST` dan `PUT /api/v1/applications/:id/lifecycle/tests[/:testId]` (Pencatatan & pembaruan berkas pengujian kelaikan)
+>      - `POST` dan `PUT /api/v1/applications/:id/lifecycle/maintenance[/:recordId]` (Pencatatan & pembaruan berkas pemeliharaan)
+>      - `POST` dan `PUT /api/v1/applications/:id/lifecycle/evaluations[/:evaluationId]` (Pencatatan & pembaruan berkas evaluasi SPBE)
+>      - `PUT /api/v1/applications/:id/lifecycle/(analysis|planning|design|implementation)` (Upsert data dan lampiran tahapan siklus hidup)
 
 Contoh blok konfigurasi Nginx:
 ```nginx
-# 1. Batas ukuran payload default untuk seluruh endpoint API umum
+# 1. Batas ukuran payload default untuk seluruh endpoint API umum (2MB)
 client_max_body_size 2m;
 
-# 2. Batas ukuran payload khusus rute penerimaan dokumen (50MB)
+# 2. Batas ukuran payload 50MB khusus rute penerimaan dokumen (metode POST dan PUT)
+# Mencakup: pendaftaran publik, revisi, dokumen teknis, tests, maintenance, evaluations, dan upsert tahap lifecycle
 location ~ ^/api/v1/(applications$|public/tickets/[^/]+/revision|applications/[^/]+/lifecycle/) {
     client_max_body_size 50m;
     proxy_pass http://127.0.0.1:3000;

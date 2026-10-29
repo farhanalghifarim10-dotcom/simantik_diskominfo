@@ -11,6 +11,7 @@ Dokumen ini mencatat seluruh rangkaian perbaikan kode yang dilakukan pada branch
 * **Deskripsi Baseline**: Status repositori sebelum implementasi perbaikan F1–F6 (seluruh 18 file test bawaan lulus dengan 289 pengujian).
 * **Catatan Skema Basis Data**: Seluruh perbaikan pada rangkaian ini **TIDAK** mengubah skema database (`supabase/migrations/`) maupun data tabel Supabase. Tidak ada prosedur *down-migration* SQL yang diperlukan saat melakukan rollback.
 * **Infrastruktur Bawaan**: Repositori ini tidak memiliki berkas `Dockerfile`, workflow CI (`.github/workflows`), maupun skrip backup database otomatis, dan tidak ditambahkan pada branch perbaikan ini.
+* **Risiko Tersisa (Residual Risk) - Cache Idempotency Plaintext**: Cache idempotency memori pada `ApplicationsService` (`inMemoryIdempotencyKeys`) menyimpan objek `ApplicationSubmissionResult` lengkap dengan `tracking_code` dalam format teks polos (plaintext) selama jendela waktu TTL 10 menit (atau maksimal 1000 entri). Hal ini diperlukan agar klien yang melakukan pengiriman ulang formulir akibat gangguan jaringan menerima nomor tiket dan kode pelacakan yang identik. Konsekuensinya, jika memori heap proses Node.js di-dump oleh entitas berhak akses root di server, kode pelacakan permohonan yang baru saja dibuat berpotensi terbaca sebelum kedaluwarsa.
 
 ---
 
@@ -30,13 +31,16 @@ Dokumen ini mencatat seluruh rangkaian perbaikan kode yang dilakukan pada branch
 | **K2** | `5709d1ccd29d875727ca87740c7e9430c708d177` | `fix` | **Longgarkan Validasi Format Nomor Telepon Pendaftaran**<br>- Mengizinkan 8–30 karakter dengan format angka, spasi, +, -, dan kurung `/^[0-9+\-\s()]{8,30}$/`.<br>- Menghapus batasan spesifik format nomor telepon Indonesia.<br>- Menyelaraskan validasi di backend dan frontend serta menambahkan pengujian format di `f4-security-hardening.spec.ts`. |
 | **K3** | `ab2d176ca2d709743a0e943e3fbca136d7f1c0eb` | `fix` | **Penyesuaian Throttling Global & Pengecualian Rute Internal**<br>- Mengatur batas global throttler ke 100 req/menit.<br>- Mengecualikan rute internal (`/api/v1/admin/*`, `/api/v1/technician/*`, `/api/v1/notifications`, `/api/v1/health`) menggunakan `@SkipThrottle()`.<br>- Melengkapi dokumentasi `TRUST_PROXY` beserta konsekuensinya di `README.md` dan `.env.example`. |
 | **Docs 2** | `a8bea4a18ad371b12d222f49f8c1ff460109e2c0` | `docs` | **Pembaruan Panduan Rollback dengan Hash Penuh dan Instruksi Revert**<br>- Melengkapi hash commit SHA-1 40 karakter dan skenario rollback K1–K3. |
-| **L3** | `fdc5951abb3f42505a792a2cd1e70d2c84963eab` | `fix` | **Batas Laju 3 Email per Penerima per Jam**<br>- Menambahkan pembatasan laju 3 email per penerima per jam dengan counter in-memory di `EmailService`.<br>- Mekanisme pembersihan berkala `cleanupExpiredEntries` untuk mencegah kebocoran memori.<br>- Test baru di `test/f3-email-security.spec.ts` dan penyesuaian helper query di `test/e2e-idempotency.spec.ts`. |
+| **L3** | `fdc5951abb3f42505a792a2cd1e70d2c84963eab` | `fix` | **Batas Laju 3 Email per Penerima per Jam**<br>- Menambahkan pembatasan laju 3 email per penerima per jam dengan counter in-memory di `EmailService`.<br>- Mekanisme pembersihan berkala `cleanupExpiredEntries` untuk mencegah kebocoran memori.<br>- Test baru di `test/f3-email-security.spec.ts`. |
 | **L4** | `48a86c5dc7b2922c5e6fc40804dbf5662778b5b2` | `fix` | **Rapikan Pengecualian Throttling Rute Staf vs Publik**<br>- Mengecualikan rute staf di `MessagesController` (`/applications/:id/messages`, `/admin/applications/:id/messages`, `/technician/applications/:id/messages`) menggunakan `@SkipThrottle()`.<br>- Mengecualikan rute admin di `HelpdeskController` (`/admin/helpdesk/consultations`) menggunakan `@SkipThrottle()`.<br>- Mempertahankan batas laju rute publik (`/public/tickets/:ticket_number/messages`, `/public/helpdesk/consultations`).<br>- Test baru di `test/f4-security-hardening.spec.ts`. |
 | **L6** | `471f2602b86100bc6fba6eb5aee864b3adc2a793` | `docs` | **Rekomendasi Angka Hop Proxy untuk Mencegah IP Spoofing**<br>- Memperbarui `README.md`, `.env.example`, dan `backend/api/.env.example`.<br>- Merekomendasikan nilai angka hop proxy (misal: `TRUST_PROXY=1`) dan melarang boolean `true` guna mencegah pemalsuan header `X-Forwarded-For`. |
 | **L2** | `367971c5217a99064011daf378836af1ccd7d1d9` | `fix` | **Isolasi Ketat Fallback In-Memory dari Lingkungan Non-Test**<br>- Menambahkan pengujian di `test/f2-database-safeguards.spec.ts`:<br>  1. Tanpa `ALLOW_IN_MEMORY_FALLBACK`, `verifyCredential` tiket & kode contoh menghasilkan 401 Unauthorized.<br>  2. `listTechnicians` saat database error melempar 5xx InternalServerError (bukan data seed).<br>  3. `listLogs` saat database error melempar 5xx InternalServerError (bukan data seed). |
 | **Docs L1** | `4b8c4b5dca6bf62b58ee9d1a3371a546ce36e637` | `docs` | **Pembaruan Panduan Rollback & Koreksi L1**<br>- Sinkronisasi tabel commit lengkap untuk L2, L3, L4, L6 dan instruksi rollback. |
 | **M4** | `3640be81ea8194b5621d921485c95bf6560f967e` | `fix` | **Cache Idempotency TTL 10 Menit & Proteksi In-Memory**<br>- Memberikan TTL 10 menit dan batas kapasitas 1000 entri (FIFO eviction) pada `inMemoryIdempotencyKeys`.<br>- Mencegah penulisan ke `inMemoryApplications` dan `registerInMemoryApplication` di luar mode test.<br>- Test baru di `test/f4-security-hardening.spec.ts`. |
 | **M5** | `cb24f30b6809a89531554f31d4ddde3596978c70` | `fix` | **RBAC RolesGuard pada Rute Pembacaan Helpdesk**<br>- Memasang `@UseGuards(AuthGuard, RolesGuard)` dan `@Roles('SUPER_ADMIN', 'TECHNICIAN')` pada endpoint baca dan penandaan konsultasi di `HelpdeskController`.<br>- Test baru di `src/helpdesk/helpdesk.spec.ts`. |
+| **M6** | `023fc5ee16d6db1c86cb50aff30dc54f2a0cf418` | `docs` | **Rekomendasi Batas Ukuran Body Reverse Proxy & Panduan Rollback**<br>- Dokumentasi batas `client_max_body_size 50m` vs `2m` dan koreksi eksekusi body-parser sebelum throttler di `README.md`. |
+| **N1** | `81303b67f74fcde136a825610be52f0a10592aab` | `test` | **Asersi Ketat e2e-idempotency & Skip Eksplisit Tanpa Fixture**<br>- Mengembalikan asersi ketat format tiket, status, dan judul serta melewati pengujian secara eksplisit via `ctx.skip` bila fixture lokal belum tersedia di basis data. |
+| **N3** | `0c29466c6fe801504072e1d3fd5f9573b5485fa4` | `fix` | **Proteksi 5xx & Isolasi Fallback Admin Applications, Assignments & Notifications**<br>- Melempar `InternalServerErrorException` (5xx) saat basis data error dan fallback dinonaktifkan.<br>- Mencegah kebocoran data contoh dan pembacaan in-memory tanpa izin.<br>- Test baru di `test/f2-database-safeguards.spec.ts`. |
 
 ---
 
@@ -47,8 +51,8 @@ Dokumen ini mencatat seluruh rangkaian perbaikan kode yang dilakukan pada branch
 Jika ingin membatalkan satu commit tertentu tanpa memengaruhi perbaikan lainnya, jalankan `git revert <hash>` menggunakan hash penuh dari tabel di atas:
 
 ```powershell
-# Contoh: membatalkan M5 saja
-git revert cb24f30b6809a89531554f31d4ddde3596978c70 --no-edit
+# Contoh: membatalkan N3 saja
+git revert 0c29466c6fe801504072e1d3fd5f9573b5485fa4 --no-edit
 
 # Verifikasi test dan build ulang pasca-revert
 $env:Path += ";C:\Program Files\nodejs"
@@ -65,6 +69,9 @@ Jika ingin membatalkan seluruh commit perbaikan secara bersih dan teratur:
 git branch --show-current
 
 # 2. Revert commit secara berurutan mundur dari yang terbaru ke terlama:
+git revert --no-commit 0c29466c6fe801504072e1d3fd5f9573b5485fa4 # N3
+git revert --no-commit 81303b67f74fcde136a825610be52f0a10592aab # N1
+git revert --no-commit 023fc5ee16d6db1c86cb50aff30dc54f2a0cf418 # M6
 git revert --no-commit cb24f30b6809a89531554f31d4ddde3596978c70 # M5
 git revert --no-commit 3640be81ea8194b5621d921485c95bf6560f967e # M4
 git revert --no-commit 4b8c4b5dca6bf62b58ee9d1a3371a546ce36e637 # Docs L1
