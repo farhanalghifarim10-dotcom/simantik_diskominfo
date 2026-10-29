@@ -109,10 +109,9 @@ D:\Projects\simantik/
 │   ├── PRD.md                  # Product Requirements Document baseline
 │   ├── TECHNICAL-SPEC.md       # Spesifikasi teknis arsitektur lengkap
 │   ├── HANDOVER.md             # Dokumen serah terima & batasan sistem
+│   ├── ROLLBACK.md             # Panduan rollback & catatan commit perbaikan
 │   ├── SIMANTIK_SYSTEM_CONTEXT.md          # Dokumen induk konteks sistem (berkas ini)
-│   ├── SIMANTIK_FILE_MAP.md                # Peta dan inventaris seluruh berkas
-│   ├── SIMANTIK_DECISIONS_AND_CHANGELOG.md # Log keputusan & catatan perubahan
-│   └── SIMANTIK_CURRENT_STATE.md           # Status aktual pengujian & repositori
+│   └── SIMANTIK_DECISIONS_AND_CHANGELOG.md # Log keputusan & catatan perubahan
 ├── frontend/
 │   ├── admin-web/              # Web Admin Diskominfo (Konsol Manajemen)
 │   │   ├── src/
