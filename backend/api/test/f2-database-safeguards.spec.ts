@@ -17,6 +17,7 @@ import { LifecycleService } from '../src/lifecycle/lifecycle.service.js';
 import { TechniciansService } from '../src/technicians/technicians.service.js';
 import { OpdService } from '../src/opd/opd.service.js';
 import { ServicesService } from '../src/services/services.service.js';
+import { AuditService } from '../src/audit/audit.service.js';
 
 describe('F2: Database Safeguards & Supabase Error Handling', () => {
   const originalEnv = { ...process.env };
@@ -468,6 +469,133 @@ describe('F2: Database Safeguards & Supabase Error Handling', () => {
 
       const list = await servicesService.getPublicServices();
       expect(list.find((s) => s.code === 'SRV-TEST')).toBeUndefined();
+    });
+  });
+
+  describe('Isolasi Ketat Fallback In-Memory: verifyCredential 401, listTechnicians 5xx, listLogs 5xx', () => {
+    it('tanpa ALLOW_IN_MEMORY_FALLBACK, verifyCredential dengan tiket dan kode contoh harus 401 Unauthorized', async () => {
+      // Pastikan fallback in-memory dinonaktifkan
+      process.env.ALLOW_IN_MEMORY_FALLBACK = 'false';
+      process.env.NODE_ENV = 'production';
+
+      const mockClient = {
+        from: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              maybeSingle: vi.fn().mockResolvedValue({
+                data: null, // Tiket tidak ditemukan di database nyata
+                error: null,
+              }),
+            }),
+          }),
+        }),
+      };
+
+      const mockSupabase = { getClient: vi.fn().mockReturnValue(mockClient) };
+      const tokenService = new TrackingTokenService({
+        get: vi.fn().mockReturnValue('dummy-test-secret-at-least-32-chars-long!'),
+      } as any);
+      const rateLimiter = new TrackingRateLimiter();
+
+      const trackingService = new TrackingService(
+        mockSupabase as any,
+        tokenService,
+        rateLimiter,
+      );
+
+      // Coba verifikasi menggunakan kredensial contoh seed (SIM-2026-000101 & TRK-A1B2C3D4)
+      await expect(
+        trackingService.verifyCredential({
+          ticket_number: 'SIM-2026-000101',
+          tracking_code: 'TRK-A1B2C3D4',
+        }),
+      ).rejects.toThrow(UnauthorizedException);
+
+      try {
+        await trackingService.verifyCredential({
+          ticket_number: 'SIM-2026-000101',
+          tracking_code: 'TRK-A1B2C3D4',
+        });
+      } catch (err: any) {
+        expect(err.getStatus()).toBe(401);
+        expect(err.getResponse()).toEqual(
+          expect.objectContaining({
+            statusCode: 401,
+            code: 'TRACKING_INVALID_CREDENTIAL',
+            message: 'Nomor tiket atau kode pelacakan tidak sesuai.',
+          }),
+        );
+      }
+    });
+
+    it('tanpa ALLOW_IN_MEMORY_FALLBACK, listTechnicians saat database error harus melempar galat 5xx InternalServerError, bukan data contoh', async () => {
+      process.env.ALLOW_IN_MEMORY_FALLBACK = 'false';
+      process.env.NODE_ENV = 'production';
+
+      const mockClient = {
+        from: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              order: vi.fn().mockResolvedValue({
+                data: null,
+                error: { message: 'Database connection failed: ECONNREFUSED' },
+              }),
+            }),
+          }),
+        }),
+      };
+
+      const mockSupabase = { getClient: vi.fn().mockReturnValue(mockClient) };
+      const mockAudit = { record: vi.fn().mockResolvedValue({}) };
+
+      const techniciansService = new TechniciansService(
+        mockSupabase as any,
+        mockAudit as any,
+      );
+
+      await expect(techniciansService.listTechnicians()).rejects.toThrow(
+        InternalServerErrorException,
+      );
+
+      try {
+        await techniciansService.listTechnicians();
+      } catch (err: any) {
+        expect(err.getStatus()).toBe(500);
+        expect(err.message).toContain('Gagal memuat daftar tenaga ahli dari basis data');
+      }
+    });
+
+    it('tanpa ALLOW_IN_MEMORY_FALLBACK, listLogs saat database error harus melempar galat 5xx InternalServerError, bukan data contoh', async () => {
+      process.env.ALLOW_IN_MEMORY_FALLBACK = 'false';
+      process.env.NODE_ENV = 'production';
+
+      const mockClient = {
+        from: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            order: vi.fn().mockReturnValue({
+              range: vi.fn().mockResolvedValue({
+                data: null,
+                count: null,
+                error: { message: 'Query execution timeout on audit_logs' },
+              }),
+            }),
+          }),
+        }),
+      };
+
+      const mockSupabase = { getClient: vi.fn().mockReturnValue(mockClient) };
+      const auditService = new AuditService(mockSupabase as any);
+
+      await expect(auditService.listLogs({})).rejects.toThrow(
+        InternalServerErrorException,
+      );
+
+      try {
+        await auditService.listLogs({});
+      } catch (err: any) {
+        expect(err.getStatus()).toBe(500);
+        expect(err.message).toContain('Gagal memuat log audit dari basis data');
+      }
     });
   });
 });
