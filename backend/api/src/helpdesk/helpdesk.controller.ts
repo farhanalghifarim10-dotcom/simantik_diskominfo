@@ -7,11 +7,8 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import { HelpdeskService } from './helpdesk.service.js';
 import { AuthGuard } from '../auth/auth.guard.js';
-import { RolesGuard } from '../auth/roles.guard.js';
-import { Roles } from '../auth/roles.decorator.js';
 import type { CreateConsultationDto } from './helpdesk.types.js';
 
 @Controller()
@@ -23,7 +20,6 @@ export class HelpdeskController {
   // ------------------------------------------------------------
 
   @Post('public/helpdesk/consultations')
-  @Throttle({ default: { limit: 3, ttl: 600000 } })
   async submitPublicConsultation(@Body() body: CreateConsultationDto) {
     const data = await this.helpdeskService.submitConsultation(body);
     return {
@@ -35,7 +31,6 @@ export class HelpdeskController {
 
   // Alias endpoint jika dipanggil tanpa prefix public
   @Post('helpdesk/consultations')
-  @Throttle({ default: { limit: 3, ttl: 600000 } })
   async submitConsultationAlias(@Body() body: CreateConsultationDto) {
     return this.submitPublicConsultation(body);
   }
@@ -45,9 +40,7 @@ export class HelpdeskController {
   // ------------------------------------------------------------
 
   @Get('admin/helpdesk/consultations')
-  @SkipThrottle()
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('SUPER_ADMIN', 'TECHNICIAN')
+  @UseGuards(AuthGuard)
   async getAdminConsultations(@Req() req: any) {
     const user = req.user;
     const data = await this.helpdeskService.getConsultations(user);
@@ -58,9 +51,7 @@ export class HelpdeskController {
   }
 
   @Post('admin/helpdesk/consultations/:id/read')
-  @SkipThrottle()
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('SUPER_ADMIN', 'TECHNICIAN')
+  @UseGuards(AuthGuard)
   async markAdminConsultationRead(@Param('id') id: string, @Req() req: any) {
     const user = req.user;
     const data = await this.helpdeskService.markAsRead(id, user);
@@ -73,17 +64,13 @@ export class HelpdeskController {
 
   // Aliases for /helpdesk/consultations when called by internal client
   @Get('helpdesk/consultations')
-  @SkipThrottle()
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('SUPER_ADMIN', 'TECHNICIAN')
+  @UseGuards(AuthGuard)
   async getConsultationsInternalAlias(@Req() req: any) {
     return this.getAdminConsultations(req);
   }
 
   @Post('helpdesk/consultations/:id/read')
-  @SkipThrottle()
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('SUPER_ADMIN', 'TECHNICIAN')
+  @UseGuards(AuthGuard)
   async markConsultationReadAlias(@Param('id') id: string, @Req() req: any) {
     return this.markAdminConsultationRead(id, req);
   }

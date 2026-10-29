@@ -1,7 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { json, urlencoded } from 'express';
-import helmet from 'helmet';
 import { AppModule } from './app.module.js';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter.js';
 
@@ -10,19 +9,6 @@ async function bootstrap() {
     bodyParser: false,
   });
   const configService = app.get(ConfigService);
-
-  // Pasang helmet untuk perlindungan HTTP security headers
-  app.use(helmet());
-
-  // Konfigurasi trust proxy jika berada di balik reverse proxy
-  const trustProxy =
-    configService.get<boolean>('trustProxy') ||
-    process.env.TRUST_PROXY === 'true' ||
-    process.env.TRUST_PROXY === '1';
-
-  if (trustProxy) {
-    app.getHttpAdapter().getInstance().set('trust proxy', 1);
-  }
 
   // Parse JSON and URL-encoded bodies with 50MB limit to support base64 documents
   app.use(json({ limit: '50mb' }));

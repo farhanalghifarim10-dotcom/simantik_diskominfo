@@ -19,13 +19,11 @@ import type {
   ExecuteTransitionDto,
 } from '../applications/workflow/workflow.types.js';
 import type { ListTechnicianWorkQueryDto } from './assignments.types.js';
-import { SkipThrottle } from '@nestjs/throttler';
 
 type AuthenticatedRequest = Request & {
   user: AuthenticatedUser;
 };
 
-@SkipThrottle()
 @Controller('technician')
 @UseGuards(AuthGuard, RolesGuard)
 @Roles('TECHNICIAN', 'SUPER_ADMIN')

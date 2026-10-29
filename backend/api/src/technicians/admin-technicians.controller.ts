@@ -20,13 +20,11 @@ import type {
   CreateTechnicianDto,
   UpdateTechnicianDto,
 } from './technicians.types.js';
-import { SkipThrottle } from '@nestjs/throttler';
 
 type AuthenticatedRequest = Request & {
   user?: AuthenticatedUser;
 };
 
-@SkipThrottle()
 @Controller('admin/technicians')
 @UseGuards(AuthGuard, RolesGuard)
 @Roles('SUPER_ADMIN')

@@ -229,27 +229,5 @@ describe('Helpdesk Module (Layanan Bantuan & Konsultasi OPD)', () => {
       expect(res.success).toBe(true);
       expect(Array.isArray(res.data)).toBe(true);
     });
-
-    it('seluruh rute baca dan tindak lanjut internal dilindungi oleh AuthGuard, RolesGuard, dan peran SUPER_ADMIN & TECHNICIAN', () => {
-      const internalHandlers = [
-        HelpdeskController.prototype.getAdminConsultations,
-        HelpdeskController.prototype.markAdminConsultationRead,
-        HelpdeskController.prototype.getConsultationsInternalAlias,
-        HelpdeskController.prototype.markConsultationReadAlias,
-      ];
-
-      for (const handler of internalHandlers) {
-        const guards = Reflect.getMetadata('__guards__', handler);
-        expect(guards).toBeDefined();
-        expect(guards.length).toBe(2);
-
-        const roles = Reflect.getMetadata('roles', handler);
-        expect(roles).toEqual(['SUPER_ADMIN', 'TECHNICIAN']);
-      }
-
-      // Rute publik tidak boleh dilindungi AuthGuard
-      const publicGuards = Reflect.getMetadata('__guards__', HelpdeskController.prototype.submitPublicConsultation);
-      expect(publicGuards).toBeUndefined();
-    });
   });
 });

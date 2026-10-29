@@ -1,17 +1,13 @@
 import {
   BadRequestException,
   ForbiddenException,
-  HttpException,
   Injectable,
-  InternalServerErrorException,
-  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import crypto from 'node:crypto';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { SupabaseService } from '../supabase/supabase.service.js';
 import { AssignmentsService } from '../assignments/assignments.service.js';
-import { assertSupabaseOk, isInMemoryFallbackAllowed } from '../common/utils/supabase.utils.js';
 import type {
   AnalysisRecord,
   CreateEvaluationDto,
@@ -40,7 +36,6 @@ import type {
 
 @Injectable()
 export class LifecycleService {
-  private readonly logger = new Logger(LifecycleService.name);
   // In-memory fallback stores for test/offline resilience
   private inMemoryAnalysis = new Map<string, AnalysisRecord>();
   private inMemoryPlanning = new Map<string, ProjectPlanRecord>();
@@ -266,7 +261,7 @@ export class LifecycleService {
       const currentDb = await this.getAnalysis(applicationId, user);
 
       if (currentDb) {
-        const updateRes = await client
+        const { data } = await client
           .from('analysis_records')
           .update({
             problems: record.problems,
@@ -284,13 +279,12 @@ export class LifecycleService {
           .eq('id', currentDb.id)
           .select()
           .single();
-        const data = assertSupabaseOk(updateRes, 'Gagal memperbarui catatan analisis');
 
         if (data) {
           record = { ...record, ...data, created_by_name: user.fullName };
         }
       } else {
-        const insertRes = await client
+        const { data } = await client
           .from('analysis_records')
           .insert({
             id: record.id,
@@ -311,41 +305,26 @@ export class LifecycleService {
           })
           .select()
           .single();
-        const data = assertSupabaseOk(insertRes, 'Gagal menyimpan catatan analisis baru');
 
         if (data) {
           record = { ...record, ...data, created_by_name: user.fullName };
         }
       }
 
-      try {
-        const auditRes = await client.from('audit_logs').insert({
-          actor_profile_id: user.id,
-          application_id: applicationId,
-          action: 'LIFECYCLE_ANALYSIS_UPDATED',
-          entity_type: 'analysis_records',
-          entity_id: record.id,
-          new_data: dto,
-          created_at: now,
-        });
-        if (auditRes?.error) {
-          this.logger.warn(`Gagal mencatat audit log analisis: ${auditRes.error.message}`);
-        }
-      } catch (auditErr) {
-        this.logger.warn(`Gagal mencatat audit log analisis: ${auditErr}`);
-      }
-    } catch (err) {
-      if (err instanceof HttpException) {
-        throw err;
-      }
-      if (!isInMemoryFallbackAllowed()) {
-        throw new InternalServerErrorException('Gagal menyimpan catatan analisis.');
-      }
+      await client.from('audit_logs').insert({
+        actor_profile_id: user.id,
+        application_id: applicationId,
+        action: 'LIFECYCLE_ANALYSIS_UPDATED',
+        entity_type: 'analysis_records',
+        entity_id: record.id,
+        new_data: dto,
+        created_at: now,
+      });
+    } catch {
+      // In-memory fallback
     }
 
-    if (isInMemoryFallbackAllowed()) {
-      this.inMemoryAnalysis.set(applicationId, record);
-    }
+    this.inMemoryAnalysis.set(applicationId, record);
     return record;
   }
 
@@ -438,7 +417,7 @@ export class LifecycleService {
       const currentDb = await this.getProjectPlan(applicationId, user);
 
       if (currentDb) {
-        const updateRes = await client
+        const { data } = await client
           .from('project_plans')
           .update({
             scope: record.scope,
@@ -459,13 +438,12 @@ export class LifecycleService {
           .eq('id', currentDb.id)
           .select()
           .single();
-        const data = assertSupabaseOk(updateRes, 'Gagal memperbarui rencana proyek');
 
         if (data) {
           record = { ...record, ...data, created_by_name: user.fullName };
         }
       } else {
-        const insertRes = await client
+        const { data } = await client
           .from('project_plans')
           .insert({
             id: record.id,
@@ -489,41 +467,26 @@ export class LifecycleService {
           })
           .select()
           .single();
-        const data = assertSupabaseOk(insertRes, 'Gagal menyimpan rencana proyek baru');
 
         if (data) {
           record = { ...record, ...data, created_by_name: user.fullName };
         }
       }
 
-      try {
-        const auditRes = await client.from('audit_logs').insert({
-          actor_profile_id: user.id,
-          application_id: applicationId,
-          action: 'LIFECYCLE_PLANNING_UPDATED',
-          entity_type: 'project_plans',
-          entity_id: record.id,
-          new_data: dto,
-          created_at: now,
-        });
-        if (auditRes?.error) {
-          this.logger.warn(`Gagal mencatat audit log perencanaan: ${auditRes.error.message}`);
-        }
-      } catch (auditErr) {
-        this.logger.warn(`Gagal mencatat audit log perencanaan: ${auditErr}`);
-      }
-    } catch (err) {
-      if (err instanceof HttpException) {
-        throw err;
-      }
-      if (!isInMemoryFallbackAllowed()) {
-        throw new InternalServerErrorException('Gagal menyimpan rencana proyek.');
-      }
+      await client.from('audit_logs').insert({
+        actor_profile_id: user.id,
+        application_id: applicationId,
+        action: 'LIFECYCLE_PLANNING_UPDATED',
+        entity_type: 'project_plans',
+        entity_id: record.id,
+        new_data: dto,
+        created_at: now,
+      });
+    } catch {
+      // In-memory fallback
     }
 
-    if (isInMemoryFallbackAllowed()) {
-      this.inMemoryPlanning.set(applicationId, record);
-    }
+    this.inMemoryPlanning.set(applicationId, record);
     return record;
   }
 
@@ -606,7 +569,7 @@ export class LifecycleService {
       const currentDb = await this.getDesign(applicationId, user);
 
       if (currentDb) {
-        const updateRes = await client
+        const { data } = await client
           .from('design_records')
           .update({
             architecture_model: record.architecture_model,
@@ -622,13 +585,12 @@ export class LifecycleService {
           .eq('id', currentDb.id)
           .select()
           .single();
-        const data = assertSupabaseOk(updateRes, 'Gagal memperbarui desain sistem');
 
         if (data) {
           record = { ...record, ...data, created_by_name: user.fullName };
         }
       } else {
-        const insertRes = await client
+        const { data } = await client
           .from('design_records')
           .insert({
             id: record.id,
@@ -647,41 +609,26 @@ export class LifecycleService {
           })
           .select()
           .single();
-        const data = assertSupabaseOk(insertRes, 'Gagal menyimpan desain sistem baru');
 
         if (data) {
           record = { ...record, ...data, created_by_name: user.fullName };
         }
       }
 
-      try {
-        const auditRes = await client.from('audit_logs').insert({
-          actor_profile_id: user.id,
-          application_id: applicationId,
-          action: 'LIFECYCLE_DESIGN_UPDATED',
-          entity_type: 'design_records',
-          entity_id: record.id,
-          new_data: dto,
-          created_at: now,
-        });
-        if (auditRes?.error) {
-          this.logger.warn(`Gagal mencatat audit log desain: ${auditRes.error.message}`);
-        }
-      } catch (auditErr) {
-        this.logger.warn(`Gagal mencatat audit log desain: ${auditErr}`);
-      }
-    } catch (err) {
-      if (err instanceof HttpException) {
-        throw err;
-      }
-      if (!isInMemoryFallbackAllowed()) {
-        throw new InternalServerErrorException('Gagal menyimpan desain sistem.');
-      }
+      await client.from('audit_logs').insert({
+        actor_profile_id: user.id,
+        application_id: applicationId,
+        action: 'LIFECYCLE_DESIGN_UPDATED',
+        entity_type: 'design_records',
+        entity_id: record.id,
+        new_data: dto,
+        created_at: now,
+      });
+    } catch {
+      // In-memory fallback
     }
 
-    if (isInMemoryFallbackAllowed()) {
-      this.inMemoryDesign.set(applicationId, record);
-    }
+    this.inMemoryDesign.set(applicationId, record);
     return record;
   }
 
@@ -764,7 +711,7 @@ export class LifecycleService {
       const currentDb = await this.getImplementation(applicationId, user);
 
       if (currentDb) {
-        const updateRes = await client
+        const { data } = await client
           .from('implementation_records')
           .update({
             software_dev_records: record.software_dev_records,
@@ -780,13 +727,12 @@ export class LifecycleService {
           .eq('id', currentDb.id)
           .select()
           .single();
-        const data = assertSupabaseOk(updateRes, 'Gagal memperbarui implementasi sistem');
 
         if (data) {
           record = { ...record, ...data, created_by_name: user.fullName };
         }
       } else {
-        const insertRes = await client
+        const { data } = await client
           .from('implementation_records')
           .insert({
             id: record.id,
@@ -805,41 +751,26 @@ export class LifecycleService {
           })
           .select()
           .single();
-        const data = assertSupabaseOk(insertRes, 'Gagal menyimpan implementasi sistem baru');
 
         if (data) {
           record = { ...record, ...data, created_by_name: user.fullName };
         }
       }
 
-      try {
-        const auditRes = await client.from('audit_logs').insert({
-          actor_profile_id: user.id,
-          application_id: applicationId,
-          action: 'LIFECYCLE_IMPLEMENTATION_UPDATED',
-          entity_type: 'implementation_records',
-          entity_id: record.id,
-          new_data: dto,
-          created_at: now,
-        });
-        if (auditRes?.error) {
-          this.logger.warn(`Gagal mencatat audit log implementasi: ${auditRes.error.message}`);
-        }
-      } catch (auditErr) {
-        this.logger.warn(`Gagal mencatat audit log implementasi: ${auditErr}`);
-      }
-    } catch (err) {
-      if (err instanceof HttpException) {
-        throw err;
-      }
-      if (!isInMemoryFallbackAllowed()) {
-        throw new InternalServerErrorException('Gagal menyimpan implementasi sistem.');
-      }
+      await client.from('audit_logs').insert({
+        actor_profile_id: user.id,
+        application_id: applicationId,
+        action: 'LIFECYCLE_IMPLEMENTATION_UPDATED',
+        entity_type: 'implementation_records',
+        entity_id: record.id,
+        new_data: dto,
+        created_at: now,
+      });
+    } catch {
+      // In-memory fallback
     }
 
-    if (isInMemoryFallbackAllowed()) {
-      this.inMemoryImplementation.set(applicationId, record);
-    }
+    this.inMemoryImplementation.set(applicationId, record);
     return record;
   }
 
@@ -1042,7 +973,7 @@ export class LifecycleService {
 
     try {
       const client = this.supabaseService.getClient();
-      const insertRes = await client
+      const { data } = await client
         .from('test_records')
         .insert({
           id: record.id,
@@ -1067,18 +998,6 @@ export class LifecycleService {
         .select()
         .single();
 
-      if (insertRes?.error) {
-        if (attachPath) {
-          try {
-            await client.storage.from('simantik-documents').remove([attachPath]);
-          } catch (storageErr) {
-            this.logger.warn(`Gagal menghapus berkas lampiran test setelah DB insert gagal: ${storageErr}`);
-          }
-        }
-        assertSupabaseOk(insertRes, 'Gagal menyimpan catatan pengujian');
-      }
-
-      const data = insertRes.data;
       if (data) {
         record = {
           ...record,
@@ -1089,36 +1008,22 @@ export class LifecycleService {
         };
       }
 
-      try {
-        const auditRes = await client.from('audit_logs').insert({
-          actor_profile_id: user.id,
-          application_id: applicationId,
-          action: 'LIFECYCLE_TEST_RECORD_CREATED',
-          entity_type: 'test_records',
-          entity_id: record.id,
-          new_data: { test_type: dto.test_type, test_name: dto.test_name, result: dto.result },
-          created_at: now,
-        });
-        if (auditRes?.error) {
-          this.logger.warn(`Gagal mencatat audit log test: ${auditRes.error.message}`);
-        }
-      } catch (auditErr) {
-        this.logger.warn(`Gagal mencatat audit log test: ${auditErr}`);
-      }
-    } catch (err) {
-      if (err instanceof HttpException) {
-        throw err;
-      }
-      if (!isInMemoryFallbackAllowed()) {
-        throw new InternalServerErrorException('Gagal menyimpan catatan pengujian.');
-      }
+      await client.from('audit_logs').insert({
+        actor_profile_id: user.id,
+        application_id: applicationId,
+        action: 'LIFECYCLE_TEST_RECORD_CREATED',
+        entity_type: 'test_records',
+        entity_id: record.id,
+        new_data: { test_type: dto.test_type, test_name: dto.test_name, result: dto.result },
+        created_at: now,
+      });
+    } catch {
+      // In-memory fallback
     }
 
-    if (isInMemoryFallbackAllowed()) {
-      const list = this.inMemoryTests.get(applicationId) || [];
-      list.unshift(record);
-      this.inMemoryTests.set(applicationId, list);
-    }
+    const list = this.inMemoryTests.get(applicationId) || [];
+    list.unshift(record);
+    this.inMemoryTests.set(applicationId, list);
     return record;
   }
 
@@ -1173,7 +1078,7 @@ export class LifecycleService {
 
     try {
       const client = this.supabaseService.getClient();
-      const updateRes = await client
+      const { data } = await client
         .from('test_records')
         .update({
           test_type: updated.test_type,
@@ -1195,18 +1100,6 @@ export class LifecycleService {
         .select()
         .single();
 
-      if (updateRes?.error) {
-        if (attachPath && attachPath !== existing.attachment_path) {
-          try {
-            await client.storage.from('simantik-documents').remove([attachPath]);
-          } catch (storageErr) {
-            this.logger.warn(`Gagal menghapus berkas lampiran test setelah DB update gagal: ${storageErr}`);
-          }
-        }
-        assertSupabaseOk(updateRes, 'Gagal memperbarui catatan pengujian');
-      }
-
-      const data = updateRes.data;
       if (data) {
         updated = {
           ...updated,
@@ -1217,37 +1110,23 @@ export class LifecycleService {
         };
       }
 
-      try {
-        const auditRes = await client.from('audit_logs').insert({
-          actor_profile_id: user.id,
-          application_id: applicationId,
-          action: 'LIFECYCLE_TEST_RECORD_UPDATED',
-          entity_type: 'test_records',
-          entity_id: testId,
-          new_data: dto,
-          created_at: now,
-        });
-        if (auditRes?.error) {
-          this.logger.warn(`Gagal mencatat audit log test update: ${auditRes.error.message}`);
-        }
-      } catch (auditErr) {
-        this.logger.warn(`Gagal mencatat audit log test update: ${auditErr}`);
-      }
-    } catch (err) {
-      if (err instanceof HttpException) {
-        throw err;
-      }
-      if (!isInMemoryFallbackAllowed()) {
-        throw new InternalServerErrorException('Gagal memperbarui catatan pengujian.');
-      }
+      await client.from('audit_logs').insert({
+        actor_profile_id: user.id,
+        application_id: applicationId,
+        action: 'LIFECYCLE_TEST_RECORD_UPDATED',
+        entity_type: 'test_records',
+        entity_id: testId,
+        new_data: dto,
+        created_at: now,
+      });
+    } catch {
+      // In-memory fallback
     }
 
-    if (isInMemoryFallbackAllowed()) {
-      const list = this.inMemoryTests.get(applicationId) || [];
-      const idx = list.findIndex((t) => t.id === testId);
-      if (idx >= 0) list[idx] = updated;
-      this.inMemoryTests.set(applicationId, list);
-    }
+    const list = this.inMemoryTests.get(applicationId) || [];
+    const idx = list.findIndex((t) => t.id === testId);
+    if (idx >= 0) list[idx] = updated;
+    this.inMemoryTests.set(applicationId, list);
     return updated;
   }
 
@@ -1257,61 +1136,19 @@ export class LifecycleService {
     user: AuthenticatedUser,
   ): Promise<void> {
     await this.assertLifecycleAccess(applicationId, user);
-    const existing = await this.getTest(applicationId, testId, user).catch(() => null);
 
     try {
       const client = this.supabaseService.getClient();
-      const deleteRes = await client
-        .from('test_records')
-        .delete()
-        .eq('id', testId)
-        .eq('application_id', applicationId);
-      assertSupabaseOk(deleteRes, 'Gagal menghapus catatan pengujian');
-
-      if (existing?.attachment_path) {
-        try {
-          await client.storage.from('simantik-documents').remove([existing.attachment_path]);
-        } catch (storageErr) {
-          this.logger.warn(`Gagal menghapus berkas lampiran test dari storage: ${storageErr}`);
-        }
-      }
-
-      try {
-        await client.from('audit_logs').insert({
-          actor_profile_id: user.id,
-          application_id: applicationId,
-          action: 'LIFECYCLE_TEST_DELETED',
-          entity_type: 'test_records',
-          entity_id: testId,
-          old_data: existing
-            ? {
-                test_name: existing.test_name,
-                test_type: existing.test_type,
-                result: existing.result,
-                attachment_path: existing.attachment_path,
-              }
-            : null,
-          created_at: new Date().toISOString(),
-        });
-      } catch (auditErr) {
-        this.logger.warn(`Gagal mencatat audit log delete test: ${auditErr}`);
-      }
-    } catch (err) {
-      if (err instanceof HttpException) {
-        throw err;
-      }
-      if (!isInMemoryFallbackAllowed()) {
-        throw new InternalServerErrorException('Gagal menghapus catatan pengujian.');
-      }
+      await client.from('test_records').delete().eq('id', testId).eq('application_id', applicationId);
+    } catch {
+      // fallback
     }
 
-    if (isInMemoryFallbackAllowed()) {
-      const list = this.inMemoryTests.get(applicationId) || [];
-      this.inMemoryTests.set(
-        applicationId,
-        list.filter((t) => t.id !== testId),
-      );
-    }
+    const list = this.inMemoryTests.get(applicationId) || [];
+    this.inMemoryTests.set(
+      applicationId,
+      list.filter((t) => t.id !== testId),
+    );
   }
 
   async getTestAttachmentUrl(
@@ -1473,7 +1310,7 @@ export class LifecycleService {
 
     try {
       const client = this.supabaseService.getClient();
-      const insertRes = await client
+      const { data } = await client
         .from('maintenance_records')
         .insert({
           id: record.id,
@@ -1495,18 +1332,6 @@ export class LifecycleService {
         .select()
         .single();
 
-      if (insertRes?.error) {
-        if (attachPath) {
-          try {
-            await client.storage.from('simantik-documents').remove([attachPath]);
-          } catch (storageErr) {
-            this.logger.warn(`Gagal menghapus berkas lampiran maintenance setelah DB insert gagal: ${storageErr}`);
-          }
-        }
-        assertSupabaseOk(insertRes, 'Gagal menyimpan catatan pemeliharaan');
-      }
-
-      const data = insertRes.data;
       if (data) {
         record = {
           ...record,
@@ -1519,36 +1344,22 @@ export class LifecycleService {
         };
       }
 
-      try {
-        const auditRes = await client.from('audit_logs').insert({
-          actor_profile_id: user.id,
-          application_id: applicationId,
-          action: 'LIFECYCLE_MAINTENANCE_RECORD_CREATED',
-          entity_type: 'maintenance_records',
-          entity_id: record.id,
-          new_data: { maintenance_type: dto.maintenance_type, title: record.title },
-          created_at: now,
-        });
-        if (auditRes?.error) {
-          this.logger.warn(`Gagal mencatat audit log maintenance: ${auditRes.error.message}`);
-        }
-      } catch (auditErr) {
-        this.logger.warn(`Gagal mencatat audit log maintenance: ${auditErr}`);
-      }
-    } catch (err) {
-      if (err instanceof HttpException) {
-        throw err;
-      }
-      if (!isInMemoryFallbackAllowed()) {
-        throw new InternalServerErrorException('Gagal menyimpan catatan pemeliharaan.');
-      }
+      await client.from('audit_logs').insert({
+        actor_profile_id: user.id,
+        application_id: applicationId,
+        action: 'LIFECYCLE_MAINTENANCE_RECORD_CREATED',
+        entity_type: 'maintenance_records',
+        entity_id: record.id,
+        new_data: { maintenance_type: dto.maintenance_type, title: record.title },
+        created_at: now,
+      });
+    } catch {
+      // In-memory fallback
     }
 
-    if (isInMemoryFallbackAllowed()) {
-      const list = this.inMemoryMaintenance.get(applicationId) || [];
-      list.unshift(record);
-      this.inMemoryMaintenance.set(applicationId, list);
-    }
+    const list = this.inMemoryMaintenance.get(applicationId) || [];
+    list.unshift(record);
+    this.inMemoryMaintenance.set(applicationId, list);
     return record;
   }
 
@@ -1604,7 +1415,7 @@ export class LifecycleService {
 
     try {
       const client = this.supabaseService.getClient();
-      const updateRes = await client
+      const { data } = await client
         .from('maintenance_records')
         .update({
           maintenance_type: updated.maintenance_type,
@@ -1623,18 +1434,6 @@ export class LifecycleService {
         .select()
         .single();
 
-      if (updateRes?.error) {
-        if (attachPath && attachPath !== existing.attachment_path) {
-          try {
-            await client.storage.from('simantik-documents').remove([attachPath]);
-          } catch (storageErr) {
-            this.logger.warn(`Gagal menghapus berkas lampiran maintenance setelah DB update gagal: ${storageErr}`);
-          }
-        }
-        assertSupabaseOk(updateRes, 'Gagal memperbarui catatan pemeliharaan');
-      }
-
-      const data = updateRes.data;
       if (data) {
         updated = {
           ...updated,
@@ -1647,37 +1446,23 @@ export class LifecycleService {
         };
       }
 
-      try {
-        const auditRes = await client.from('audit_logs').insert({
-          actor_profile_id: user.id,
-          application_id: applicationId,
-          action: 'LIFECYCLE_MAINTENANCE_RECORD_UPDATED',
-          entity_type: 'maintenance_records',
-          entity_id: recordId,
-          new_data: dto,
-          created_at: now,
-        });
-        if (auditRes?.error) {
-          this.logger.warn(`Gagal mencatat audit log maintenance update: ${auditRes.error.message}`);
-        }
-      } catch (auditErr) {
-        this.logger.warn(`Gagal mencatat audit log maintenance update: ${auditErr}`);
-      }
-    } catch (err) {
-      if (err instanceof HttpException) {
-        throw err;
-      }
-      if (!isInMemoryFallbackAllowed()) {
-        throw new InternalServerErrorException('Gagal memperbarui catatan pemeliharaan.');
-      }
+      await client.from('audit_logs').insert({
+        actor_profile_id: user.id,
+        application_id: applicationId,
+        action: 'LIFECYCLE_MAINTENANCE_RECORD_UPDATED',
+        entity_type: 'maintenance_records',
+        entity_id: recordId,
+        new_data: dto,
+        created_at: now,
+      });
+    } catch {
+      // In-memory fallback
     }
 
-    if (isInMemoryFallbackAllowed()) {
-      const list = this.inMemoryMaintenance.get(applicationId) || [];
-      const idx = list.findIndex((m) => m.id === recordId);
-      if (idx >= 0) list[idx] = updated;
-      this.inMemoryMaintenance.set(applicationId, list);
-    }
+    const list = this.inMemoryMaintenance.get(applicationId) || [];
+    const idx = list.findIndex((m) => m.id === recordId);
+    if (idx >= 0) list[idx] = updated;
+    this.inMemoryMaintenance.set(applicationId, list);
     return updated;
   }
 
@@ -1687,60 +1472,19 @@ export class LifecycleService {
     user: AuthenticatedUser,
   ): Promise<void> {
     await this.assertLifecycleAccess(applicationId, user);
-    const existing = await this.getMaintenanceRecord(applicationId, recordId, user).catch(() => null);
 
     try {
       const client = this.supabaseService.getClient();
-      const deleteRes = await client
-        .from('maintenance_records')
-        .delete()
-        .eq('id', recordId)
-        .eq('application_id', applicationId);
-      assertSupabaseOk(deleteRes, 'Gagal menghapus catatan pemeliharaan');
-
-      if (existing?.attachment_path) {
-        try {
-          await client.storage.from('simantik-documents').remove([existing.attachment_path]);
-        } catch (storageErr) {
-          this.logger.warn(`Gagal menghapus berkas lampiran pemeliharaan dari storage: ${storageErr}`);
-        }
-      }
-
-      try {
-        await client.from('audit_logs').insert({
-          actor_profile_id: user.id,
-          application_id: applicationId,
-          action: 'LIFECYCLE_MAINTENANCE_DELETED',
-          entity_type: 'maintenance_records',
-          entity_id: recordId,
-          old_data: existing
-            ? {
-                title: existing.title,
-                maintenance_type: existing.maintenance_type,
-                attachment_path: existing.attachment_path,
-              }
-            : null,
-          created_at: new Date().toISOString(),
-        });
-      } catch (auditErr) {
-        this.logger.warn(`Gagal mencatat audit log delete maintenance: ${auditErr}`);
-      }
-    } catch (err) {
-      if (err instanceof HttpException) {
-        throw err;
-      }
-      if (!isInMemoryFallbackAllowed()) {
-        throw new InternalServerErrorException('Gagal menghapus catatan pemeliharaan.');
-      }
+      await client.from('maintenance_records').delete().eq('id', recordId).eq('application_id', applicationId);
+    } catch {
+      // fallback
     }
 
-    if (isInMemoryFallbackAllowed()) {
-      const list = this.inMemoryMaintenance.get(applicationId) || [];
-      this.inMemoryMaintenance.set(
-        applicationId,
-        list.filter((m) => m.id !== recordId),
-      );
-    }
+    const list = this.inMemoryMaintenance.get(applicationId) || [];
+    this.inMemoryMaintenance.set(
+      applicationId,
+      list.filter((m) => m.id !== recordId),
+    );
   }
 
   async getMaintenanceAttachmentUrl(
@@ -1872,7 +1616,7 @@ export class LifecycleService {
 
     try {
       const client = this.supabaseService.getClient();
-      const insertRes = await client
+      const { data } = await client
         .from('evaluations')
         .insert({
           id: record.id,
@@ -1892,18 +1636,6 @@ export class LifecycleService {
         .select()
         .single();
 
-      if (insertRes?.error) {
-        if (attachPath) {
-          try {
-            await client.storage.from('simantik-documents').remove([attachPath]);
-          } catch (storageErr) {
-            this.logger.warn(`Gagal menghapus berkas lampiran evaluasi setelah DB insert gagal: ${storageErr}`);
-          }
-        }
-        assertSupabaseOk(insertRes, 'Gagal menyimpan evaluasi');
-      }
-
-      const data = insertRes.data;
       if (data) {
         record = {
           ...record,
@@ -1915,36 +1647,22 @@ export class LifecycleService {
         };
       }
 
-      try {
-        const auditRes = await client.from('audit_logs').insert({
-          actor_profile_id: user.id,
-          application_id: applicationId,
-          action: 'LIFECYCLE_EVALUATION_CREATED',
-          entity_type: 'evaluations',
-          entity_id: record.id,
-          new_data: { evaluation_date: dto.evaluation_date, achievement: dto.achievement },
-          created_at: now,
-        });
-        if (auditRes?.error) {
-          this.logger.warn(`Gagal mencatat audit log evaluasi: ${auditRes.error.message}`);
-        }
-      } catch (auditErr) {
-        this.logger.warn(`Gagal mencatat audit log evaluasi: ${auditErr}`);
-      }
-    } catch (err) {
-      if (err instanceof HttpException) {
-        throw err;
-      }
-      if (!isInMemoryFallbackAllowed()) {
-        throw new InternalServerErrorException('Gagal menyimpan evaluasi.');
-      }
+      await client.from('audit_logs').insert({
+        actor_profile_id: user.id,
+        application_id: applicationId,
+        action: 'LIFECYCLE_EVALUATION_CREATED',
+        entity_type: 'evaluations',
+        entity_id: record.id,
+        new_data: { evaluation_date: dto.evaluation_date, achievement: dto.achievement },
+        created_at: now,
+      });
+    } catch {
+      // In-memory fallback
     }
 
-    if (isInMemoryFallbackAllowed()) {
-      const list = this.inMemoryEvaluations.get(applicationId) || [];
-      list.unshift(record);
-      this.inMemoryEvaluations.set(applicationId, list);
-    }
+    const list = this.inMemoryEvaluations.get(applicationId) || [];
+    list.unshift(record);
+    this.inMemoryEvaluations.set(applicationId, list);
     return record;
   }
 
@@ -2000,7 +1718,7 @@ export class LifecycleService {
 
     try {
       const client = this.supabaseService.getClient();
-      const updateRes = await client
+      const { data } = await client
         .from('evaluations')
         .update({
           evaluation_date: updated.evaluation_date,
@@ -2017,18 +1735,6 @@ export class LifecycleService {
         .select()
         .single();
 
-      if (updateRes?.error) {
-        if (attachPath && attachPath !== existing.attachment_path) {
-          try {
-            await client.storage.from('simantik-documents').remove([attachPath]);
-          } catch (storageErr) {
-            this.logger.warn(`Gagal menghapus berkas lampiran evaluasi setelah DB update gagal: ${storageErr}`);
-          }
-        }
-        assertSupabaseOk(updateRes, 'Gagal memperbarui evaluasi');
-      }
-
-      const data = updateRes.data;
       if (data) {
         updated = {
           ...updated,
@@ -2040,37 +1746,23 @@ export class LifecycleService {
         };
       }
 
-      try {
-        const auditRes = await client.from('audit_logs').insert({
-          actor_profile_id: user.id,
-          application_id: applicationId,
-          action: 'LIFECYCLE_EVALUATION_UPDATED',
-          entity_type: 'evaluations',
-          entity_id: evalId,
-          new_data: dto,
-          created_at: now,
-        });
-        if (auditRes?.error) {
-          this.logger.warn(`Gagal mencatat audit log evaluasi update: ${auditRes.error.message}`);
-        }
-      } catch (auditErr) {
-        this.logger.warn(`Gagal mencatat audit log evaluasi update: ${auditErr}`);
-      }
-    } catch (err) {
-      if (err instanceof HttpException) {
-        throw err;
-      }
-      if (!isInMemoryFallbackAllowed()) {
-        throw new InternalServerErrorException('Gagal memperbarui evaluasi.');
-      }
+      await client.from('audit_logs').insert({
+        actor_profile_id: user.id,
+        application_id: applicationId,
+        action: 'LIFECYCLE_EVALUATION_UPDATED',
+        entity_type: 'evaluations',
+        entity_id: evalId,
+        new_data: dto,
+        created_at: now,
+      });
+    } catch {
+      // In-memory fallback
     }
 
-    if (isInMemoryFallbackAllowed()) {
-      const list = this.inMemoryEvaluations.get(applicationId) || [];
-      const idx = list.findIndex((e) => e.id === evalId);
-      if (idx >= 0) list[idx] = updated;
-      this.inMemoryEvaluations.set(applicationId, list);
-    }
+    const list = this.inMemoryEvaluations.get(applicationId) || [];
+    const idx = list.findIndex((e) => e.id === evalId);
+    if (idx >= 0) list[idx] = updated;
+    this.inMemoryEvaluations.set(applicationId, list);
     return updated;
   }
 
@@ -2080,58 +1772,19 @@ export class LifecycleService {
     user: AuthenticatedUser,
   ): Promise<void> {
     await this.assertLifecycleAccess(applicationId, user);
-    const existing = await this.getEvaluation(applicationId, evalId, user).catch(() => null);
 
     try {
       const client = this.supabaseService.getClient();
-      const deleteRes = await client.from('evaluations').delete().eq('id', evalId).eq('application_id', applicationId);
-      assertSupabaseOk(deleteRes, 'Gagal menghapus evaluasi');
-
-      if (existing?.attachment_path) {
-        try {
-          await client.storage.from('simantik-documents').remove([existing.attachment_path]);
-        } catch (storageErr) {
-          this.logger.warn(`Gagal menghapus berkas lampiran evaluasi dari storage: ${storageErr}`);
-        }
-      }
-
-      try {
-        await client.from('audit_logs').insert({
-          actor_profile_id: user.id,
-          application_id: applicationId,
-          action: 'LIFECYCLE_EVALUATION_DELETED',
-          entity_type: 'evaluations',
-          entity_id: evalId,
-          old_data: existing
-            ? {
-                evaluation_date: existing.evaluation_date,
-                success_indicator: existing.success_indicator,
-                findings: existing.findings,
-                recommendations: existing.recommendations,
-                attachment_path: existing.attachment_path,
-              }
-            : null,
-          created_at: new Date().toISOString(),
-        });
-      } catch (auditErr) {
-        this.logger.warn(`Gagal mencatat audit log delete evaluation: ${auditErr}`);
-      }
-    } catch (err) {
-      if (err instanceof HttpException) {
-        throw err;
-      }
-      if (!isInMemoryFallbackAllowed()) {
-        throw new InternalServerErrorException('Gagal menghapus evaluasi.');
-      }
+      await client.from('evaluations').delete().eq('id', evalId).eq('application_id', applicationId);
+    } catch {
+      // fallback
     }
 
-    if (isInMemoryFallbackAllowed()) {
-      const list = this.inMemoryEvaluations.get(applicationId) || [];
-      this.inMemoryEvaluations.set(
-        applicationId,
-        list.filter((e) => e.id !== evalId),
-      );
-    }
+    const list = this.inMemoryEvaluations.get(applicationId) || [];
+    this.inMemoryEvaluations.set(
+      applicationId,
+      list.filter((e) => e.id !== evalId),
+    );
   }
 
   async getEvaluationAttachmentUrl(
@@ -2228,25 +1881,21 @@ export class LifecycleService {
       uploaded_at: now,
     };
 
-    let uploadedStoragePath: string | null = null;
     try {
       const client = this.supabaseService.getClient();
 
       // If base64 payload provided, upload to private bucket simantik-documents
       if (dto.base64_data) {
         const buffer = Buffer.from(dto.base64_data, 'base64');
-        const uploadRes = await client.storage
+        await client.storage
           .from('simantik-documents')
           .upload(storagePath, buffer, {
             contentType: dto.mime_type || 'application/pdf',
             upsert: true,
           });
-        if (!uploadRes?.error) {
-          uploadedStoragePath = storagePath;
-        }
       }
 
-      const insertRes = await client
+      const { data } = await client
         .from('technical_documents')
         .insert({
           id: docId,
@@ -2266,65 +1915,30 @@ export class LifecycleService {
         .select()
         .single();
 
-      if (insertRes?.error) {
-        if (uploadedStoragePath) {
-          try {
-            await client.storage.from('simantik-documents').remove([uploadedStoragePath]);
-            uploadedStoragePath = null;
-          } catch (storageErr) {
-            this.logger.warn(`Gagal menghapus berkas dokumen teknis setelah DB insert gagal: ${storageErr}`);
-          }
-        }
-        assertSupabaseOk(insertRes, 'Gagal menyimpan dokumen teknis');
-      }
-
-      const data = insertRes.data;
       if (data) {
         record = { ...record, ...data, uploaded_by_name: user.fullName };
       }
 
-      try {
-        const auditRes = await client.from('audit_logs').insert({
-          actor_profile_id: user.id,
-          application_id: applicationId,
-          action: 'TECHNICAL_DOCUMENT_UPLOADED',
-          entity_type: 'technical_documents',
-          entity_id: docId,
-          new_data: {
-            title: dto.title,
-            document_type: dto.document_type,
-            original_filename: dto.original_filename,
-          },
-          created_at: now,
-        });
-        if (auditRes?.error) {
-          this.logger.warn(`Gagal mencatat audit log dokumen teknis: ${auditRes.error.message}`);
-        }
-      } catch (auditErr) {
-        this.logger.warn(`Gagal mencatat audit log dokumen teknis: ${auditErr}`);
-      }
-    } catch (err) {
-      if (uploadedStoragePath) {
-        try {
-          const client = this.supabaseService.getClient();
-          await client.storage.from('simantik-documents').remove([uploadedStoragePath]);
-        } catch {
-          // ignore
-        }
-      }
-      if (err instanceof HttpException) {
-        throw err;
-      }
-      if (!isInMemoryFallbackAllowed()) {
-        throw new InternalServerErrorException('Gagal mengunggah dokumen teknis.');
-      }
+      await client.from('audit_logs').insert({
+        actor_profile_id: user.id,
+        application_id: applicationId,
+        action: 'TECHNICAL_DOCUMENT_UPLOADED',
+        entity_type: 'technical_documents',
+        entity_id: docId,
+        new_data: {
+          title: dto.title,
+          document_type: dto.document_type,
+          original_filename: dto.original_filename,
+        },
+        created_at: now,
+      });
+    } catch {
+      // In-memory fallback
     }
 
-    if (isInMemoryFallbackAllowed()) {
-      const list = this.inMemoryTechnicalDocs.get(applicationId) || [];
-      list.unshift(record);
-      this.inMemoryTechnicalDocs.set(applicationId, list);
-    }
+    const list = this.inMemoryTechnicalDocs.get(applicationId) || [];
+    list.unshift(record);
+    this.inMemoryTechnicalDocs.set(applicationId, list);
     return record;
   }
 
@@ -2380,57 +1994,18 @@ export class LifecycleService {
     user: AuthenticatedUser,
   ): Promise<void> {
     await this.assertLifecycleAccess(applicationId, user);
-    const docs = await this.getTechnicalDocuments(applicationId, user).catch(() => []);
-    const existing = docs.find((d) => d.id === docId) || null;
 
     try {
       const client = this.supabaseService.getClient();
-      const deleteRes = await client.from('technical_documents').delete().eq('id', docId).eq('application_id', applicationId);
-      assertSupabaseOk(deleteRes, 'Gagal menghapus dokumen teknis');
-
-      if (existing?.storage_path) {
-        try {
-          await client.storage.from('simantik-documents').remove([existing.storage_path]);
-        } catch (storageErr) {
-          this.logger.warn(`Gagal menghapus berkas dokumen teknis dari storage: ${storageErr}`);
-        }
-      }
-
-      try {
-        await client.from('audit_logs').insert({
-          actor_profile_id: user.id,
-          application_id: applicationId,
-          action: 'LIFECYCLE_TECHNICAL_DOCUMENT_DELETED',
-          entity_type: 'technical_documents',
-          entity_id: docId,
-          old_data: existing
-            ? {
-                title: existing.title,
-                document_type: existing.document_type,
-                original_filename: existing.original_filename,
-                storage_path: existing.storage_path,
-              }
-            : null,
-          created_at: new Date().toISOString(),
-        });
-      } catch (auditErr) {
-        this.logger.warn(`Gagal mencatat audit log delete technical document: ${auditErr}`);
-      }
-    } catch (err) {
-      if (err instanceof HttpException) {
-        throw err;
-      }
-      if (!isInMemoryFallbackAllowed()) {
-        throw new InternalServerErrorException('Gagal menghapus dokumen teknis.');
-      }
+      await client.from('technical_documents').delete().eq('id', docId).eq('application_id', applicationId);
+    } catch {
+      // fallback
     }
 
-    if (isInMemoryFallbackAllowed()) {
-      const list = this.inMemoryTechnicalDocs.get(applicationId) || [];
-      this.inMemoryTechnicalDocs.set(
-        applicationId,
-        list.filter((d) => d.id !== docId),
-      );
-    }
+    const list = this.inMemoryTechnicalDocs.get(applicationId) || [];
+    this.inMemoryTechnicalDocs.set(
+      applicationId,
+      list.filter((d) => d.id !== docId),
+    );
   }
 }

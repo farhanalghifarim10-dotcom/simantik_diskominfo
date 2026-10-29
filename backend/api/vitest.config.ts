@@ -9,10 +9,5 @@ export default defineConfig({
     globals: true,
     root: './',
     include: ['**/*.spec.ts'],
-    testTimeout: 30000,
-    env: {
-      JWT_SECRET: 'test-vitest-environment-secret-key-min-32-chars!',
-      ALLOW_IN_MEMORY_FALLBACK: 'true',
-    },
   },
 });

@@ -1,15 +1,12 @@
 import {
   BadRequestException,
   ForbiddenException,
-  HttpException,
-  HttpStatus,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { SupabaseService } from '../supabase/supabase.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
-import { isInMemoryFallbackAllowed } from '../common/utils/supabase.utils.js';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import type {
   ConsultationItem,
@@ -20,56 +17,10 @@ import type {
 export class HelpdeskService {
   private readonly inMemoryConsultations: Map<string, ConsultationItem> = new Map();
 
-  // Cache pembatasan laju pengajuan per penerima/email (maksimal 3 per jam)
-  private readonly consultationRateLimitMap: Map<string, number[]> = new Map();
-  private readonly RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 jam
-  private readonly RATE_LIMIT_MAX_PER_HOUR = 3;
-
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly notificationsService: NotificationsService,
   ) {}
-
-  /**
-   * Membersihkan entri yang sudah kedaluwarsa (> 1 jam) dari cache pembatasan laju
-   */
-  private cleanupExpiredRateLimits(now: number): void {
-    for (const [email, timestamps] of this.consultationRateLimitMap.entries()) {
-      const active = timestamps.filter((t) => now - t < this.RATE_LIMIT_WINDOW_MS);
-      if (active.length === 0) {
-        this.consultationRateLimitMap.delete(email);
-      } else if (active.length !== timestamps.length) {
-        this.consultationRateLimitMap.set(email, active);
-      }
-    }
-  }
-
-  /**
-   * Memeriksa dan mencatat laju pengajuan per alamat email pemohon
-   */
-  private checkAndRecordRateLimit(email: string): void {
-    const now = Date.now();
-    this.cleanupExpiredRateLimits(now);
-
-    const key = email.toLowerCase().trim();
-    const timestamps = (this.consultationRateLimitMap.get(key) || []).filter(
-      (t) => now - t < this.RATE_LIMIT_WINDOW_MS,
-    );
-
-    if (timestamps.length >= this.RATE_LIMIT_MAX_PER_HOUR) {
-      throw new HttpException(
-        {
-          statusCode: HttpStatus.TOO_MANY_REQUESTS,
-          code: 'TOO_MANY_REQUESTS',
-          message: `Batas pengajuan konsultasi tercapai. Maksimal ${this.RATE_LIMIT_MAX_PER_HOUR} pengajuan per jam untuk alamat email ini.`,
-        },
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
-    }
-
-    timestamps.push(now);
-    this.consultationRateLimitMap.set(key, timestamps);
-  }
 
   /**
    * Membersihkan tag HTML untuk pencegahan injeksi / XSS
@@ -88,13 +39,6 @@ export class HelpdeskService {
    */
   clearInMemoryConsultations(): void {
     this.inMemoryConsultations.clear();
-  }
-
-  /**
-   * Helper pengujian: Mengosongkan cache pembatasan laju
-   */
-  clearRateLimitCache(): void {
-    this.consultationRateLimitMap.clear();
   }
 
   /**
@@ -230,10 +174,6 @@ export class HelpdeskService {
    */
   async submitConsultation(dto: CreateConsultationDto): Promise<ConsultationItem> {
     const validated = this.validateDto(dto);
-
-    // Periksa batas laju per email penerima (maksimal 3 per jam)
-    this.checkAndRecordRateLimit(validated.email);
-
     const now = new Date().toISOString();
 
     const notifTitle = `[Konsultasi OPD] ${validated.opdName} - ${validated.subject}`;
@@ -269,10 +209,8 @@ export class HelpdeskService {
       notification_id: notifRecord?.id,
     };
 
-    // 2. Simpan ke in-memory map jika fallback diizinkan
-    if (isInMemoryFallbackAllowed()) {
-      this.inMemoryConsultations.set(consultationId, consultationItem);
-    }
+    // 2. Simpan ke in-memory map
+    this.inMemoryConsultations.set(consultationId, consultationItem);
 
     // 3. Kirimkan email notifikasi konfirmasi ke pemohon via EmailService (opsional / background)
     try {
@@ -324,12 +262,10 @@ export class HelpdeskService {
       // Fallback
     }
 
-    // 2. Gabungkan dengan data in-memory fallback hanya jika fallback diizinkan
-    if (isInMemoryFallbackAllowed()) {
-      for (const [id, item] of this.inMemoryConsultations.entries()) {
-        if (!itemsMap.has(id)) {
-          itemsMap.set(id, item);
-        }
+    // 2. Gabungkan dengan data in-memory fallback
+    for (const [id, item] of this.inMemoryConsultations.entries()) {
+      if (!itemsMap.has(id)) {
+        itemsMap.set(id, item);
       }
     }
 
@@ -359,15 +295,13 @@ export class HelpdeskService {
       // Abaikan jika notifikasi tidak ada
     }
 
-    // 2. Update status in-memory jika ada dan diizinkan
-    if (isInMemoryFallbackAllowed()) {
-      const existing = this.inMemoryConsultations.get(id);
-      if (existing) {
-        existing.status = 'READ';
-        existing.read_at = now;
-        this.inMemoryConsultations.set(id, existing);
-        return existing;
-      }
+    // 2. Update status in-memory jika ada
+    const existing = this.inMemoryConsultations.get(id);
+    if (existing) {
+      existing.status = 'READ';
+      existing.read_at = now;
+      this.inMemoryConsultations.set(id, existing);
+      return existing;
     }
 
     // 3. Jika tidak ada di in-memory, cari di Supabase

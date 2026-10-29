@@ -1,7 +1,5 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import configuration from './config/configuration.js';
 import { HealthModule } from './health/health.module.js';
 import { SupabaseModule } from './supabase/supabase.module.js';
@@ -26,23 +24,6 @@ import { AdminController } from './admin/admin.controller.js';
       cache: true,
       load: [configuration],
     }),
-    ThrottlerModule.forRoot([
-      {
-        name: 'default',
-        ttl: 60000, // 60 detik (1 menit)
-        limit: 100, // 100 request per menit
-      },
-      {
-        name: 'strict',
-        ttl: 600000, // 600 detik (10 menit)
-        limit: 5, // 5 per 10 menit
-      },
-      {
-        name: 'helpdesk',
-        ttl: 600000, // 600 detik (10 menit)
-        limit: 3, // 3 per 10 menit
-      },
-    ]),
     HealthModule,
     SupabaseModule,
     AuthModule,
@@ -59,11 +40,5 @@ import { AdminController } from './admin/admin.controller.js';
     HelpdeskModule,
   ],
   controllers: [AdminController],
-  providers: [
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard,
-    },
-  ],
 })
-export class AppModule {}
+export class AppModule { }

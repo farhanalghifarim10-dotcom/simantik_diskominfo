@@ -24,13 +24,11 @@ import type {
   ListApplicationsQueryDto,
   ReissueTrackingCodeDto,
 } from './admin-applications.types.js';
-import { SkipThrottle } from '@nestjs/throttler';
 
 type AuthenticatedRequest = Request & {
   user: AuthenticatedUser;
 };
 
-@SkipThrottle()
 @Controller('admin/applications')
 @UseGuards(AuthGuard, RolesGuard)
 export class AdminApplicationsController {

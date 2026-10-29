@@ -7,7 +7,6 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { SkipThrottle } from '@nestjs/throttler';
 import { MessagesService } from './messages.service.js';
 import { TrackingAuthGuard, type TrackingRequest } from '../tracking/tracking.guard.js';
 import { AuthGuard } from '../auth/auth.guard.js';
@@ -68,7 +67,6 @@ export class MessagesController {
   // ------------------------------------------------------------
 
   @Get('applications/:id/messages')
-  @SkipThrottle()
   @UseGuards(AuthGuard)
   async getInternalMessages(@Param('id') id: string, @Req() req: any) {
     const user = req.user;
@@ -81,7 +79,6 @@ export class MessagesController {
   }
 
   @Post('applications/:id/messages')
-  @SkipThrottle()
   @UseGuards(AuthGuard)
   async sendInternalMessage(
     @Param('id') id: string,
@@ -103,14 +100,12 @@ export class MessagesController {
 
   // Aliases for /admin/applications/:id/messages and /technician/applications/:id/messages
   @Get('admin/applications/:id/messages')
-  @SkipThrottle()
   @UseGuards(AuthGuard)
   async getAdminMessages(@Param('id') id: string, @Req() req: any) {
     return this.getInternalMessages(id, req);
   }
 
   @Post('admin/applications/:id/messages')
-  @SkipThrottle()
   @UseGuards(AuthGuard)
   async sendAdminMessage(
     @Param('id') id: string,
@@ -121,14 +116,12 @@ export class MessagesController {
   }
 
   @Get('technician/applications/:id/messages')
-  @SkipThrottle()
   @UseGuards(AuthGuard)
   async getTechMessages(@Param('id') id: string, @Req() req: any) {
     return this.getInternalMessages(id, req);
   }
 
   @Post('technician/applications/:id/messages')
-  @SkipThrottle()
   @UseGuards(AuthGuard)
   async sendTechMessage(
     @Param('id') id: string,

@@ -1,14 +1,10 @@
 import {
   BadRequestException,
   ForbiddenException,
-  HttpException,
   Injectable,
-  InternalServerErrorException,
-  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
-import { assertSupabaseOk, isInMemoryFallbackAllowed } from '../common/utils/supabase.utils.js';
 import { SupabaseService } from '../supabase/supabase.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { AssignmentsService } from '../assignments/assignments.service.js';
@@ -22,7 +18,6 @@ import type {
 
 @Injectable()
 export class MessagesService {
-  private readonly logger = new Logger(MessagesService.name);
   // In-memory fallback message store for offline and unit testing
   private readonly inMemoryMessages: Map<string, MessageItem[]> = new Map();
 
@@ -35,9 +30,6 @@ export class MessagesService {
   }
 
   private seedInitialMessages() {
-    if (!isInMemoryFallbackAllowed()) {
-      return;
-    }
     const seedAppId = 'a1000000-0000-0000-0000-000000000001';
     const now = new Date().toISOString();
 
@@ -204,7 +196,7 @@ export class MessagesService {
     // Simpan ke Supabase
     try {
       const client = this.supabaseService.getClient();
-      const insertRes = await client.from('messages').insert({
+      await client.from('messages').insert({
         id: record.id,
         application_id: record.application_id,
         sender_type: record.sender_type,
@@ -213,24 +205,16 @@ export class MessagesService {
         message: record.message,
         created_at: record.created_at,
       });
-      assertSupabaseOk(insertRes, 'Gagal mengirim pesan publik');
-    } catch (err) {
-      if (err instanceof HttpException) {
-        throw err;
-      }
-      if (!isInMemoryFallbackAllowed()) {
-        throw new InternalServerErrorException('Gagal mengirim pesan.');
-      }
+    } catch {
+      // Fallback
     }
 
     // Simpan di in-memory
-    if (isInMemoryFallbackAllowed()) {
-      const existing = this.inMemoryMessages.get(appId) || [];
-      existing.push(record);
-      this.inMemoryMessages.set(appId, existing);
-    }
+    const existing = this.inMemoryMessages.get(appId) || [];
+    existing.push(record);
+    this.inMemoryMessages.set(appId, existing);
 
-    // Kirim notifikasi in-app kepada admin/teknisi (efek sekunder)
+    // Kirim notifikasi in-app kepada admin/teknisi
     try {
       await this.notificationsService.notify({
         application_id: appId,
@@ -240,8 +224,8 @@ export class MessagesService {
         title: `Pesan Baru dari Pemohon [${normalizedTicket}]`,
         body: messageText.length > 100 ? `${messageText.slice(0, 100)}...` : messageText,
       });
-    } catch (notifErr) {
-      this.logger.warn(`Gagal mengirim notifikasi in-app pemohon: ${notifErr}`);
+    } catch {
+      // Abaikan jika notifikasi gagal
     }
 
     return this.sanitizePublicMessage(record);
@@ -297,24 +281,7 @@ export class MessagesService {
       });
     }
 
-    if (messageText.length > 2000) {
-      throw new BadRequestException({
-        statusCode: 400,
-        message: 'Pesan melebihi batas maksimum 2000 karakter.',
-      });
-    }
-
-    let visibility: 'PUBLIC' | 'INTERNAL' = 'INTERNAL';
-    if (dto.visibility !== undefined && dto.visibility !== null) {
-      if (dto.visibility !== 'PUBLIC' && dto.visibility !== 'INTERNAL') {
-        throw new BadRequestException({
-          statusCode: 400,
-          message: 'Visibilitas pesan tidak valid. Pilih PUBLIC atau INTERNAL.',
-        });
-      }
-      visibility = dto.visibility;
-    }
-
+    const visibility = dto.visibility === 'PUBLIC' ? 'PUBLIC' : 'INTERNAL';
     const senderType = user.role === 'SUPER_ADMIN' ? 'ADMIN' : 'TECHNICIAN';
     const now = new Date().toISOString();
     const id = crypto.randomUUID();
@@ -335,7 +302,7 @@ export class MessagesService {
     // Simpan ke Supabase
     try {
       const client = this.supabaseService.getClient();
-      const insertRes = await client.from('messages').insert({
+      await client.from('messages').insert({
         id: record.id,
         application_id: record.application_id,
         sender_type: record.sender_type,
@@ -346,24 +313,16 @@ export class MessagesService {
         message: record.message,
         created_at: record.created_at,
       });
-      assertSupabaseOk(insertRes, 'Gagal mengirim pesan staf');
-    } catch (err) {
-      if (err instanceof HttpException) {
-        throw err;
-      }
-      if (!isInMemoryFallbackAllowed()) {
-        throw new InternalServerErrorException('Gagal mengirim pesan.');
-      }
+    } catch {
+      // Fallback
     }
 
     // Simpan di in-memory
-    if (isInMemoryFallbackAllowed()) {
-      const existing = this.inMemoryMessages.get(applicationId) || [];
-      existing.push(record);
-      this.inMemoryMessages.set(applicationId, existing);
-    }
+    const existing = this.inMemoryMessages.get(applicationId) || [];
+    existing.push(record);
+    this.inMemoryMessages.set(applicationId, existing);
 
-    // Jika pesan bertipe PUBLIC: beri notifikasi ke pemohon via EMAIL (efek sekunder)
+    // Jika pesan bertipe PUBLIC: beri notifikasi ke pemohon via EMAIL
     if (visibility === 'PUBLIC') {
       try {
         let recipientEmail: string | undefined;
@@ -393,8 +352,8 @@ export class MessagesService {
             body: `Tim Diskominfo telah membalas pesan pada tiket permohonan Anda: "${messageText.slice(0, 150)}"`,
           });
         }
-      } catch (notifErr) {
-        this.logger.warn(`Gagal mengirim notifikasi email pemohon: ${notifErr}`);
+      } catch {
+        // Abaikan kegagalan notifikasi
       }
     }
 

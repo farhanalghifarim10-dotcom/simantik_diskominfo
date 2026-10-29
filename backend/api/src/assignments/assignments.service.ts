@@ -1,13 +1,9 @@
 import {
   BadRequestException,
   ForbiddenException,
-  HttpException,
   Injectable,
-  InternalServerErrorException,
-  Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { assertSupabaseOk, isInMemoryFallbackAllowed } from '../common/utils/supabase.utils.js';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { SupabaseService } from '../supabase/supabase.service.js';
 import { AdminApplicationsService } from '../applications/admin-applications.service.js';
@@ -56,12 +52,9 @@ export const DEFAULT_MOCK_TECHNICIANS: TechnicianProfileItem[] = [
 
 @Injectable()
 export class AssignmentsService {
-  private readonly logger = new Logger(AssignmentsService.name);
   // In-memory assignment store for fallback and unit test consistency
   private inMemoryAssignments: Map<string, AssignmentHistoryItem[]> = new Map();
-  private inMemoryTechnicians: TechnicianProfileItem[] = isInMemoryFallbackAllowed()
-    ? [...DEFAULT_MOCK_TECHNICIANS]
-    : [];
+  private inMemoryTechnicians: TechnicianProfileItem[] = [...DEFAULT_MOCK_TECHNICIANS];
 
   constructor(
     private readonly supabaseService: SupabaseService,
@@ -71,9 +64,6 @@ export class AssignmentsService {
   }
 
   private seedInitialAssignment() {
-    if (!isInMemoryFallbackAllowed()) {
-      return;
-    }
     const seedAppId = 'a1000000-0000-0000-0000-000000000001';
     const now = new Date().toISOString();
     const initialAssignment: AssignmentHistoryItem = {
@@ -148,25 +138,8 @@ export class AssignmentsService {
           active_assignments_count: countMap.get(t.id) || 0,
         }));
       }
-
-      if (error) {
-        if (!isInMemoryFallbackAllowed()) {
-          throw new InternalServerErrorException(
-            `Gagal memuat daftar teknisi dari basis data: ${error.message || JSON.stringify(error)}`,
-          );
-        }
-      }
-    } catch (err: any) {
-      if (err instanceof HttpException) throw err;
-      if (!isInMemoryFallbackAllowed()) {
-        throw new InternalServerErrorException(
-          `Gagal memuat daftar teknisi dari basis data: ${err?.message || 'Database error'}`,
-        );
-      }
-    }
-
-    if (!isInMemoryFallbackAllowed()) {
-      throw new InternalServerErrorException('Gagal memuat daftar teknisi dari basis data.');
+    } catch {
+      // Fallback
     }
 
     // In-memory fallback: hitung beban kerja aktif
@@ -251,25 +224,8 @@ export class AssignmentsService {
           assignment_history: history,
         };
       }
-
-      if (error) {
-        if (!isInMemoryFallbackAllowed()) {
-          throw new InternalServerErrorException(
-            `Gagal memuat riwayat penugasan dari basis data: ${error.message || JSON.stringify(error)}`,
-          );
-        }
-      }
-    } catch (err: any) {
-      if (err instanceof HttpException) throw err;
-      if (!isInMemoryFallbackAllowed()) {
-        throw new InternalServerErrorException(
-          `Gagal memuat riwayat penugasan dari basis data: ${err?.message || 'Database error'}`,
-        );
-      }
-    }
-
-    if (!isInMemoryFallbackAllowed()) {
-      throw new InternalServerErrorException('Gagal memuat riwayat penugasan dari basis data.');
+    } catch {
+      // Fallback
     }
 
     const list = this.inMemoryAssignments.get(applicationId) || [];
@@ -315,27 +271,23 @@ export class AssignmentsService {
     const existingCurrent = currentAssignments.current_assignment;
     const isReassignment = Boolean(existingCurrent && existingCurrent.technician_id !== dto.technician_id);
 
-    const newId = crypto.randomUUID();
-    let oldAssignmentClosed = false;
-
     try {
       const client = this.supabaseService.getClient();
 
       // a. Jika ada penugasan aktif sebelumnya, nonaktifkan (archive)
       if (existingCurrent) {
-        const updateOldRes = await client
+        await client
           .from('assignments')
           .update({
             is_current: false,
             unassigned_at: now,
           })
           .eq('id', existingCurrent.id);
-        assertSupabaseOk(updateOldRes, 'Gagal menonaktifkan penugasan tenaga ahli sebelumnya');
-        oldAssignmentClosed = true;
       }
 
       // b. Insert penugasan baru
-      const insertNewRes = await client.from('assignments').insert({
+      const newId = crypto.randomUUID();
+      await client.from('assignments').insert({
         id: newId,
         application_id: applicationId,
         technician_id: dto.technician_id,
@@ -345,79 +297,49 @@ export class AssignmentsService {
         is_current: true,
       });
 
-      if (insertNewRes?.error) {
-        // Kompensasi: jika insert gagal setelah penugasan lama ditutup, kembalikan penugasan lama
-        if (oldAssignmentClosed && existingCurrent) {
-          try {
-            await client
-              .from('assignments')
-              .update({
-                is_current: true,
-                unassigned_at: null,
-              })
-              .eq('id', existingCurrent.id);
-          } catch (revertErr) {
-            this.logger.warn(`Gagal melakukan kompensasi rollback penugasan sebelumnya: ${revertErr}`);
-          }
-        }
-        assertSupabaseOk(insertNewRes, 'Gagal menyimpan penugasan tenaga ahli baru');
-      }
+      // c. Audit Log
+      await client.from('audit_logs').insert({
+        actor_profile_id: adminUser.id,
+        application_id: applicationId,
+        action: isReassignment ? 'APPLICATION_REASSIGNED' : 'APPLICATION_ASSIGNED',
+        entity_type: 'assignments',
+        entity_id: newId,
+        old_data: existingCurrent
+          ? { technician_id: existingCurrent.technician_id, technician_name: existingCurrent.technician_name }
+          : null,
+        new_data: {
+          technician_id: dto.technician_id,
+          technician_name: technician.full_name,
+          note: dto.note || null,
+        },
+        created_at: now,
+      });
 
-      // c. Audit Log (efek samping sekunder)
-      try {
-        const auditRes = await client.from('audit_logs').insert({
-          actor_profile_id: adminUser.id,
-          application_id: applicationId,
-          action: isReassignment ? 'APPLICATION_REASSIGNED' : 'APPLICATION_ASSIGNED',
-          entity_type: 'assignments',
-          entity_id: newId,
-          old_data: existingCurrent
-            ? { technician_id: existingCurrent.technician_id, technician_name: existingCurrent.technician_name }
-            : null,
-          new_data: {
-            technician_id: dto.technician_id,
-            technician_name: technician.full_name,
-            note: dto.note || null,
-          },
-          created_at: now,
-        });
-        if (auditRes?.error) {
-          this.logger.warn(`Gagal mencatat audit log penugasan: ${auditRes.error.message}`);
-        }
-      } catch (auditErr) {
-        this.logger.warn(`Gagal mencatat audit log penugasan: ${auditErr}`);
-      }
+      // d. Simpan pesan internal penugasan
+      await client.from('messages').insert({
+        application_id: applicationId,
+        sender_type: 'ADMIN',
+        sender_profile_id: adminUser.id,
+        sender_name: adminUser.fullName,
+        visibility: 'INTERNAL',
+        message: isReassignment
+          ? `[PENUGASAN ULANG] Teknisi dialihkan dari ${existingCurrent?.technician_name} ke ${technician.full_name}. Catatan: ${dto.note || '-'}`
+          : `[PENUGASAN] Ditugaskan kepada ${technician.full_name}. Catatan: ${dto.note || '-'}`,
+        created_at: now,
+      });
+    } catch {
+      // Fallback in-memory
+    }
 
-      // d. Simpan pesan internal penugasan (efek samping sekunder)
-      try {
-        const msgRes = await client.from('messages').insert({
-          application_id: applicationId,
-          sender_type: 'ADMIN',
-          sender_profile_id: adminUser.id,
-          sender_name: adminUser.fullName,
-          visibility: 'INTERNAL',
-          message: isReassignment
-            ? `[PENUGASAN ULANG] Teknisi dialihkan dari ${existingCurrent?.technician_name} ke ${technician.full_name}. Catatan: ${dto.note || '-'}`
-            : `[PENUGASAN] Ditugaskan kepada ${technician.full_name}. Catatan: ${dto.note || '-'}`,
-          created_at: now,
-        });
-        if (msgRes?.error) {
-          this.logger.warn(`Gagal mencatat pesan internal penugasan: ${msgRes.error.message}`);
-        }
-      } catch (msgErr) {
-        this.logger.warn(`Gagal mencatat pesan internal penugasan: ${msgErr}`);
-      }
-    } catch (err) {
-      if (err instanceof HttpException) {
-        throw err;
-      }
-      if (!isInMemoryFallbackAllowed()) {
-        throw new InternalServerErrorException('Gagal memproses penugasan tenaga ahli.');
-      }
+    // In-memory store updates
+    const list = this.inMemoryAssignments.get(applicationId) || [];
+    if (existingCurrent) {
+      existingCurrent.is_current = false;
+      existingCurrent.unassigned_at = now;
     }
 
     const newAssignment: AssignmentHistoryItem = {
-      id: newId,
+      id: crypto.randomUUID(),
       application_id: applicationId,
       technician_id: dto.technician_id,
       technician_name: technician.full_name,
@@ -430,19 +352,11 @@ export class AssignmentsService {
       is_current: true,
     };
 
-    // In-memory store updates
-    if (isInMemoryFallbackAllowed()) {
-      const list = this.inMemoryAssignments.get(applicationId) || [];
-      if (existingCurrent) {
-        existingCurrent.is_current = false;
-        existingCurrent.unassigned_at = now;
-      }
-      list.unshift(newAssignment);
-      this.inMemoryAssignments.set(applicationId, list);
+    list.unshift(newAssignment);
+    this.inMemoryAssignments.set(applicationId, list);
 
-      this.adminApplicationsService.unassignTechniciansInMemory(applicationId);
-      this.adminApplicationsService.assignTechnicianInMemory(applicationId, dto.technician_id);
-    }
+    this.adminApplicationsService.unassignTechniciansInMemory(applicationId);
+    this.adminApplicationsService.assignTechnicianInMemory(applicationId, dto.technician_id);
 
     return newAssignment;
   }

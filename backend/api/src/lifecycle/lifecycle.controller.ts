@@ -32,13 +32,11 @@ import type {
   UpsertImplementationDto,
   UpsertProjectPlanDto,
 } from './lifecycle.types.js';
-import { SkipThrottle } from '@nestjs/throttler';
 
 type AuthenticatedRequest = Request & {
   user: AuthenticatedUser;
 };
 
-@SkipThrottle()
 @Controller('applications/:id/lifecycle')
 @UseGuards(AuthGuard, RolesGuard)
 @Roles('SUPER_ADMIN', 'TECHNICIAN')

@@ -17,13 +17,11 @@ import { Roles } from '../auth/roles.decorator.js';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { OpdService } from './opd.service.js';
 import type { CreateOpdDto, UpdateOpdDto } from './opd.types.js';
-import { SkipThrottle } from '@nestjs/throttler';
 
 type AuthenticatedRequest = Request & {
   user?: AuthenticatedUser;
 };
 
-@SkipThrottle()
 @Controller('admin/opd')
 @UseGuards(AuthGuard, RolesGuard)
 @Roles('SUPER_ADMIN')

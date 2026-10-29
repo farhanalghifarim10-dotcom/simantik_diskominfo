@@ -18,7 +18,6 @@ import {
   sanitizeFilename,
   validateUploadedFile,
 } from '../common/utils/file-validator.js';
-import { isInMemoryFallbackAllowed } from '../common/utils/supabase.utils.js';
 import type {
   ApplicationSubmissionResult,
   OpdUnitEntity,
@@ -42,21 +41,13 @@ const DEFAULT_OPD_UNITS: OpdUnitEntity[] = [
   { id: 'cddddddd-dddd-dddd-dddd-dddddddddddd', code: 'SATPOLPP', name: 'Satuan Polisi Pamong Praja', is_active: true },
 ];
 
-interface IdempotencyCacheEntry {
-  result: ApplicationSubmissionResult;
-  createdAt: number;
-}
-
-const IDEMPOTENCY_TTL_MS = 10 * 60 * 1000; // 10 menit
-const MAX_IDEMPOTENCY_ENTRIES = 1000;
-
 @Injectable()
 export class ApplicationsService {
   private readonly logger = new Logger(ApplicationsService.name);
 
   // In-memory application store for idempotency and fallback testing
   private inMemoryApplications: Map<string, ApplicationSubmissionResult> = new Map();
-  private inMemoryIdempotencyKeys: Map<string, IdempotencyCacheEntry> = new Map();
+  private inMemoryIdempotencyKeys: Map<string, ApplicationSubmissionResult> = new Map();
 
   constructor(
     private readonly supabaseService: SupabaseService,
@@ -64,71 +55,6 @@ export class ApplicationsService {
     @Optional() private readonly trackingService?: TrackingService,
     @Optional() private readonly auditService?: AuditService,
   ) {}
-
-  /**
-   * Membersihkan entri cache idempotency yang sudah melewati TTL 10 menit
-   */
-  private cleanupExpiredIdempotencyKeys(now = Date.now()): void {
-    for (const [key, entry] of this.inMemoryIdempotencyKeys.entries()) {
-      if (now - entry.createdAt > IDEMPOTENCY_TTL_MS) {
-        this.inMemoryIdempotencyKeys.delete(key);
-      }
-    }
-  }
-
-  /**
-   * Menyimpan entri ke cache idempotency dengan TTL 10 menit dan batas maksimal 1000 entri (FIFO eviction)
-   */
-  private setIdempotencyKey(key: string, result: ApplicationSubmissionResult): void {
-    const now = Date.now();
-    this.cleanupExpiredIdempotencyKeys(now);
-    if (this.inMemoryIdempotencyKeys.size >= MAX_IDEMPOTENCY_ENTRIES) {
-      const oldestKey = this.inMemoryIdempotencyKeys.keys().next().value;
-      if (oldestKey !== undefined) {
-        this.inMemoryIdempotencyKeys.delete(oldestKey);
-      }
-    }
-    this.inMemoryIdempotencyKeys.set(key, {
-      result,
-      createdAt: now,
-    });
-  }
-
-  /**
-   * Mengambil entri dari cache idempotency, mengembalikan null jika tidak ada atau kedaluwarsa
-   */
-  private getIdempotencyKey(key: string): ApplicationSubmissionResult | null {
-    const entry = this.inMemoryIdempotencyKeys.get(key);
-    if (!entry) {
-      return null;
-    }
-    if (Date.now() - entry.createdAt > IDEMPOTENCY_TTL_MS) {
-      this.inMemoryIdempotencyKeys.delete(key);
-      return null;
-    }
-    return entry.result;
-  }
-
-  /**
-   * Helper pengujian: Mengembalikan jumlah entri cache idempotency
-   */
-  getIdempotencyCacheSize(): number {
-    return this.inMemoryIdempotencyKeys.size;
-  }
-
-  /**
-   * Helper pengujian: Mengosongkan cache idempotency
-   */
-  clearIdempotencyCache(): void {
-    this.inMemoryIdempotencyKeys.clear();
-  }
-
-  /**
-   * Helper pengujian: Mengembalikan jumlah in-memory applications
-   */
-  getInMemoryApplicationsCount(): number {
-    return this.inMemoryApplications.size;
-  }
 
   /**
    * Mengambil daftar OPD unit aktif untuk dropdown pemohon.
@@ -159,10 +85,10 @@ export class ApplicationsService {
     payload: SubmitApplicationPayload,
     documents: UploadedDocumentInput[] = [],
   ): Promise<ApplicationSubmissionResult> {
-    // 1. Idempotency Check (hanya membaca jika key disediakan)
+    // 1. Idempotency Check
     if (payload.idempotency_key && payload.idempotency_key.trim()) {
       const key = payload.idempotency_key.trim();
-      const existing = this.getIdempotencyKey(key);
+      const existing = this.inMemoryIdempotencyKeys.get(key);
       if (existing) {
         return existing;
       }
@@ -192,72 +118,35 @@ export class ApplicationsService {
     if (!payload.applicant_name || payload.applicant_name.trim().length < 3) {
       throw new BadRequestException('Nama lengkap pemohon wajib diisi (minimal 3 karakter).');
     }
-    if (payload.applicant_name.trim().length > 150) {
-      throw new BadRequestException('Nama pemohon melebihi batas maksimum 150 karakter.');
-    }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!payload.applicant_email || !emailRegex.test(payload.applicant_email.trim())) {
       throw new BadRequestException('Alamat email pemohon tidak valid.');
     }
-    if (payload.applicant_email.trim().length > 150) {
-      throw new BadRequestException('Email pemohon melebihi batas maksimum 150 karakter.');
-    }
-    const rawPhone = payload.applicant_phone ? payload.applicant_phone.trim() : '';
-    const phoneAllowedCharsRegex = /^[0-9+\-\s()]{8,30}$/;
-    if (!rawPhone || !phoneAllowedCharsRegex.test(rawPhone)) {
-      throw new BadRequestException(
-        'Nomor telepon pemohon tidak valid. Harus terdiri dari 8 hingga 30 karakter dan hanya boleh memuat angka, spasi, +, -, serta tanda kurung.',
-      );
+    if (!payload.applicant_phone || payload.applicant_phone.trim().length < 8) {
+      throw new BadRequestException('Nomor telepon / WhatsApp pemohon wajib diisi.');
     }
     if (!payload.applicant_position || payload.applicant_position.trim().length < 2) {
       throw new BadRequestException('Jabatan pemohon di OPD wajib diisi.');
-    }
-    if (payload.applicant_position.trim().length > 100) {
-      throw new BadRequestException('Jabatan pemohon melebihi batas maksimum 100 karakter.');
     }
 
     // 5. Validasi Rincian Permohonan
     if (!payload.title || payload.title.trim().length < 5) {
       throw new BadRequestException('Judul permohonan wajib diisi (minimal 5 karakter).');
     }
-    if (payload.title.trim().length > 200) {
-      throw new BadRequestException('Judul usulan melebihi batas maksimum 200 karakter.');
-    }
     if (!payload.background || payload.background.trim().length < 10) {
       throw new BadRequestException('Latar belakang permohonan wajib diisi (minimal 10 karakter).');
-    }
-    if (payload.background.trim().length > 5000) {
-      throw new BadRequestException('Uraian usulan melebihi batas maksimum 5000 karakter.');
     }
     if (!payload.problem_statement || payload.problem_statement.trim().length < 10) {
       throw new BadRequestException('Rumusan masalah wajib diisi (minimal 10 karakter).');
     }
-    if (payload.problem_statement.trim().length > 5000) {
-      throw new BadRequestException('Uraian usulan melebihi batas maksimum 5000 karakter.');
-    }
     if (!payload.objective || payload.objective.trim().length < 10) {
       throw new BadRequestException('Maksud dan tujuan wajib diisi (minimal 10 karakter).');
-    }
-    if (payload.objective.trim().length > 5000) {
-      throw new BadRequestException('Uraian usulan melebihi batas maksimum 5000 karakter.');
     }
     if (!payload.scope || payload.scope.trim().length < 10) {
       throw new BadRequestException('Ruang lingkup sistem wajib diisi (minimal 10 karakter).');
     }
-    if (payload.scope.trim().length > 5000) {
-      throw new BadRequestException('Uraian usulan melebihi batas maksimum 5000 karakter.');
-    }
     if (!payload.expected_output || payload.expected_output.trim().length < 5) {
       throw new BadRequestException('Keluaran (output) yang diharapkan wajib diisi.');
-    }
-    if (payload.expected_output.trim().length > 5000) {
-      throw new BadRequestException('Uraian usulan melebihi batas maksimum 5000 karakter.');
-    }
-    if ((payload as any).description && (payload as any).description.trim().length > 5000) {
-      throw new BadRequestException('Deskripsi usulan melebihi batas maksimum 5000 karakter.');
-    }
-    if (payload.additional_notes && payload.additional_notes.trim().length > 2000) {
-      throw new BadRequestException('Catatan melebihi batas maksimum 2000 karakter.');
     }
 
     // Jika layanan peningkatan/enhancement, wajib ada informasi aplikasi eksisting
@@ -280,25 +169,6 @@ export class ApplicationsService {
     }
 
     // 7. Validasi Dokumen Persyaratan
-    if (documents.length > 10) {
-      throw new BadRequestException(
-        'Jumlah dokumen yang diunggah melebihi batas maksimum (maksimal 10 dokumen per permohonan).',
-      );
-    }
-
-    // Larang duplikasi requirement_id
-    const seenReqIds = new Set<string>();
-    for (const doc of documents) {
-      if (doc.requirement_id) {
-        if (seenReqIds.has(doc.requirement_id)) {
-          throw new BadRequestException(
-            'Terdapat persyaratan dokumen ganda. Setiap persyaratan hanya boleh diunggah satu dokumen.',
-          );
-        }
-        seenReqIds.add(doc.requirement_id);
-      }
-    }
-
     const serviceReqs = service.requirements || [];
     const requiredDocumentReqs = serviceReqs.filter(
       (r) => r.is_required && r.type === 'DOCUMENT',
@@ -314,10 +184,7 @@ export class ApplicationsService {
       }
     }
 
-    // Validasi tipe berkas, ekstensi, magic bytes, buffer biner, dan batasan total ukuran (maks 35 MB)
-    const MAX_TOTAL_DECODE_BYTES = 35 * 1024 * 1024; // 35 MB
-    let totalDecodedBytes = 0;
-
+    // Validasi tipe berkas, ekstensi, magic bytes, buffer biner, dan batasan per persyaratan
     for (const doc of documents) {
       let buf = doc.buffer;
       if (!buf && doc.base64_data !== undefined) {
@@ -331,17 +198,6 @@ export class ApplicationsService {
           message: `Berkas "${doc.original_filename || 'Dokumen'}" wajib memiliki data konten biner (base64_data) yang valid dan tidak kosong. Dokumen metadata-only tidak diizinkan.`,
         });
       }
-
-      totalDecodedBytes += buf.length;
-    }
-
-    if (totalDecodedBytes > MAX_TOTAL_DECODE_BYTES) {
-      throw new BadRequestException(
-        'Total ukuran seluruh dokumen yang diunggah melebihi batas maksimum 35 MB.',
-      );
-    }
-
-    for (const doc of documents) {
       const associatedReq = serviceReqs.find((r) => r.id === doc.requirement_id);
       validateUploadedFile(
         {
@@ -353,9 +209,7 @@ export class ApplicationsService {
         associatedReq
           ? {
               name: associatedReq.name,
-              allowed_file_types: Array.isArray(associatedReq.allowed_file_types)
-                ? associatedReq.allowed_file_types.join(',')
-                : associatedReq.allowed_file_types,
+              allowed_file_types: associatedReq.allowed_file_types,
               max_file_size_mb: associatedReq.max_file_size_mb,
             }
           : undefined,
@@ -383,7 +237,9 @@ export class ApplicationsService {
     const client = this.supabaseService.getClient();
 
     // Fallback in-memory hanya diizinkan bila secara eksplisit diaktifkan untuk automated test/offline dev
-    const isExplicitFallbackAllowed = isInMemoryFallbackAllowed();
+    const isExplicitFallbackAllowed =
+      process.env.ALLOW_IN_MEMORY_FALLBACK === 'true' &&
+      process.env.NODE_ENV === 'test';
 
     let applicantInserted = false;
     let applicationInserted = false;
@@ -622,44 +478,42 @@ export class ApplicationsService {
         '[IMPLEMENTATION ASSUMPTION] Format nomor tiket menggunakan format SIM-2026-XXXXXX sementara menunggu ketetapan resmi SOP Diskominfo.',
     };
 
-    // Simpan di in-memory cache untuk idempotensi bila key disediakan
+    // Simpan di in-memory cache untuk idempotensi dan testing
+    this.inMemoryApplications.set(applicationId, result);
     if (payload.idempotency_key && payload.idempotency_key.trim()) {
-      this.setIdempotencyKey(payload.idempotency_key.trim(), result);
+      this.inMemoryIdempotencyKeys.set(payload.idempotency_key.trim(), result);
     }
 
-    // inMemoryApplications dan trackingService hanya ditulis jika fallback diperbolehkan (mode test)
-    if (isExplicitFallbackAllowed) {
-      this.inMemoryApplications.set(applicationId, result);
-      if (this.trackingService) {
-        this.trackingService.registerInMemoryApplication({
-          id: applicationId,
-          ticket_number: ticketNumber,
-          tracking_code_hash: trackingCodeHash,
-          title: payload.title.trim(),
-          service_name: service.name,
-          opd_name: opd?.name || 'Pemerintah Kabupaten Bandung',
-          applicant_name: payload.applicant_name.trim(),
-          applicant_email: payload.applicant_email.trim(),
-          current_status: 'SUBMITTED',
-          current_stage: 'ANALYSIS',
-          submitted_at: submissionTime,
-          updated_at: submissionTime,
-          documents: documents.map((d) => ({
-            requirement_name: 'Dokumen Persyaratan',
-            original_filename: d.original_filename,
-            size_bytes: d.size_bytes,
-            uploaded_at: submissionTime,
-          })),
-          status_history: [
-            {
-              from_status: null,
-              to_status: 'SUBMITTED',
-              note: 'Permohonan berhasil didaftarkan oleh pemohon OPD.',
-              changed_at: submissionTime,
-            },
-          ],
-        });
-      }
+    // Jika mode test fallback dan trackingService terhubung, daftarkan agar dapat dilacak pada testing
+    if (this.trackingService) {
+      this.trackingService.registerInMemoryApplication({
+        id: applicationId,
+        ticket_number: ticketNumber,
+        tracking_code_hash: trackingCodeHash,
+        title: payload.title.trim(),
+        service_name: service.name,
+        opd_name: opd?.name || 'Pemerintah Kabupaten Bandung',
+        applicant_name: payload.applicant_name.trim(),
+        applicant_email: payload.applicant_email.trim(),
+        current_status: 'SUBMITTED',
+        current_stage: 'ANALYSIS',
+        submitted_at: submissionTime,
+        updated_at: submissionTime,
+        documents: documents.map((d) => ({
+          requirement_name: 'Dokumen Persyaratan',
+          original_filename: d.original_filename,
+          size_bytes: d.size_bytes,
+          uploaded_at: submissionTime,
+        })),
+        status_history: [
+          {
+            from_status: null,
+            to_status: 'SUBMITTED',
+            note: 'Permohonan berhasil didaftarkan oleh pemohon OPD.',
+            changed_at: submissionTime,
+          },
+        ],
+      });
     }
 
     return result;

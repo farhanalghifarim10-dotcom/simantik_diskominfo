@@ -1,12 +1,10 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { SkipThrottle } from '@nestjs/throttler';
 import { AuthGuard } from '../auth/auth.guard.js';
 import { RolesGuard } from '../auth/roles.guard.js';
 import { Roles } from '../auth/roles.decorator.js';
 import { AuditService } from './audit.service.js';
 import type { ListAuditLogsQueryDto } from './audit.types.js';
 
-@SkipThrottle()
 @Controller('admin/audit')
 @UseGuards(AuthGuard, RolesGuard)
 @Roles('SUPER_ADMIN')

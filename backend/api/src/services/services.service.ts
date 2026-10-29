@@ -1,19 +1,7 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-  NotFoundException,
-  Optional,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, Optional } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { SupabaseService } from '../supabase/supabase.service.js';
 import { AuditService } from '../audit/audit.service.js';
-import {
-  assertSupabaseOk,
-  isInMemoryFallbackAllowed,
-} from '../common/utils/supabase.utils.js';
 import type {
   CreateRequirementDto,
   CreateServiceDto,
@@ -219,7 +207,6 @@ const DEFAULT_SERVICES: ServiceEntity[] = [
 
 @Injectable()
 export class ServicesService {
-  private readonly logger = new Logger(ServicesService.name);
   // In-memory catalog state for consistent testing & graceful fallback
   private inMemoryServices: ServiceEntity[] = JSON.parse(
     JSON.stringify(DEFAULT_SERVICES),
@@ -248,12 +235,7 @@ export class ServicesService {
         .eq('is_active', true)
         .order('sort_order', { ascending: true });
 
-      if (error) {
-        this.logger.error(`Gagal memuat layanan publik: ${error.message}`);
-        if (!isInMemoryFallbackAllowed()) {
-          throw new InternalServerErrorException('Gagal memuat daftar layanan dari basis data.');
-        }
-      } else if (services !== null && services !== undefined) {
+      if (!error && services && services.length > 0) {
         return services.map((s: Record<string, unknown>) => ({
           ...s,
           requirements: (
@@ -263,16 +245,8 @@ export class ServicesService {
           ).sort((a, b) => a.sort_order - b.sort_order),
         })) as ServiceEntity[];
       }
-    } catch (err) {
-      if (err instanceof InternalServerErrorException) throw err;
-      this.logger.error(`Error getPublicServices: ${err instanceof Error ? err.message : String(err)}`);
-      if (!isInMemoryFallbackAllowed()) {
-        throw new InternalServerErrorException('Gagal memuat daftar layanan dari basis data.');
-      }
-    }
-
-    if (!isInMemoryFallbackAllowed()) {
-      return [];
+    } catch {
+      // Fallback ke in-memory jika database belum terkoneksi
     }
 
     return this.inMemoryServices
@@ -310,12 +284,7 @@ export class ServicesService {
 
       const { data, error } = await query.maybeSingle();
 
-      if (error) {
-        this.logger.error(`Gagal memuat layanan ${slugOrId}: ${error.message}`);
-        if (!isInMemoryFallbackAllowed()) {
-          throw new InternalServerErrorException('Gagal memuat detail layanan dari basis data.');
-        }
-      } else if (data) {
+      if (!error && data) {
         return {
           ...data,
           requirements: (
@@ -324,24 +293,9 @@ export class ServicesService {
             )
           ).sort((a, b) => a.sort_order - b.sort_order),
         } as ServiceEntity;
-      } else {
-        if (!isInMemoryFallbackAllowed()) {
-          throw new NotFoundException(
-            `Layanan dengan pengenal "${slugOrId}" tidak ditemukan atau tidak aktif.`,
-          );
-        }
       }
-    } catch (err) {
-      if (
-        err instanceof NotFoundException ||
-        err instanceof InternalServerErrorException
-      ) {
-        throw err;
-      }
-      this.logger.error(`Error getPublicServiceBySlugOrId: ${err instanceof Error ? err.message : String(err)}`);
-      if (!isInMemoryFallbackAllowed()) {
-        throw new InternalServerErrorException('Gagal memuat detail layanan dari basis data.');
-      }
+    } catch {
+      // Fallback
     }
 
     const found = this.inMemoryServices.find(
@@ -385,12 +339,7 @@ export class ServicesService {
         `)
         .order('sort_order', { ascending: true });
 
-      if (error) {
-        this.logger.error(`Gagal memuat katalog layanan admin: ${error.message}`);
-        if (!isInMemoryFallbackAllowed()) {
-          throw new InternalServerErrorException('Gagal memuat katalog layanan dari basis data.');
-        }
-      } else if (services !== null && services !== undefined) {
+      if (!error && services && services.length > 0) {
         return services.map((s: Record<string, unknown>) => ({
           ...s,
           requirements: ((s.service_requirements as ServiceRequirementEntity[]) || []).sort(
@@ -398,16 +347,8 @@ export class ServicesService {
           ),
         })) as ServiceEntity[];
       }
-    } catch (err) {
-      if (err instanceof InternalServerErrorException) throw err;
-      this.logger.error(`Error getAdminServices: ${err instanceof Error ? err.message : String(err)}`);
-      if (!isInMemoryFallbackAllowed()) {
-        throw new InternalServerErrorException('Gagal memuat katalog layanan dari basis data.');
-      }
-    }
-
-    if (!isInMemoryFallbackAllowed()) {
-      return [];
+    } catch {
+      // Fallback
     }
 
     return this.inMemoryServices.sort((a, b) => a.sort_order - b.sort_order);
@@ -431,34 +372,16 @@ export class ServicesService {
         .eq('id', id)
         .maybeSingle();
 
-      if (error) {
-        this.logger.error(`Gagal memuat detail layanan admin ${id}: ${error.message}`);
-        if (!isInMemoryFallbackAllowed()) {
-          throw new InternalServerErrorException('Gagal memuat detail layanan dari basis data.');
-        }
-      } else if (data) {
+      if (!error && data) {
         return {
           ...data,
           requirements: (
             (data.service_requirements as ServiceRequirementEntity[]) || []
           ).sort((a, b) => a.sort_order - b.sort_order),
         } as ServiceEntity;
-      } else {
-        if (!isInMemoryFallbackAllowed()) {
-          throw new NotFoundException(`Layanan ID "${id}" tidak ditemukan.`);
-        }
       }
-    } catch (err) {
-      if (
-        err instanceof NotFoundException ||
-        err instanceof InternalServerErrorException
-      ) {
-        throw err;
-      }
-      this.logger.error(`Error getAdminServiceDetail: ${err instanceof Error ? err.message : String(err)}`);
-      if (!isInMemoryFallbackAllowed()) {
-        throw new InternalServerErrorException('Gagal memuat detail layanan dari basis data.');
-      }
+    } catch {
+      // Fallback
     }
 
     const found = this.inMemoryServices.find((s) => s.id === id);
@@ -499,7 +422,7 @@ export class ServicesService {
 
     try {
       const client = this.supabaseService.getClient();
-      const insertRes = await client
+      const { data, error } = await client
         .from('services')
         .insert({
           id,
@@ -514,33 +437,15 @@ export class ServicesService {
         .select()
         .single();
 
-      if (insertRes.error) {
-        if (!isInMemoryFallbackAllowed()) {
-          assertSupabaseOk(insertRes, 'Menyimpan layanan baru');
-        } else {
-          this.logger.warn(`Supabase error pada createService, fallback in-memory: ${insertRes.error.message}`);
-        }
-      } else if (insertRes.data) {
-        newService.created_at = insertRes.data.created_at;
-        newService.updated_at = insertRes.data.updated_at;
+      if (!error && data) {
+        newService.created_at = data.created_at;
+        newService.updated_at = data.updated_at;
       }
-    } catch (err) {
-      if (
-        err instanceof BadRequestException ||
-        err instanceof ConflictException ||
-        err instanceof InternalServerErrorException
-      ) {
-        throw err;
-      }
-      this.logger.error(`Gagal membuat layanan: ${err instanceof Error ? err.message : String(err)}`);
-      if (!isInMemoryFallbackAllowed()) {
-        throw new InternalServerErrorException('Gagal menyimpan layanan ke basis data.');
-      }
+    } catch {
+      // Fallback
     }
 
-    if (isInMemoryFallbackAllowed()) {
-      this.inMemoryServices.push(newService);
-    }
+    this.inMemoryServices.push(newService);
 
     if (this.auditService) {
       await this.auditService.record({
@@ -575,20 +480,14 @@ export class ServicesService {
       if (dto.is_active !== undefined) payload.is_active = dto.is_active;
       if (dto.sort_order !== undefined) payload.sort_order = dto.sort_order;
 
-      const updateRes = await client
+      const { data, error } = await client
         .from('services')
         .update(payload)
         .eq('id', id)
         .select()
         .single();
 
-      if (updateRes.error) {
-        if (!isInMemoryFallbackAllowed()) {
-          assertSupabaseOk(updateRes, 'Memperbarui data layanan');
-        } else {
-          this.logger.warn(`Supabase error pada updateService, fallback in-memory: ${updateRes.error.message}`);
-        }
-      } else if (updateRes.data) {
+      if (!error && data) {
         if (this.auditService) {
           await this.auditService.record({
             actor_profile_id: actorId,
@@ -601,19 +500,8 @@ export class ServicesService {
         }
         return this.getAdminServiceDetail(id);
       }
-    } catch (err) {
-      if (
-        err instanceof BadRequestException ||
-        err instanceof ConflictException ||
-        err instanceof InternalServerErrorException ||
-        err instanceof NotFoundException
-      ) {
-        throw err;
-      }
-      this.logger.error(`Gagal memperbarui layanan ${id}: ${err instanceof Error ? err.message : String(err)}`);
-      if (!isInMemoryFallbackAllowed()) {
-        throw new InternalServerErrorException('Gagal memperbarui layanan di basis data.');
-      }
+    } catch {
+      // Fallback
     }
 
     const service = this.inMemoryServices.find((s) => s.id === id);
@@ -670,7 +558,7 @@ export class ServicesService {
 
     try {
       const client = this.supabaseService.getClient();
-      const insertRes = await client
+      const { data, error } = await client
         .from('service_requirements')
         .insert({
           id: newReqId,
@@ -687,13 +575,7 @@ export class ServicesService {
         .select()
         .single();
 
-      if (insertRes.error) {
-        if (!isInMemoryFallbackAllowed()) {
-          assertSupabaseOk(insertRes, 'Menyimpan persyaratan layanan baru');
-        } else {
-          this.logger.warn(`Supabase error pada createRequirement, fallback in-memory: ${insertRes.error.message}`);
-        }
-      } else if (insertRes.data) {
+      if (!error && data) {
         if (this.auditService) {
           await this.auditService.record({
             actor_profile_id: actorId,
@@ -703,27 +585,14 @@ export class ServicesService {
             new_data: { service_id: service.id, name: dto.name, is_required: newRequirement.is_required },
           });
         }
-        return insertRes.data as ServiceRequirementEntity;
+        return data as ServiceRequirementEntity;
       }
-    } catch (err) {
-      if (
-        err instanceof BadRequestException ||
-        err instanceof ConflictException ||
-        err instanceof InternalServerErrorException ||
-        err instanceof NotFoundException
-      ) {
-        throw err;
-      }
-      this.logger.error(`Gagal membuat persyaratan layanan: ${err instanceof Error ? err.message : String(err)}`);
-      if (!isInMemoryFallbackAllowed()) {
-        throw new InternalServerErrorException('Gagal menyimpan persyaratan ke basis data.');
-      }
+    } catch {
+      // Fallback
     }
 
-    if (isInMemoryFallbackAllowed()) {
-      if (!service.requirements) service.requirements = [];
-      service.requirements.push(newRequirement);
-    }
+    if (!service.requirements) service.requirements = [];
+    service.requirements.push(newRequirement);
 
     if (this.auditService) {
       await this.auditService.record({
@@ -771,20 +640,14 @@ export class ServicesService {
       if (dto.allowed_file_types !== undefined) payload.allowed_file_types = dto.allowed_file_types;
       if (dto.max_file_size_mb !== undefined) payload.max_file_size_mb = dto.max_file_size_mb;
 
-      const updateRes = await client
+      const { data, error } = await client
         .from('service_requirements')
         .update(payload)
         .eq('id', reqId)
         .select()
         .single();
 
-      if (updateRes.error) {
-        if (!isInMemoryFallbackAllowed()) {
-          assertSupabaseOk(updateRes, 'Memperbarui persyaratan layanan');
-        } else {
-          this.logger.warn(`Supabase error pada updateRequirement, fallback in-memory: ${updateRes.error.message}`);
-        }
-      } else if (updateRes.data) {
+      if (!error && data) {
         if (this.auditService) {
           await this.auditService.record({
             actor_profile_id: actorId,
@@ -795,21 +658,10 @@ export class ServicesService {
             new_data: payload,
           });
         }
-        return updateRes.data as ServiceRequirementEntity;
+        return data as ServiceRequirementEntity;
       }
-    } catch (err) {
-      if (
-        err instanceof BadRequestException ||
-        err instanceof ConflictException ||
-        err instanceof InternalServerErrorException ||
-        err instanceof NotFoundException
-      ) {
-        throw err;
-      }
-      this.logger.error(`Gagal memperbarui persyaratan ${reqId}: ${err instanceof Error ? err.message : String(err)}`);
-      if (!isInMemoryFallbackAllowed()) {
-        throw new InternalServerErrorException('Gagal memperbarui persyaratan di basis data.');
-      }
+    } catch {
+      // Fallback
     }
 
     if (dto.name !== undefined) existingReq.name = dto.name;
@@ -865,22 +717,12 @@ export class ServicesService {
 
       if (refDocs && refDocs.length > 0) {
         // Soft-deactivate untuk melindungi integritas referensial data pengajuan sebelumnya
-        const updateRes = await client
+        await client
           .from('service_requirements')
           .update({ is_active: false, updated_at: new Date().toISOString() })
           .eq('id', reqId);
 
-        if (updateRes.error) {
-          if (!isInMemoryFallbackAllowed()) {
-            assertSupabaseOk(updateRes, 'Menonaktifkan persyaratan layanan');
-          } else {
-            this.logger.warn(`Supabase error pada deactive requirement, fallback in-memory: ${updateRes.error.message}`);
-          }
-        }
-
-        if (isInMemoryFallbackAllowed()) {
-          service.requirements![index].is_active = false;
-        }
+        service.requirements![index].is_active = false;
 
         if (this.auditService) {
           await this.auditService.record({
@@ -895,32 +737,12 @@ export class ServicesService {
         return { success: true, id: reqId, deactivated: true };
       }
 
-      const delRes = await client.from('service_requirements').delete().eq('id', reqId);
-      if (delRes.error) {
-        if (!isInMemoryFallbackAllowed()) {
-          assertSupabaseOk(delRes, 'Menghapus persyaratan layanan');
-        } else {
-          this.logger.warn(`Supabase error pada delete requirement, fallback in-memory: ${delRes.error.message}`);
-        }
-      }
-    } catch (err) {
-      if (
-        err instanceof BadRequestException ||
-        err instanceof ConflictException ||
-        err instanceof InternalServerErrorException ||
-        err instanceof NotFoundException
-      ) {
-        throw err;
-      }
-      this.logger.error(`Gagal menghapus persyaratan ${reqId}: ${err instanceof Error ? err.message : String(err)}`);
-      if (!isInMemoryFallbackAllowed()) {
-        throw new InternalServerErrorException('Gagal menghapus persyaratan dari basis data.');
-      }
+      await client.from('service_requirements').delete().eq('id', reqId);
+    } catch {
+      // Fallback
     }
 
-    if (isInMemoryFallbackAllowed()) {
-      service.requirements?.splice(index, 1);
-    }
+    service.requirements?.splice(index, 1);
 
     if (this.auditService) {
       await this.auditService.record({

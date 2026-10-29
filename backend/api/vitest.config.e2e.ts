@@ -7,9 +7,5 @@ export default defineConfig({
     globals: true,
     root: './',
     include: ['**/*.e2e-spec.ts'],
-    env: {
-      JWT_SECRET: 'test-vitest-environment-secret-key-min-32-chars!',
-      ALLOW_IN_MEMORY_FALLBACK: 'true',
-    },
   },
 });

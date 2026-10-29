@@ -1,5 +1,4 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
-import { Throttle } from '@nestjs/throttler';
 import { ApplicationsService } from './applications.service.js';
 import { parseAndValidateBase64 } from '../common/utils/file-validator.js';
 import type {
@@ -12,7 +11,6 @@ export class ApplicationsController {
   constructor(private readonly applicationsService: ApplicationsService) {}
 
   @Post()
-  @Throttle({ default: { limit: 5, ttl: 600000 } })
   async submit(@Body() body: Record<string, unknown>) {
     // Parsing payload
     const payload: SubmitApplicationPayload = {

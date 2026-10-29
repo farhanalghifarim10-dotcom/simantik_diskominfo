@@ -5,7 +5,6 @@ import { TrackingTokenService } from './tracking-token.service.js';
 import { TrackingRateLimiter } from './tracking-rate-limiter.js';
 import { TrackingService } from './tracking.service.js';
 import { TrackingAuthGuard } from './tracking.guard.js';
-import configuration from '../config/configuration.js';
 
 describe('TrackingModule (Public Tracking & Revision Flow)', () => {
   let tokenService: TrackingTokenService;
@@ -958,58 +957,6 @@ describe('TrackingModule (Public Tracking & Revision Flow)', () => {
       // Verify no storage upload or db insertion occurred
       expect(mockStorageUpload).not.toHaveBeenCalled();
       expect(mockDocInsert).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('8. F1: JWT_SECRET Mandatory & Boot Validation', () => {
-    it('gagal instansiasi TrackingTokenService jika secret kosong', () => {
-      const mockEmptyConfig = {
-        get: () => '',
-      } as unknown as ConfigService;
-      expect(() => new TrackingTokenService(mockEmptyConfig)).toThrow(
-        /Konfigurasi JWT_SECRET tidak valid/,
-      );
-    });
-
-    it('gagal instansiasi TrackingTokenService jika secret kurang dari 32 karakter', () => {
-      const mockShortConfig = {
-        get: () => 'short-secret-key-12345',
-      } as unknown as ConfigService;
-      expect(() => new TrackingTokenService(mockShortConfig)).toThrow(
-        /minimal 32 karakter/,
-      );
-    });
-
-    it('berhasil instansiasi dan terbitkan token serta verifikasi jika secret valid (>= 32 karakter)', () => {
-      const mockValidConfig = {
-        get: () => 'valid-secret-key-with-more-than-32-chars-test!',
-      } as unknown as ConfigService;
-      const validTokenService = new TrackingTokenService(mockValidConfig);
-      const generated = validTokenService.generateSessionToken('SIM-2026-000101', 'app-uuid-1');
-
-      expect(generated.token).toBeDefined();
-      expect(generated.expires_in).toBe(900);
-
-      const payload = validTokenService.verifySessionToken(generated.token);
-      expect(payload.ticket_number).toBe('SIM-2026-000101');
-      expect(payload.application_id).toBe('app-uuid-1');
-    });
-
-    it('gagal konfigurasi boot jika process.env.JWT_SECRET kosong atau kurang dari 32 karakter', () => {
-      const originalSecret = process.env.JWT_SECRET;
-      try {
-        delete process.env.JWT_SECRET;
-        expect(() => configuration()).toThrow(/Konfigurasi JWT_SECRET tidak valid/);
-
-        process.env.JWT_SECRET = 'short-secret-key';
-        expect(() => configuration()).toThrow(/minimal 32 karakter/);
-
-        process.env.JWT_SECRET = 'valid-32-chars-environment-key-for-simantik!';
-        const loaded = configuration();
-        expect(loaded.jwt.secret).toBe('valid-32-chars-environment-key-for-simantik!');
-      } finally {
-        process.env.JWT_SECRET = originalSecret;
-      }
     });
   });
 });

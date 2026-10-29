@@ -111,17 +111,8 @@ CORS_ORIGINS=http://localhost:5173,http://localhost:5174
 SUPABASE_URL=https://<project-ref>.supabase.co
 SUPABASE_SECRET_KEY=<your-service-role-secret-key>
 
-# Kunci Rahasia Sesi Pelacakan Publik (WAJIB diisi, minimal 32 karakter, tanpa nilai default nyata. Aplikasi akan gagal start jika tidak diisi)
-JWT_SECRET=
-
-# Konfigurasi Reverse Proxy (Wajib diset jika di balik Nginx, Caddy, Cloudflare, Traefik, dsb.)
-# REKOMENDASI KEAMANAN: Isi dengan JUMLAH HOP PROXY yang tepat (misal: 1 untuk 1 lapis reverse proxy).
-# JANGAN gunakan nilai boolean "true", karena Express akan mempercayai seluruh hop X-Forwarded-For tanpa batas,
-# sehingga klien berpotensi memalsukan IP asal (IP spoofing) untuk menghindari rate limiting.
-# PENTING: Jika dibiarkan false (0) di balik reverse proxy, seluruh request dianggap berasal dari IP proxy lokal
-# (127.0.0.1) sehingga kuota global rate limiter (100 req/menit) akan terpakai bersamaan dan memicu blokir 429 massal.
-# Nilai: 0 atau false (tanpa proxy lokal), 1 (1 lapis proxy seperti Nginx tunggal), atau 2 (misal Cloudflare + Nginx).
-TRUST_PROXY=0
+# Kunci Rahasia Sesi Pelacakan Publik (HMAC-SHA256, Minimal 32 Karakter)
+JWT_SECRET=simantik-production-tracking-secret-key-min-32chars!
 
 # Resend Email Integration (Opsional, fallback simulasi aktif)
 RESEND_API_KEY=re_your_api_key_here
@@ -190,47 +181,7 @@ npm run dev:admin
 
 ---
 
-## 7. Rekomendasi Deployment & Konfigurasi Reverse Proxy
-
-### A. Rekomendasi Batas Ukuran Body (`client_max_body_size`)
-Backend API mengonfigurasi batas parsing body Express sebesar `50mb` (`express.json({ limit: '50mb' })`) guna mendukung pengunggahan berkas dokumen PDF (format Base64) pada pendaftaran usulan, tanggapan revisi pemohon, dan tahapan lifecycle.
-
-> [!WARNING]
-> **Koreksi Teknis & Risiko Tersisa (Residual Risk):**
-> * Middleware `body-parser` Express dieksekusi **sebelum** middleware/guard throttler (`@nestjs/throttler`). Oleh karena itu, rate limiter **tidak melindungi** server dari konsumsi memori akibat parsing request body berukuran besar.
-> * Jika backend API dideploy langsung ke internet tanpa reverse proxy, penyerang dapat mengirim payload mendekati 50MB ke rute-rute JSON biasa (seperti health check atau formulir tanpa file) yang berpotensi menyebabkan memory pressure pada event loop Node.js. Ini merupakan **risiko tersisa** dari penetapan batas global 50MB.
-> * **Rekomendasi Mitigasi di Reverse Proxy (Nginx / Caddy / Cloudflare):**
->   Wajib mengonfigurasi batas ukuran body yang ketat dan granular di lapisan reverse proxy:
->   1. **Rute Standar (Default):** Terapkan `client_max_body_size 2m;` (atau `1m`) untuk rute baca, login/otentikasi, helpdesk, dan pesan teks.
->   2. **Rute Pengunggahan Berkas (Whitelisted - Metode POST & PUT):** Berikan izin `client_max_body_size 50m;` **hanya** pada rute yang membutuhkan transmisi dokumen Base64:
->      - `POST /api/v1/applications` (Pendaftaran permohonan baru publik)
->      - `POST /api/v1/public/tickets/:ticket_number/revision` (Pengiriman berkas revisi pemohon)
->      - `POST /api/v1/applications/:id/lifecycle/technical-documents` (Unggah dokumen teknis permohonan)
->      - `POST` dan `PUT /api/v1/applications/:id/lifecycle/tests[/:testId]` (Pencatatan & pembaruan berkas pengujian kelaikan)
->      - `POST` dan `PUT /api/v1/applications/:id/lifecycle/maintenance[/:recordId]` (Pencatatan & pembaruan berkas pemeliharaan)
->      - `POST` dan `PUT /api/v1/applications/:id/lifecycle/evaluations[/:evaluationId]` (Pencatatan & pembaruan berkas evaluasi SPBE)
->      - `PUT /api/v1/applications/:id/lifecycle/(analysis|planning|design|implementation)` (Upsert data dan lampiran tahapan siklus hidup)
-
-Contoh blok konfigurasi Nginx:
-```nginx
-# 1. Batas ukuran payload default untuk seluruh endpoint API umum (2MB)
-client_max_body_size 2m;
-
-# 2. Batas ukuran payload 50MB khusus rute penerimaan dokumen (metode POST dan PUT)
-# Mencakup: pendaftaran publik, revisi, dokumen teknis, tests, maintenance, evaluations, dan upsert tahap lifecycle
-location ~ ^/api/v1/(applications$|public/tickets/[^/]+/revision|applications/[^/]+/lifecycle/) {
-    client_max_body_size 50m;
-    proxy_pass http://127.0.0.1:3000;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-}
-```
-
----
-
-## 8. Pengujian dan Kompilasi (Build & Tests)
+## 7. Pengujian dan Kompilasi (Build & Tests)
 
 ```bash
 # Menjalankan seluruh pengujian otomatis backend (125 tests)
@@ -246,7 +197,7 @@ npm run build:all
 
 ---
 
-## 9. Matriks Hak Akses Peran Pengguna (RBAC)
+## 8. Matriks Hak Akses Peran Pengguna (RBAC)
 
 | Modul / Fitur | Publik (Pemohon OPD) | TEKNISI (Diskominfo) | SUPER_ADMIN (Diskominfo) |
 | :--- | :---: | :---: | :---: |
@@ -269,7 +220,7 @@ npm run build:all
 
 ---
 
-## 10. Tautan Dokumentasi Terkait
+## 9. Tautan Dokumentasi Terkait
 
 * [Product Requirements Document (PRD)](docs/PRD.md)
 * [Technical Specification](docs/TECHNICAL-SPEC.md)
