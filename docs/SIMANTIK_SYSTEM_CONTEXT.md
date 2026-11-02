@@ -110,9 +110,8 @@ D:\Projects\simantik/
 │   ├── TECHNICAL-SPEC.md       # Spesifikasi teknis arsitektur lengkap
 │   ├── HANDOVER.md             # Dokumen serah terima & batasan sistem
 │   ├── SIMANTIK_SYSTEM_CONTEXT.md          # Dokumen induk konteks sistem (berkas ini)
-│   ├── SIMANTIK_FILE_MAP.md                # Peta dan inventaris seluruh berkas
 │   ├── SIMANTIK_DECISIONS_AND_CHANGELOG.md # Log keputusan & catatan perubahan
-│   └── SIMANTIK_CURRENT_STATE.md           # Status aktual pengujian & repositori
+│   └── PANDUAN_MEMBUKA_SISTEM.md           # SOP & langkah menjalankan sistem lokal
 ├── frontend/
 │   ├── admin-web/              # Web Admin Diskominfo (Konsol Manajemen)
 │   │   ├── src/
