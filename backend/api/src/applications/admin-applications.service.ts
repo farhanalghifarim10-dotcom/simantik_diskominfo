@@ -1138,8 +1138,8 @@ export class AdminApplicationsService {
       oldHash = memRecord.tracking_code_hash;
     }
 
-    // 5. Generate kode pelacakan baru dengan 128-bit keacakan kriptografis (16 bytes = 32 hex chars)
-    const randomHex = crypto.randomBytes(16).toString('hex').toUpperCase();
+    // 5. Generate kode pelacakan baru (8 karakter hex kapital, format: TRK-XXXXXXXX)
+    const randomHex = crypto.randomBytes(4).toString('hex').toUpperCase();
     const newTrackingCode = `TRK-${randomHex}`;
     const newHash = crypto.createHash('sha256').update(newTrackingCode).digest('hex');
 

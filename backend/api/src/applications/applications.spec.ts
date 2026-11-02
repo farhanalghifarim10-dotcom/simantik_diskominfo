@@ -391,8 +391,8 @@ describe('Public Application Submission Vertical Slice', () => {
       // Ticket number check
       expect(response.data.ticket_number).toMatch(/^SIM-2026-\d{6}$/);
 
-      // Tracking code check (must be non-predictable TRK-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX, 128-bit entropy)
-      expect(response.data.tracking_code).toMatch(/^TRK-[0-9A-F]{32}$/);
+      // Tracking code check (format ringkas TRK-XXXXXXXX, 8 hex characters)
+      expect(response.data.tracking_code).toMatch(/^TRK-[0-9A-F]{8}$/);
 
       // Initial status
       expect(response.data.current_status).toBe('SUBMITTED');

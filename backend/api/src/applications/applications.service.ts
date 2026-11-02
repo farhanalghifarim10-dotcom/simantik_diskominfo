@@ -222,8 +222,8 @@ export class ApplicationsService {
     const currentYear = new Date().getFullYear();
     const ticketNumber = `SIM-${currentYear}-${randomSuffix}`;
 
-    // Generate random secret tracking credential (128-bit cryptographic entropy = 16 bytes = 32 hex chars)
-    const trackingSecret = `TRK-${crypto.randomBytes(16).toString('hex').toUpperCase()}`;
+    // Generate random secret tracking credential (8 karakter hex kapital, format: TRK-XXXXXXXX)
+    const trackingSecret = `TRK-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
     const trackingCodeHash = crypto
       .createHash('sha256')
       .update(trackingSecret)

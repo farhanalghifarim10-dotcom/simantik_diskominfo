@@ -21,3 +21,4 @@ __pycache__/
 # Operational & UAT scratch scripts
 supabase/simantik_comprehensive_reset_*.sql
 backend/api/src/scripts/*_backup.*
+supabase/snippets/

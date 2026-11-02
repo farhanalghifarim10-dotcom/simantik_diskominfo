@@ -579,8 +579,8 @@ describe('Admin Applications & Workflow Transition Engine', () => {
         superAdminUser,
       );
 
-      // Kode baru harus berformat TRK-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX (32 digit heksadesimal kapital = 128 bit entropy)
-      expect(result.tracking_code).toMatch(/^TRK-[0-9A-F]{32}$/);
+      // Kode baru harus berformat TRK-XXXXXXXX (8 digit heksadesimal kapital)
+      expect(result.tracking_code).toMatch(/^TRK-[0-9A-F]{8}$/);
       expect(result.application_id).toBe(targetAppId);
       expect(result.ticket_number).toBe(targetTicketNumber);
       expect(result.reissued_at).toBeDefined();
@@ -722,7 +722,7 @@ describe('Admin Applications & Workflow Transition Engine', () => {
       expect(res.success).toBe(true);
       expect(res.data.application_id).toBe(targetAppId);
       expect(res.data.ticket_number).toBe(targetTicketNumber);
-      expect(res.data.tracking_code).toMatch(/^TRK-[0-9A-F]{32}$/);
+      expect(res.data.tracking_code).toMatch(/^TRK-[0-9A-F]{8}$/);
       expect(res.message).toBeDefined();
     });
 
