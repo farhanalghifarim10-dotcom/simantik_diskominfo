@@ -10,38 +10,38 @@
 SIMANTIK dirancang untuk mengelola tata kelola siklus hidup perangkat lunak pemerintahan secara terstruktur, akuntabel, dan terlacak. Sistem terdiri dari tiga komponen utama yang saling terintegrasi:
 
 ```text
-┌─────────────────────────────────┐       ┌─────────────────────────────────┐
-│     Web Layanan (Publik)        │       │       Web Admin (Diskominfo)    │
-│  - Katalog Layanan SPBE         │       │  - Dashboard & Antrean Verifikasi│
-│  - Wizard Formulir Pengajuan    │       │  - Penugasan Tenaga Ahli & Work │
-│  - Pelacakan Tiket (Tanpa Login)│       │  - 7 Tahapan Lifecycle Workspace│
-│  - Tanggapan Revisi & Diskusi   │       │  - Master Data, Akun & Jejak Audit│
-│   (React 19 + Vite, Port 5174)  │       │   (React 19 + Vite, Port 5173)  │
-└────────────────┬────────────────┘       └────────────────┬────────────────┘
+┌─────────────────────────────────┐       ┌────────────────────────────────────┐
+│     Web Layanan (Publik)        │       │       Web Admin (Diskominfo)       │
+│  - Katalog Layanan SPBE         │       │  - Dashboard & Antrean Verifikasi  │
+│  - Wizard Formulir Pengajuan    │       │  - Penugasan Tenaga Ahli & Work    │
+│  - Pelacakan Tiket (Tanpa Login)│       │  - 7 Tahapan Lifecycle Workspace   │
+│  - Tanggapan Revisi & Diskusi   │       │  - Master Data, Akun & Jejak Audit │
+│   (React 19 + Vite, Port 5174)  │       │   (React 19 + Vite, Port 5173)     │
+└────────────────┬────────────────┘       └────────────────┬───────────────────┘
                  │                                         │
                  │ HTTP / REST                             │ HTTP / REST + Bearer JWT
                  ▼                                         ▼
-┌───────────────────────────────────────────────────────────────────────────┐
-│                          Backend API (NestJS)                             │
-│  - Port 3001 (Lokal) / 3000 (Prod) | Global Prefix: `/api/v1`             │
-│  - Centralized Workflow Engine (Validasi Status & Transisi Peran)         │
-│  - Anti-Brute Force Rate Limiter & Constant-Time Hash Token (HMAC-SHA256) │
-│  - Assignment Authorization Boundary Enforcement (Backend Authoritative)  │
-│  - Isolasi Komunikasi (Pesan Publik vs Catatan Internal)                  │
-│  - Atomic Reissue Engine (Transaksi RPC PostgreSQL untuk Kode Pelacakan)  │
-│  - Signed URL Generator (Penyimpanan Berkas Privat 15 Menit)              │
-│  - Global Exception Filter (Penyensoran Error Database & Penyeragaman API)│
-└─────────────────────────────────────┬─────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────┐
+│                          Backend API (NestJS)                              │
+│  - Port 3001 (Lokal) / 3000 (Prod) | Global Prefix: `/api/v1`              │
+│  - Centralized Workflow Engine (Validasi Status & Transisi Peran)          │
+│  - Anti-Brute Force Rate Limiter & Constant-Time Hash Token (HMAC-SHA256)  │
+│  - Assignment Authorization Boundary Enforcement (Backend Authoritative)   │
+│  - Isolasi Komunikasi (Pesan Publik vs Catatan Internal)                   │
+│  - Atomic Reissue Engine (Transaksi RPC PostgreSQL untuk Kode Pelacakan)   │
+│  - Signed URL Generator (Penyimpanan Berkas Privat 15 Menit)               │
+│  - Global Exception Filter (Penyensoran Error Database & Penyeragaman API) │
+└─────────────────────────────────────┬──────────────────────────────────────┘
                                       │
                                       ▼ Service Role (Direct Client Denied)
-┌───────────────────────────────────────────────────────────────────────────┐
-│                        Supabase / PostgreSQL                              │
-│  - 20 Tabel Skema Publik dengan Row Level Security (RLS) Default-Deny     │
-│  - 15 Berkas Migrasi SQL Terkelola                                        │
-│  - Storage Bucket Privat: `simantik-documents` (Signed URL Only, Max 10MB)│
-│  - Append-Only Audit Trail: `audit_logs` (Anti-Tampering Trigger)         │
-│  - Supabase Auth: RBAC Terpusat (SUPER_ADMIN, TECHNICIAN / Tenaga Ahli)   │
-└───────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────┐
+│                        Supabase / PostgreSQL                               │
+│  - 20 Tabel Skema Publik dengan Row Level Security (RLS) Default-Deny      │
+│  - 15 Berkas Migrasi SQL Terkelola                                         │
+│  - Storage Bucket Privat: `simantik-documents` (Signed URL Only, Max 10MB) │
+│  - Append-Only Audit Trail: `audit_logs` (Anti-Tampering Trigger)          │
+│  - Supabase Auth: RBAC Terpusat (SUPER_ADMIN, TECHNICIAN / Tenaga Ahli)    │
+└────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
