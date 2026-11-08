@@ -43,7 +43,7 @@ Sesuai standar kejujuran teknis dan akuntabilitas tata kelola perangkat lunak, d
 
 ## 3. Domain Basis Data & Kebijakan RLS (*Row Level Security*)
 
-### A. Cakupan 18 Tabel Skema Publik
+### A. Cakupan 20 Tabel Skema Publik (Termasuk Notifikasi & Audit Log)
 * **`[TECHNICAL IMPLEMENTATION]`**:
   1. `public.opd_units` — Master data Perangkat Daerah di Kabupaten Bandung.
   2. `public.profiles` — Profil pengguna terautentikasi (nama, peran, status aktif).
@@ -228,9 +228,9 @@ npm run build
 | :--- | :--- | :--- | :---: |
 | **Typecheck** | Bebas dari galat TypeScript pada backend dan kedua frontend (`tsc -b`, `nest build`) | 0 type errors | **PASS** |
 | **Build Bundles** | Kompilasi bundel produksi sukses (`vite build`, `nest build`) | 0 build errors | **PASS** |
-| **Automated Tests** | Seluruh test suite vitest backend lulus 100% | 125 passed / 12 test suites | **PASS** |
+| **Automated Tests** | Seluruh unit test suite vitest backend lulus 100% | 286 passed / 16 test suites | **PASS** |
 | **No Secret Exposed** | Tidak ada API key rahasia, JWT secret, atau Resend key di bundel klien | 0 leaks (diverifikasi via ripgrep) | **PASS** |
-| **Migration State** | Urutan 14 migrasi SQL terdefinisi jelas dan teruji | Terdefinisi di `supabase/migrations/` | **PASS** |
+| **Migration State** | Urutan 15 migrasi SQL terdefinisi jelas dan teruji | Terdefinisi di `supabase/migrations/` | **PASS** |
 | **Storage State** | Bucket `simantik-documents` privat, akses unduh via signed URL | Privat, default deny aktif | **PASS** |
 | **Auth State** | Autentikasi Supabase Auth aktif dengan validasi profil & status | Terverifikasi via `AuthGuard` | **PASS** |
 | **Role Checks** | Batasan peran `SUPER_ADMIN` dan `TECHNICIAN` terverifikasi | Terverifikasi via `RolesGuard` | **PASS** |

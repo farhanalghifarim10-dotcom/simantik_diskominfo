@@ -35,15 +35,15 @@ SIMANTIK mengadopsi arsitektur tiga lapis yang memisahkan kanal publik, konsol m
 │  - Pelacakan Tiket Publik (/tracking)        │        │  - Penugasan Tenaga Ahli & "Pekerjaan Saya" │
 │  - Diskusi Tiket Publik & Pengiriman Revisi  │        │  - 7 Tahapan Lifecycle Workspace & Pengujian │
 │  - Hero Sabilulungan & Panduan Layanan       │        │  - Modal Penerbitan Ulang Kode Pelacakan     │
-│  [React 19 + Vite + Tailwind, Port 5173]     │        │  - Master OPD, Layanan, Akun & Audit Trail   │
-│  (100% Bebas Koneksi Langsung ke Supabase)   │        │  [React 19 + Vite + Tailwind, Port 5174]     │
+│  [React 19 + Vite + Tailwind, Port 5174]     │        │  - Master OPD, Layanan, Akun & Audit Trail   │
+│  (100% Bebas Koneksi Langsung ke Supabase)   │        │  [React 19 + Vite + Tailwind, Port 5173]     │
 └──────────────────────┬───────────────────────┘        └──────────────────────┬───────────────────────┘
                        │                                                       │
                        │ HTTP/REST (Anon / Tracking Token)                     │ HTTP/REST + Bearer JWT (Supabase Auth)
                        ▼                                                       ▼
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │                                       Backend API (NestJS Monolith)                                  │
-│  - Port 3000 | Global Prefix `/api/v1` | Runtime: NestJS 12 + Express                                 │
+│  - Port 3001 (Lokal) / 3000 (Prod) | Global Prefix `/api/v1` | Runtime: NestJS 12 + Express          │
 │  - Centralized Workflow Engine (Validasi Status, Role & Transisi Tahap SPBE)                         │
 │  - Security Suite: Rate Limiter, Timing-Safe Token Hash, Exception Filter, Whitelist File Validator   │
 │  - Business Layer: Applications, Assignments, Lifecycle, Messages, Notifications, Tracking, Audit    │
@@ -78,7 +78,6 @@ SIMANTIK mengadopsi arsitektur tiga lapis yang memisahkan kanal publik, konsol m
 
 ```text
 D:\Projects\simantik/
-├── .agents/                    # Konfigurasi agen, skill, dan aturan IDE
 ├── .vscode/                    # Konfigurasi workspace editor
 ├── backend/
 │   └── api/                    # Aplikasi Backend NestJS
@@ -102,7 +101,7 @@ D:\Projects\simantik/
 │       │   ├── technicians/    # Modul manajemen profil & akun Tenaga Ahli
 │       │   ├── tracking/       # Modul pelacakan publik, rate limiter, & tracking token
 │       │   ├── app.module.ts   # Root module NestJS
-│       │   └── main.ts         # Entry point backend (Port 3000, body limit 50MB, CORS)
+│       │   └── main.ts         # Entry point backend (Port 3001/3000, body limit 50MB, CORS)
 │       ├── test/               # Konfigurasi e2e & test fixtures
 │       └── package.json        # Skrip: build, start:dev, test (vitest), lint (oxlint)
 ├── docs/                       # Dokumentasi resmi sistem
@@ -121,7 +120,7 @@ D:\Projects\simantik/
 │   │   │   ├── pages/          # 17 halaman admin (Dashboard, Detail, My Work, dsb.)
 │   │   │   ├── types/          # Deklarasi tipe TypeScript antarmuka admin
 │   │   │   ├── index.css       # Tailwind utility & styling tema institusional Pemkab
-│   │   │   └── main.tsx        # React DOM entry point (Port 5174)
+│   │   │   └── main.tsx        # React DOM entry point (Port 5173)
 │   │   └── package.json        # Skrip: dev, build, lint
 │   └── service-web/            # Web Layanan Publik Pemohon OPD
 │       ├── src/
@@ -130,9 +129,8 @@ D:\Projects\simantik/
 │       │   ├── lib/            # Wizard step logic, client file validation
 │       │   ├── pages/          # 8 halaman publik (Home Sabilulungan, Layanan, Ajukan, dll.)
 │       │   ├── index.css       # Tailwind utility & styling publik
-│       │   └── main.tsx        # React DOM entry point (Port 5173)
+│       │   └── main.tsx        # React DOM entry point (Port 5174)
 │       └── package.json        # Skrip: dev, build, lint
-├── incoming-brand-assets/      # Master logo resmi Kabupaten Bandung, Diskominfo, SIMANTIK
 ├── supabase/
 │   ├── migrations/             # 15 berkas SQL migrasi skema, RLS, Storage, hardening, & atomic RPC
 │   ├── config.toml             # Konfigurasi Supabase CLI

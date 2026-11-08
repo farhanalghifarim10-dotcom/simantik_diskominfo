@@ -10,8 +10,8 @@ Dokumen ini mendokumentasikan keputusan arsitektur utama (*Architecture Decision
 ### ADR-001: Pemisahan Fisik Web Layanan Publik dan Web Admin
 * **Konteks**: Web Layanan digunakan oleh pemohon OPD publik di seluruh Kabupaten Bandung, sedangkan Web Admin digunakan secara internal oleh staf dan Tenaga Ahli Diskominfo.
 * **Keputusan**: Frontend dipisahkan menjadi dua aplikasi web mandiri:
-  - `frontend/service-web` (Port 5173): Portal publik, **100% tanpa koneksi langsung ke Supabase**. Klien publik tidak memegang API key database apa pun; seluruh interaksi dilakukan via NestJS API.
-  - `frontend/admin-web` (Port 5174): Konsol internal, menggunakan Supabase Auth untuk verifikasi sesi staf Diskominfo dan memanggil NestJS API menggunakan Bearer JWT.
+  - `frontend/service-web` (Port 5174): Portal publik, **100% tanpa koneksi langsung ke Supabase**. Klien publik tidak memegang API key database apa pun; seluruh interaksi dilakukan via NestJS API.
+  - `frontend/admin-web` (Port 5173): Konsol internal, menggunakan Supabase Auth untuk verifikasi sesi staf Diskominfo dan memanggil NestJS API menggunakan Bearer JWT.
 * **Konsekuensi Positif**: Meminimalkan risiko ekspos kredensial database ke publik dan menyederhanakan isolasi tata letak UI.
 
 ### ADR-002: Backend NestJS sebagai Pemegang Otoritas Tunggal (*Single Source of Truth*)
@@ -194,7 +194,20 @@ Menghapus seluruh sisa label roadmap/milestone internal yang sebelumnya tampil p
    - Setelah penerbitan ulang berhasil, kode pelacakan lama otomatis tidak berlaku.
 5. **Verifikasi Suite Pengujian Unit Komprehensif**:
    - Menambahkan pengujian mendalam pada `admin-applications.spec.ts` (35 tests) mencakup otorisasi role, validasi input, keberhasilan RPC, penanganan error RPC, dan integritas audit log.
-   - Total pengujian unit backend bertambah menjadi **276 tests** pada **16 file test** (**100% lulus**).
+   - Total pengujian unit backend bertambah menjadi **286 tests** pada **16 file test** (**100% lulus**).
+
+### Revisi 11 — Pasca-Sidang: Pembersihan Repositori & Penyelarasan Dokumentasi
+1. **Pembersihan Berkas Sidang & Demo**:
+   - Menghapus seluruh materi presentasi (`PRESENTASI_SIMANTIK.html`), naskah narasi sidang (`NASKAH_PRESENTASI_SIMANTIK.md`), materi slide sidang (`SIMANTIK Tata Kelola TI.pdf` ~19 MB), dan naskah demo (`DEMO_SIMANTIK.md` & `DEMO.md`) setelah presentasi sidang selesai, menjaga repositori bebas dari file presentasi yang sudah tidak terpakai.
+2. **Pembersihan Berkas Salinan PDF**:
+   - Menghapus 6 berkas binary `.pdf` dari `docs/` (`PRD.pdf`, `TECHNICAL-SPEC.pdf`, `HANDOVER.pdf`, `PANDUAN_MEMBUKA_SISTEM.pdf`, `SIMANTIK_SYSTEM_CONTEXT.pdf`, `SIMANTIK_DECISIONS_AND_CHANGELOG.pdf`) untuk mengoptimalkan ukuran repositori Git dan menegaskan file `.md` sebagai satu-satunya *source of truth*.
+3. **Pembersihan File Scratch & Duplikat**:
+   - Menghapus berkas duplikat `docs/DEMO.md` (identik dengan `DEMO_SIMANTIK.md`).
+   - Menghapus query scratch `supabase/snippets/Untitled query 220.sql` dan folder `supabase/snippets/`.
+   - Menghapus skrip scratch backup UAT lama `backend/api/src/scripts/comprehensive_uat_audit_backup.mjs`.
+4. **Penyelarasan Dokumentasi Sistem**:
+   - Memutakhirkan pemetaan port Web Admin (5173), Web Layanan (5174), dan Backend API (3001) di seluruh berkas dokumentasi.
+   - Memperbarui metrik pengujian otomatis menjadi 286 tests lulus pada 16 test suites.
 
 ---
 

@@ -82,9 +82,9 @@ Gunakan akun resmi yang terdaftar di Supabase lokal untuk masuk ke **Web Admin (
 
 ---
 
-## 5. Alur Uji Coba Demonstrasi Cepat (*End-to-End Walkthrough*)
+## 5. Alur Uji Coba Pengoperasian Sistem (*End-to-End Walkthrough*)
 
-Untuk mendemonstrasikan sistem saat sidang atau presentasi:
+Untuk menguji dan memvalidasi alur bisnis sistem secara menyeluruh dari awal hingga akhir:
 
 ```text
 1. Ajukan Permohonan Baru
