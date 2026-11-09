@@ -36,7 +36,6 @@ import type {
 
 @Injectable()
 export class LifecycleService {
-  // In-memory fallback stores for test/offline resilience
   private inMemoryAnalysis = new Map<string, AnalysisRecord>();
   private inMemoryPlanning = new Map<string, ProjectPlanRecord>();
   private inMemoryDesign = new Map<string, DesignRecord>();
@@ -51,11 +50,6 @@ export class LifecycleService {
     private readonly assignmentsService: AssignmentsService,
   ) {}
 
-  /**
-   * Authoritative backend access verification:
-   * SUPER_ADMIN: has access to all applications.
-   * TECHNICIAN: only has access if actively assigned to the application.
-   */
   async assertLifecycleAccess(
     applicationId: string,
     user: AuthenticatedUser,
@@ -82,9 +76,6 @@ export class LifecycleService {
     );
   }
 
-  // ------------------------------------------------------------
-  // OVERVIEW
-  // ------------------------------------------------------------
   async getLifecycleOverview(
     applicationId: string,
     user: AuthenticatedUser,
@@ -178,9 +169,6 @@ export class LifecycleService {
     };
   }
 
-  // ------------------------------------------------------------
-  // 1. ANALYSIS
-  // ------------------------------------------------------------
   async getAnalysis(
     applicationId: string,
     user: AuthenticatedUser,
@@ -328,9 +316,6 @@ export class LifecycleService {
     return record;
   }
 
-  // ------------------------------------------------------------
-  // 2. PLANNING (Project Plan)
-  // ------------------------------------------------------------
   async getProjectPlan(
     applicationId: string,
     user: AuthenticatedUser,
@@ -490,9 +475,6 @@ export class LifecycleService {
     return record;
   }
 
-  // ------------------------------------------------------------
-  // 3. DESIGN
-  // ------------------------------------------------------------
   async getDesign(
     applicationId: string,
     user: AuthenticatedUser,
@@ -632,9 +614,6 @@ export class LifecycleService {
     return record;
   }
 
-  // ------------------------------------------------------------
-  // 4. IMPLEMENTATION
-  // ------------------------------------------------------------
   async getImplementation(
     applicationId: string,
     user: AuthenticatedUser,
@@ -774,9 +753,6 @@ export class LifecycleService {
     return record;
   }
 
-  // ------------------------------------------------------------
-  // ATTACHMENT HELPERS
-  // ------------------------------------------------------------
   private async uploadAttachmentIfPresent(
     applicationId: string,
     subfolder: string,
@@ -804,7 +780,7 @@ export class LifecycleService {
     user: AuthenticatedUser,
     action: string,
   ): Promise<{ signed_url: string; expires_in: number; filename: string }> {
-    const expiresInSeconds = 900; // 15 menit
+    const expiresInSeconds = 900;
     let signedUrl = `https://mock-storage.simantik.bandungkab.go.id/signed/${storagePath}?token=${crypto.randomUUID()}&expires=${Date.now() + expiresInSeconds * 1000}`;
 
     try {
@@ -833,10 +809,6 @@ export class LifecycleService {
     };
   }
 
-  // ------------------------------------------------------------
-  // 5. TESTING (Uji Kelaikan)
-  // Dimensions: FUNCTION, INTEGRATION, LOAD, SECURITY
-  // ------------------------------------------------------------
   async getTests(
     applicationId: string,
     user: AuthenticatedUser,
@@ -1168,10 +1140,6 @@ export class LifecycleService {
     );
   }
 
-  // ------------------------------------------------------------
-  // 6. MAINTENANCE (Pemeliharaan)
-  // Types: PERFECTIVE, ADAPTIVE, CORRECTIVE, PREVENTIVE
-  // ------------------------------------------------------------
   async getMaintenanceRecords(
     applicationId: string,
     user: AuthenticatedUser,
@@ -1504,9 +1472,6 @@ export class LifecycleService {
     );
   }
 
-  // ------------------------------------------------------------
-  // 7. EVALUATION (Evaluasi Pasca Implementasi)
-  // ------------------------------------------------------------
   async getEvaluations(
     applicationId: string,
     user: AuthenticatedUser,
@@ -1804,9 +1769,6 @@ export class LifecycleService {
     );
   }
 
-  // ------------------------------------------------------------
-  // 8. TECHNICAL DOCUMENTS
-  // ------------------------------------------------------------
   async getTechnicalDocuments(
     applicationId: string,
     user: AuthenticatedUser,
@@ -1884,7 +1846,6 @@ export class LifecycleService {
     try {
       const client = this.supabaseService.getClient();
 
-      // If base64 payload provided, upload to private bucket simantik-documents
       if (dto.base64_data) {
         const buffer = Buffer.from(dto.base64_data, 'base64');
         await client.storage
@@ -1956,7 +1917,7 @@ export class LifecycleService {
       throw new NotFoundException(`Dokumen teknis dengan ID [${docId}] tidak ditemukan.`);
     }
 
-    const expiresInSeconds = 900; // 15 menit
+    const expiresInSeconds = 900;
     let signedUrl = `https://mock-storage.simantik.bandungkab.go.id/signed/${doc.storage_path}?token=${crypto.randomUUID()}&expires=${Date.now() + expiresInSeconds * 1000}`;
 
     try {

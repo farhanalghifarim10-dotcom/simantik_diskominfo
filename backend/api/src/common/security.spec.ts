@@ -20,9 +20,6 @@ import { MessagesService } from '../messages/messages.service.js';
 import { HttpExceptionFilter } from './filters/http-exception.filter.js';
 
 describe('Security Hardening & Audit Verification Suite', () => {
-  // ------------------------------------------------------------
-  // 1. AUTHENTICATION (Tokens, Expiration, Inactive Profiles)
-  // ------------------------------------------------------------
   describe('1. Authentication Hardening (AuthGuard)', () => {
     let mockSupabaseService: any;
     let authGuard: AuthGuard;
@@ -106,9 +103,6 @@ describe('Security Hardening & Audit Verification Suite', () => {
     });
   });
 
-  // ------------------------------------------------------------
-  // 2. AUTHORIZATION (RolesGuard & Technician Assignment Boundary)
-  // ------------------------------------------------------------
   describe('2. Authorization Boundaries (RolesGuard & Assignment Isolation)', () => {
     let reflector: Reflector;
     let rolesGuard: RolesGuard;
@@ -173,7 +167,6 @@ describe('Security Hardening & Audit Verification Suite', () => {
     });
 
     it('should enforce role requirement via RolesGuard and reject unauthorized roles', () => {
-      // Mock handler requiring SUPER_ADMIN
       const handler = () => {};
       reflector.getAllAndOverride = () => ['SUPER_ADMIN'];
 
@@ -201,11 +194,9 @@ describe('Security Hardening & Audit Verification Suite', () => {
     it('should block unassigned technician from accessing application detail', async () => {
       const appId = 'a1000000-0000-0000-0000-000000000001';
 
-      // Assigned technician can access
       const detail = await adminAppsService.getApplicationDetail(appId, assignedTechnician);
       expect(detail.id).toBe(appId);
 
-      // Unassigned technician is blocked
       await expect(
         adminAppsService.getApplicationDetail(appId, unassignedTechnician),
       ).rejects.toThrow(ForbiddenException);
@@ -214,7 +205,6 @@ describe('Security Hardening & Audit Verification Suite', () => {
     it('should block unassigned technician from executing transitions or internal notes', async () => {
       const appId = 'a1000000-0000-0000-0000-000000000001';
 
-      // Unassigned technician cannot advance status
       await expect(
         adminAppsService.executeTransition(
           appId,
@@ -223,21 +213,16 @@ describe('Security Hardening & Audit Verification Suite', () => {
         ),
       ).rejects.toThrow(ForbiddenException);
 
-      // Unassigned technician cannot add internal note
       await expect(
         adminAppsService.addInternalNote(appId, 'Catatan liar dari luar tim', unassignedTechnician),
       ).rejects.toThrow(ForbiddenException);
 
-      // Unassigned technician cannot request document download URL
       await expect(
         adminAppsService.getDocumentSignedUrl(appId, 'doc-1111', unassignedTechnician),
       ).rejects.toThrow(ForbiddenException);
     });
   });
 
-  // ------------------------------------------------------------
-  // 3. PUBLIC TRACKING (Constant-time Hash, Session Expiration)
-  // ------------------------------------------------------------
   describe('3. Public Tracking Security & Data Minimization', () => {
     let tokenService: TrackingTokenService;
     let rateLimiter: TrackingRateLimiter;
@@ -278,9 +263,8 @@ describe('Security Hardening & Audit Verification Suite', () => {
       });
 
       expect(res.tracking_token).toBeDefined();
-      expect(res.expires_in).toBe(900); // exactly 15 minutes
+      expect(res.expires_in).toBe(900);
 
-      // Token verification succeeds
       const payload = tokenService.verifySessionToken(res.tracking_token);
       expect(payload.ticket_number).toBe(validTicket);
     });
@@ -297,16 +281,12 @@ describe('Security Hardening & Audit Verification Suite', () => {
       const payload = tokenService.verifySessionToken(session.token);
       const summary = await trackingService.getPublicTicketSummary(validTicket, payload);
 
-      // Verification of data minimization
       expect(summary.applicant_name_masked).toContain('***');
       expect(summary.applicant_email_masked).toContain('***');
       expect(summary.applicant_email_masked).not.toBe('agus.setiawan@bandungkab.go.id');
     });
   });
 
-  // ------------------------------------------------------------
-  // 4. MESSAGES & LEAKAGE PREVENTION
-  // ------------------------------------------------------------
   describe('4. Message Visibility & Note Leakage Prevention', () => {
     let messagesService: MessagesService;
 
@@ -351,12 +331,10 @@ describe('Security Hardening & Audit Verification Suite', () => {
         exp: Math.floor(Date.now() / 1000) + 900,
       };
 
-      // Seed public message
       await messagesService.sendPublicMessage(testTicket, validPublicSession, {
         message: 'Mohon info progres permohonan kami.',
       });
 
-      // Internal user sends an INTERNAL note
       const internalAdmin: AuthenticatedUser = {
         id: 'u-admin-1',
         email: 'admin@bandungkab.go.id',
@@ -369,18 +347,13 @@ describe('Security Hardening & Audit Verification Suite', () => {
         visibility: 'INTERNAL',
       });
 
-      // Public endpoint query
       const publicMessages = await messagesService.getPublicMessages(testTicket, validPublicSession);
 
-      // Verify that INTERNAL note is NEVER included in public messages
       expect(publicMessages.some((m) => m.message.includes('Catatan rahasia'))).toBe(false);
       expect(publicMessages.every((m) => m.visibility === 'PUBLIC')).toBe(true);
     });
   });
 
-  // ------------------------------------------------------------
-  // 5. API ERROR SANITIZATION & EXCEPTION FILTER
-  // ------------------------------------------------------------
   describe('5. Error Response Uniformity & Information Leakage Prevention', () => {
     let filter: HttpExceptionFilter;
 
@@ -444,7 +417,6 @@ describe('Security Hardening & Audit Verification Suite', () => {
         }),
       } as unknown as ExecutionContext;
 
-      // Uncaught database driver error containing sensitive table/connection info
       const rawPgError = new Error(
         'pg_query_error: relation "public.secret_credentials" does not exist at postgres://user:pass@db.internal:5432',
       );
@@ -454,7 +426,6 @@ describe('Security Hardening & Audit Verification Suite', () => {
       expect(capturedStatus).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
       expect(capturedJson.success).toBe(false);
       expect(capturedJson.error.code).toBe('INTERNAL_SERVER_ERROR');
-      // Must NOT leak connection string, password, or table names!
       expect(capturedJson.error.message).toBe('Terjadi kesalahan internal pada peladen.');
       expect(capturedJson.error.message).not.toContain('postgres://');
       expect(capturedJson.error.message).not.toContain('secret_credentials');

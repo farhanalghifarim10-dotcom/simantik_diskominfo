@@ -34,16 +34,12 @@ export function PublicLayout() {
     <ToastProvider>
       <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans antialiased">
 
-
-        {/* Main Navbar */}
         <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
-            {/* Logo Hierarchy */}
             <Link to="/" className="inline-flex items-center select-none">
               <LogoHierarchy layout="horizontal" />
             </Link>
 
-            {/* Desktop Navigation Links */}
             <nav className="hidden lg:flex items-center gap-1" aria-label="Navigasi Utama">
               {navLinks.map((link) => {
                 const isActive =
@@ -67,7 +63,6 @@ export function PublicLayout() {
               })}
             </nav>
 
-            {/* Right Actions: Quick Action */}
             <div className="hidden sm:flex items-center gap-2.5">
               <Link
                 to="/tracking"
@@ -87,7 +82,6 @@ export function PublicLayout() {
               </Link>
             </div>
 
-            {/* Mobile Menu Toggle Button */}
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -98,7 +92,6 @@ export function PublicLayout() {
             </button>
           </div>
 
-          {/* Mobile Navigation Drawer / Dropdown */}
           {isMobileMenuOpen && (
             <div className="lg:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-6 space-y-3">
               <nav className="flex flex-col space-y-1">
@@ -141,7 +134,6 @@ export function PublicLayout() {
           )}
         </header>
 
-        {/* Page Content Outlet with Smooth Motion Page Transition */}
         <main className="flex-1">
           <motion.div
             key={location.pathname}
@@ -153,11 +145,9 @@ export function PublicLayout() {
           </motion.div>
         </main>
 
-        {/* Official Institutional Footer */}
         <footer className="border-t border-slate-200 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8 lg:gap-12">
-              {/* Kolom 1: Profil Kelembagaan */}
               <div className="md:col-span-2 space-y-4">
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
@@ -185,7 +175,6 @@ export function PublicLayout() {
                 </div>
               </div>
 
-              {/* Kolom 2: Tautan Layanan */}
               <div className="space-y-3">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">
                   Layanan Publik
@@ -214,7 +203,6 @@ export function PublicLayout() {
                 </ul>
               </div>
 
-              {/* Kolom 3: Kanal Bantuan & Kontak */}
               <div className="space-y-3">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">
                   Bantuan & Kontak
@@ -239,7 +227,6 @@ export function PublicLayout() {
               </div>
             </div>
 
-            {/* Bottom Disclaimer & Copyright */}
             <div className="mt-12 pt-8 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 text-center sm:text-left">
               <p>
                 © 2026 Diskominfo Pemerintah Daerah Kabupaten Bandung. Seluruh hak cipta dilindungi.

@@ -12,7 +12,6 @@ export class ApplicationsController {
 
   @Post()
   async submit(@Body() body: Record<string, unknown>) {
-    // Parsing payload
     const payload: SubmitApplicationPayload = {
       service_id: String(body.service_id || ''),
       opd_unit_id: String(body.opd_unit_id || ''),
@@ -45,7 +44,6 @@ export class ApplicationsController {
         : undefined,
     };
 
-    // Parsing documents list
     const rawDocs = Array.isArray(body.documents) ? body.documents : [];
     const documents: UploadedDocumentInput[] = rawDocs.map(
       (d: Record<string, unknown>) => {

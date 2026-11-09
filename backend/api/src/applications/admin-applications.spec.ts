@@ -72,11 +72,9 @@ describe('Admin Applications & Workflow Transition Engine', () => {
     it('should transition from SUBMITTED -> VERIFICATION -> APPROVED successfully', async () => {
       const appId = 'a1000000-0000-0000-0000-000000000001';
 
-      // Initial state is SUBMITTED
       let detail = await adminService.getApplicationDetail(appId, superAdminUser);
       expect(detail.current_status).toBe('SUBMITTED');
 
-      // 1. Move to VERIFICATION
       detail = await adminService.executeTransition(
         appId,
         { target_status: 'VERIFICATION', note: 'Mulai proses telaah kelengkapan administrasi' },
@@ -86,14 +84,13 @@ describe('Admin Applications & Workflow Transition Engine', () => {
       expect(detail.status_history[0].to_status).toBe('VERIFICATION');
       expect(detail.status_history[0].from_status).toBe('SUBMITTED');
 
-      // 2. Move to APPROVED
       detail = await adminService.executeTransition(
         appId,
         { target_status: 'APPROVED', note: 'Kriteria kelayakan SPBE terpenuhi, disetujui.' },
         superAdminUser,
       );
       expect(detail.current_status).toBe('APPROVED');
-      expect(detail.current_stage).toBe('ANALYSIS'); // targetStage automatically set to ANALYSIS
+      expect(detail.current_stage).toBe('ANALYSIS');
       expect(detail.status_history[0].to_status).toBe('APPROVED');
     });
   });
@@ -128,7 +125,6 @@ describe('Admin Applications & Workflow Transition Engine', () => {
     it('should throw ForbiddenException when TECHNICIAN attempts to perform verification or approval', async () => {
       const appId = 'a1000000-0000-0000-0000-000000000001';
 
-      // TECHNICIAN cannot move from SUBMITTED -> VERIFICATION
       await expect(
         adminService.executeTransition(
           appId,
@@ -141,7 +137,6 @@ describe('Admin Applications & Workflow Transition Engine', () => {
     it('should allow TECHNICIAN to start IN_PROGRESS once APPROVED', async () => {
       const appId = 'a1000000-0000-0000-0000-000000000001';
 
-      // Admin advances to APPROVED
       await adminService.executeTransition(
         appId,
         { target_status: 'VERIFICATION' },
@@ -153,7 +148,6 @@ describe('Admin Applications & Workflow Transition Engine', () => {
         superAdminUser,
       );
 
-      // Now TECHNICIAN can start work (APPROVED -> IN_PROGRESS)
       const detail = await adminService.executeTransition(
         appId,
         { target_status: 'IN_PROGRESS', note: 'Teknisi memulai analisis dan perancangan' },
@@ -174,7 +168,6 @@ describe('Admin Applications & Workflow Transition Engine', () => {
         superAdminUser,
       );
 
-      // Empty or short note should fail
       await expect(
         adminService.executeTransition(
           appId,
@@ -218,7 +211,6 @@ describe('Admin Applications & Workflow Transition Engine', () => {
       expect(result.expires_in).toBe(900);
       expect(result.filename).toBe('Surat_Permohonan_Bapenda.pdf');
 
-      // Verify audit log entry
       const detail = await adminService.getApplicationDetail(appId, superAdminUser);
       expect(detail.audit_logs.some((al) => al.action === 'DOCUMENT_ACCESSED')).toBe(true);
     });
@@ -251,7 +243,6 @@ describe('Admin Applications & Workflow Transition Engine', () => {
       expect(latestHistory.note).toBe('Pemeriksaan administrasi berkas');
       expect(latestHistory.changed_at).toBeDefined();
 
-      // Verify audit log has matching action
       expect(detail.audit_logs.some((al) => al.action === 'APPLICATION_STATUS_TRANSITION')).toBe(true);
     });
   });
@@ -259,7 +250,6 @@ describe('Admin Applications & Workflow Transition Engine', () => {
   describe('7. Lifecycle Stage Transition', () => {
     it('should prevent stage update when application is not approved', async () => {
       const appId = 'a1000000-0000-0000-0000-000000000001';
-      // In SUBMITTED status
       await expect(
         adminService.executeStageTransition(
           appId,
@@ -294,7 +284,6 @@ describe('Admin Applications & Workflow Transition Engine', () => {
       await adminService.executeTransition(appId, { target_status: 'IN_PROGRESS' }, superAdminUser);
       await adminService.executeTransition(appId, { target_status: 'COMPLETED', note: 'Selesai pengerjaan' }, superAdminUser);
 
-      // Pada status COMPLETED, perubahan stage dilarang
       await expect(
         adminService.executeStageTransition(
           appId,
@@ -303,7 +292,6 @@ describe('Admin Applications & Workflow Transition Engine', () => {
         ),
       ).rejects.toThrow(BadRequestException);
 
-      // Pada status CLOSED, perubahan stage juga dilarang
       await adminService.executeTransition(appId, { target_status: 'CLOSED', note: 'Ditutup resmi' }, superAdminUser);
 
       await expect(
@@ -391,10 +379,6 @@ describe('Admin Applications & Workflow Transition Engine', () => {
 
       const stats = await adminService.getDashboardStats(undefined, superAdminUser);
 
-      // Expected for current UAT data:
-      // Total Permohonan >= 1 (1)
-      // Selesai / Ditutup: 1 (CLOSED counts toward completed/closed)
-      // Dalam Pengerjaan: 0 (CLOSED is not IN_PROGRESS)
       expect(stats.total_applications).toBe(1);
       expect(stats.completed_closed_count).toBe(1);
       expect(stats.in_progress_count).toBe(0);
@@ -457,7 +441,7 @@ describe('Admin Applications & Workflow Transition Engine', () => {
       const stats = await adminService.getDashboardStats(undefined, superAdminUser);
       expect(stats.total_applications).toBe(5);
       expect(stats.in_progress_count).toBe(1);
-      expect(stats.completed_closed_count).toBe(2); // COMPLETED + CLOSED
+      expect(stats.completed_closed_count).toBe(2);
       expect(stats.submitted_count).toBe(1);
     });
 
@@ -469,12 +453,10 @@ describe('Admin Applications & Workflow Transition Engine', () => {
         createMockApp('app-2026', 'SIM-2026-001', 'CLOSED', 'EVALUATION', '2026-10-10T00:00:00.000Z'),
       );
 
-      // Filtering for 2026
       const stats2026 = await adminService.getDashboardStats({ year: 2026 }, superAdminUser);
       expect(stats2026.total_applications).toBe(1);
       expect(stats2026.completed_closed_count).toBe(1);
 
-      // No year filter includes both
       const statsAll = await adminService.getDashboardStats(undefined, superAdminUser);
       expect(statsAll.total_applications).toBe(2);
       expect(statsAll.completed_closed_count).toBe(2);
@@ -512,37 +494,30 @@ describe('Admin Applications & Workflow Transition Engine', () => {
     });
 
     it('2. Validasi: harus menolak alasan kosong, spasi saja, atau kurang dari 10 karakter dengan BadRequestException, serta menerima >= 10 karakter', async () => {
-      // Alasan kosong
       await expect(
         adminService.reissueTrackingCode(targetAppId, { reason: '' }, superAdminUser),
       ).rejects.toThrow(BadRequestException);
 
-      // Alasan hanya spasi
       await expect(
         adminService.reissueTrackingCode(targetAppId, { reason: '          ' }, superAdminUser),
       ).rejects.toThrow(BadRequestException);
 
-      // Alasan kurang dari 10 karakter (3 karakter)
       await expect(
         adminService.reissueTrackingCode(targetAppId, { reason: 'abc' }, superAdminUser),
       ).rejects.toThrow(BadRequestException);
 
-      // Alasan 9 karakter (tepat di bawah batas minimal)
       await expect(
         adminService.reissueTrackingCode(targetAppId, { reason: '123456789' }, superAdminUser),
       ).rejects.toThrow(BadRequestException);
 
-      // Alasan dengan padding spasi namun isi trimmed kurang dari 10 karakter
       await expect(
         adminService.reissueTrackingCode(targetAppId, { reason: '   123456789   ' }, superAdminUser),
       ).rejects.toThrow(BadRequestException);
 
-      // DTO null/undefined
       await expect(
         adminService.reissueTrackingCode(targetAppId, null as any, superAdminUser),
       ).rejects.toThrow(BadRequestException);
 
-      // Alasan tepat 10 karakter setelah trim diterima
       const validTen = await adminService.reissueTrackingCode(
         targetAppId,
         { reason: '1234567890' },
@@ -550,7 +525,6 @@ describe('Admin Applications & Workflow Transition Engine', () => {
       );
       expect(validTen.tracking_code).toBeDefined();
 
-      // Alasan dengan spasi di awal/akhir tapi >= 10 karakter setelah trim diterima
       const validTrimmed = await adminService.reissueTrackingCode(
         targetAppId,
         { reason: '   1234567890   ' },
@@ -579,14 +553,12 @@ describe('Admin Applications & Workflow Transition Engine', () => {
         superAdminUser,
       );
 
-      // Kode baru harus berformat TRK-XXXXXXXX (8 digit heksadesimal kapital)
       expect(result.tracking_code).toMatch(/^TRK-[0-9A-F]{8}$/);
       expect(result.application_id).toBe(targetAppId);
       expect(result.ticket_number).toBe(targetTicketNumber);
       expect(result.reissued_at).toBeDefined();
       expect(result.message).toContain('berhasil diterbitkan');
 
-      // Hash di database/memory harus terbarui dan cocok dengan SHA-256 dari kode baru
       const updatedHash = adminService.getInMemoryTrackingCodeHash(targetAppId);
       expect(updatedHash).toBeDefined();
       expect(updatedHash).not.toBe(initialHash);
@@ -606,21 +578,18 @@ describe('Admin Applications & Workflow Transition Engine', () => {
       const rateLimiter = new TrackingRateLimiter();
       const trackingService = new TrackingService(mockSupabaseService, tokenService, rateLimiter);
 
-      // Kode awal sebelum diterbitkan ulang adalah TRK-A1B2C3D4
       const initialVerification = await trackingService.verifyCredential({
         ticket_number: targetTicketNumber,
         tracking_code: 'TRK-A1B2C3D4',
       });
       expect(initialVerification.tracking_token).toBeDefined();
 
-      // Buat instance service terintegrasi dengan trackingService
       const integratedService = new AdminApplicationsService(
         mockSupabaseService,
         workflowEngine,
         trackingService,
       );
 
-      // Terbitkan ulang kode
       const reissued = await integratedService.reissueTrackingCode(
         targetTicketNumber,
         { reason: 'Surat dinas resmi OPD perihal kehilangan kode pelacakan' },
@@ -629,7 +598,6 @@ describe('Admin Applications & Workflow Transition Engine', () => {
 
       expect(reissued.tracking_code).not.toBe('TRK-A1B2C3D4');
 
-      // Percobaan menggunakan kode lama (TRK-A1B2C3D4) SEKARANG HARUS DITOLAK
       await expect(
         trackingService.verifyCredential({
           ticket_number: targetTicketNumber,
@@ -637,7 +605,6 @@ describe('Admin Applications & Workflow Transition Engine', () => {
         }),
       ).rejects.toThrow(UnauthorizedException);
 
-      // Percobaan menggunakan kode baru HARUS BERHASIL
       const newVerification = await trackingService.verifyCredential({
         ticket_number: targetTicketNumber,
         tracking_code: reissued.tracking_code,
@@ -667,7 +634,6 @@ describe('Admin Applications & Workflow Transition Engine', () => {
       expect(recordSpy).toHaveBeenCalledTimes(1);
       const loggedEntry = recordSpy.mock.calls[0][0];
 
-      // Verifikasi field audit log wajib
       expect(loggedEntry.action).toBe('TRACKING_CODE_REISSUED');
       expect(loggedEntry.entity_type).toBe('applications');
       expect(loggedEntry.entity_id).toBe(targetAppId);
@@ -677,7 +643,6 @@ describe('Admin Applications & Workflow Transition Engine', () => {
       expect(loggedEntry.new_data.actor_email).toBe(superAdminUser.email);
       expect(loggedEntry.new_data.actor_role).toBe('SUPER_ADMIN');
 
-      // KEAMANAN KETAT: Jejak audit TIDAK BOLEH memuat kode pelacakan asli atau hash-nya
       const serializedAudit = JSON.stringify(loggedEntry);
       expect(serializedAudit).not.toContain(reissued.tracking_code);
       const newHash = crypto.createHash('sha256').update(reissued.tracking_code).digest('hex');
@@ -697,7 +662,6 @@ describe('Admin Applications & Workflow Transition Engine', () => {
       const afterDetail = await adminService.getApplicationDetail(targetAppId, superAdminUser);
       const afterStats = await adminService.getDashboardStats(undefined, superAdminUser);
 
-      // Data kunci harus tetap utuh
       expect(afterDetail.id).toBe(beforeDetail.id);
       expect(afterDetail.ticket_number).toBe(beforeDetail.ticket_number);
       expect(afterDetail.current_status).toBe(beforeDetail.current_status);
@@ -707,7 +671,6 @@ describe('Admin Applications & Workflow Transition Engine', () => {
       expect(afterDetail.applicant).toEqual(beforeDetail.applicant);
       expect(afterDetail.documents).toEqual(beforeDetail.documents);
 
-      // Jumlah total permohonan tidak bertambah (tidak ada permohonan baru dibuat)
       expect(afterStats.total_applications).toBe(beforeStats.total_applications);
     });
 
@@ -768,7 +731,6 @@ describe('Admin Applications & Workflow Transition Engine', () => {
         trackingService,
       );
 
-      // Harus menolak dengan InternalServerErrorException yang jelas
       await expect(
         serviceWithNoRpc.reissueTrackingCode(
           targetAppId,
@@ -777,10 +739,8 @@ describe('Admin Applications & Workflow Transition Engine', () => {
         ),
       ).rejects.toThrow(InternalServerErrorException);
 
-      // Pastikan TIDAK ADA pembaruan hash melalui jalur alternatif
       expect(updateAttempted).toBe(false);
 
-      // Kredensial lama HARUS TETAP BERLAKU
       const oldCheck = await trackingService.verifyCredential({
         ticket_number: targetTicketNumber,
         tracking_code: 'TRK-A1B2C3D4',
@@ -838,7 +798,6 @@ describe('Admin Applications & Workflow Transition Engine', () => {
         trackingService,
       );
 
-      // Operasi harus dibatalkan seketika dengan pesan kegagalan jelas
       await expect(
         serviceWithMissingRpc.reissueTrackingCode(
           targetAppId,
@@ -847,13 +806,10 @@ describe('Admin Applications & Workflow Transition Engine', () => {
         ),
       ).rejects.toThrow(InternalServerErrorException);
 
-      // Verifikasi RPC dipanggil dan gagal
       expect(rpcMissingSpy).toHaveBeenCalledTimes(1);
 
-      // Verifikasi TIDAK ADA update hash alternatif pada tabel applications
       expect(updateAttempted).toBe(false);
 
-      // Kode lama HARUS TETAP BERLAKU
       const oldCheck = await trackingService.verifyCredential({
         ticket_number: targetTicketNumber,
         tracking_code: 'TRK-A1B2C3D4',
@@ -905,7 +861,6 @@ describe('Admin Applications & Workflow Transition Engine', () => {
         superAdminUser,
       );
 
-      // Pastikan fungsi RPC dipanggil tepat 1 kali dengan parameter yang sesuai
       expect(rpcSpy).toHaveBeenCalledTimes(1);
       const rpcCall = rpcSpy.mock.calls[0];
       expect(rpcCall[0]).toBe('reissue_tracking_code_atomic');
@@ -915,7 +870,6 @@ describe('Admin Applications & Workflow Transition Engine', () => {
       expect(rpcCall[1].p_reason).toBe('Permohonan kode pengganti resmi via surat dinas OPD');
       expect(rpcCall[1].p_new_hash).toBe(crypto.createHash('sha256').update(res.tracking_code).digest('hex'));
 
-      // Kode baru harus berlaku di tracking service
       const verifyNew = await trackingService.verifyCredential({
         ticket_number: targetTicketNumber,
         tracking_code: res.tracking_code,
@@ -976,10 +930,8 @@ describe('Admin Applications & Workflow Transition Engine', () => {
         ),
       ).rejects.toThrow(InternalServerErrorException);
 
-      // Tidak ada pembaruan hash melalui update alternatif
       expect(updateAttempted).toBe(false);
 
-      // Kredensial lama tetap berlaku karena RPC transaction di-rollback di tingkat database
       const oldCheck = await trackingService.verifyCredential({
         ticket_number: targetTicketNumber,
         tracking_code: 'TRK-A1B2C3D4',
@@ -988,7 +940,6 @@ describe('Admin Applications & Workflow Transition Engine', () => {
     });
 
     it('13. Penolakan Akses Langsung oleh Role Tidak Berwenang: validasi backend menolak keras role selain SUPER_ADMIN', async () => {
-      // 1. Role TECHNICIAN ditolak
       await expect(
         adminService.reissueTrackingCode(
           targetAppId,
@@ -997,7 +948,6 @@ describe('Admin Applications & Workflow Transition Engine', () => {
         ),
       ).rejects.toThrow(ForbiddenException);
 
-      // 2. Role non-Superadmin lainnya ditolak
       const unauthorizedUser: AuthenticatedUser = {
         id: 'u-unauthorized',
         email: 'user@example.com',
@@ -1072,11 +1022,9 @@ describe('Admin Applications & Workflow Transition Engine', () => {
           ),
         );
 
-        // Pastikan RPC sama sekali TIDAK dipanggil ketika berstatus terminal
         expect(rpcSpy).not.toHaveBeenCalled();
       }
 
-      // Pengujian penolakan status terminal pada fallback in-memory records
       const initialSeedRecord = (adminService as any).inMemoryRecords.get(targetAppId);
       expect(initialSeedRecord).toBeDefined();
 
@@ -1098,14 +1046,12 @@ describe('Admin Applications & Workflow Transition Engine', () => {
         );
       }
 
-      // Kembalikan status in-memory record ke SUBMITTED
       if (initialSeedRecord) {
         initialSeedRecord.detail.current_status = 'SUBMITTED';
       }
     });
 
     it('15. Validasi Status Tidak Tersedia dan Tidak Dikenal: harus menolak jika status kosong/tidak tersedia atau tidak dikenal, serta memastikan RPC tidak dipanggil', async () => {
-      // 1. Status kosong / tidak tersedia (null / undefined / '')
       const missingStatuses = [null, undefined, ''];
 
       for (const missingStatus of missingStatuses) {
@@ -1163,11 +1109,9 @@ describe('Admin Applications & Workflow Transition Engine', () => {
           ),
         );
 
-        // Pastikan RPC sama sekali TIDAK dipanggil saat status tidak tersedia
         expect(rpcSpy).not.toHaveBeenCalled();
       }
 
-      // 2. Status tidak dikenal / tidak valid (misal: 'UNKNOWN', 'INVALID_STATUS', 'DRAFT')
       const unknownStatuses = ['UNKNOWN', 'INVALID_STATUS', 'DRAFT', 'ARCHIVED'];
 
       for (const unknownStatus of unknownStatuses) {
@@ -1225,11 +1169,9 @@ describe('Admin Applications & Workflow Transition Engine', () => {
           ),
         );
 
-        // Pastikan RPC sama sekali TIDAK dipanggil saat status tidak dikenal
         expect(rpcSpy).not.toHaveBeenCalled();
       }
 
-      // 3. Verifikasi seluruh status non-terminal yang valid berhasil diproses
       const validNonTerminalStatuses: ApplicationStatus[] = [
         'SUBMITTED',
         'VERIFICATION',

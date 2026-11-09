@@ -31,7 +31,6 @@ export function Dialog({
   const titleId = useId();
   const descId = useId();
 
-  // Escape key listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
@@ -68,7 +67,6 @@ export function Dialog({
           aria-labelledby={title ? titleId : undefined}
           aria-describedby={description ? descId : undefined}
         >
-          {/* Backdrop */}
           <motion.div
             variants={backdropVariants}
             initial="closed"
@@ -79,7 +77,6 @@ export function Dialog({
             aria-hidden="true"
           />
 
-          {/* Modal Content */}
           <motion.div
             variants={modalVariants}
             initial="closed"
@@ -87,7 +84,6 @@ export function Dialog({
             exit="closed"
             className={`relative w-full rounded-xl border border-slate-200 bg-white shadow-xl overflow-hidden flex flex-col z-10 ${sizeStyles[size]} ${className}`}
           >
-            {/* Header */}
             {(title || description) && (
               <div className="flex items-start justify-between border-b border-slate-200 p-5">
                 <div>
@@ -120,12 +116,10 @@ export function Dialog({
               </div>
             )}
 
-            {/* Body */}
             <div className="p-5 max-h-[70vh] overflow-y-auto leading-normal text-slate-700 text-sm">
               {children}
             </div>
 
-            {/* Footer */}
             {footer && (
               <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-5 py-3.5">
                 {footer}

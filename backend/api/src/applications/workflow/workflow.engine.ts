@@ -12,7 +12,6 @@ import type {
 } from './workflow.types.js';
 
 export const TRANSITION_RULES: TransitionRule[] = [
-  // Dari SUBMITTED
   {
     from: 'SUBMITTED',
     to: 'VERIFICATION',
@@ -41,7 +40,6 @@ export const TRANSITION_RULES: TransitionRule[] = [
     variant: 'neutral',
   },
 
-  // Dari VERIFICATION
   {
     from: 'VERIFICATION',
     to: 'APPROVED',
@@ -80,7 +78,6 @@ export const TRANSITION_RULES: TransitionRule[] = [
     variant: 'neutral',
   },
 
-  // Dari REVISION_REQUIRED
   {
     from: 'REVISION_REQUIRED',
     to: 'VERIFICATION',
@@ -109,7 +106,6 @@ export const TRANSITION_RULES: TransitionRule[] = [
     variant: 'neutral',
   },
 
-  // Dari APPROVED
   {
     from: 'APPROVED',
     to: 'IN_PROGRESS',
@@ -130,7 +126,6 @@ export const TRANSITION_RULES: TransitionRule[] = [
     variant: 'neutral',
   },
 
-  // Dari IN_PROGRESS
   {
     from: 'IN_PROGRESS',
     to: 'COMPLETED',
@@ -160,7 +155,6 @@ export const TRANSITION_RULES: TransitionRule[] = [
     variant: 'neutral',
   },
 
-  // Dari COMPLETED
   {
     from: 'COMPLETED',
     to: 'CLOSED',
@@ -184,9 +178,6 @@ export const ORDERED_STAGES: ApplicationStage[] = [
 
 @Injectable()
 export class WorkflowEngine {
-  /**
-   * Menghitung daftar transisi status yang diizinkan untuk current status dan role pengguna.
-   */
   getAllowedTransitions(
     currentStatus: ApplicationStatus,
     userRole: AppRole,
@@ -203,12 +194,6 @@ export class WorkflowEngine {
     }));
   }
 
-  /**
-   * Memvalidasi transisi status secara terpusat:
-   * - memeriksa keberadaan aturan dari current -> target
-   * - memeriksa otorisasi peran (RBAC)
-   * - memeriksa kewajiban catatan/alasan
-   */
   validateTransition(
     currentStatus: ApplicationStatus,
     targetStatus: ApplicationStatus,
@@ -240,12 +225,6 @@ export class WorkflowEngine {
     return rule;
   }
 
-  /**
-   * Memvalidasi transisi lifecycle stage secara terpusat:
-   * - stage hanya boleh diperbarui jika status permohonan sedang aktif dalam siklus (APPROVED atau IN_PROGRESS)
-   * - status terminal (COMPLETED, CLOSED, REJECTED, CANCELLED) tidak diizinkan mengubah stage
-   * - role yang diizinkan: SUPER_ADMIN atau TECHNICIAN
-   */
   validateStageTransition(
     currentStage: ApplicationStage | null,
     targetStage: ApplicationStage,

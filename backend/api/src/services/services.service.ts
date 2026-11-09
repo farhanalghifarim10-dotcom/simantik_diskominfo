@@ -11,7 +11,6 @@ import type {
   UpdateServiceDto,
 } from './services.types.js';
 
-// Default standard catalog fallback
 const DEFAULT_SERVICES: ServiceEntity[] = [
   {
     id: '11111111-1111-1111-1111-111111111111',
@@ -207,7 +206,6 @@ const DEFAULT_SERVICES: ServiceEntity[] = [
 
 @Injectable()
 export class ServicesService {
-  // In-memory catalog state for consistent testing & graceful fallback
   private inMemoryServices: ServiceEntity[] = JSON.parse(
     JSON.stringify(DEFAULT_SERVICES),
   );
@@ -217,9 +215,6 @@ export class ServicesService {
     @Optional() private readonly auditService?: AuditService,
   ) {}
 
-  /**
-   * Mengambil daftar layanan publik yang aktif beserta persyaratannya.
-   */
   async getPublicServices(): Promise<ServiceEntity[]> {
     try {
       const client = this.supabaseService.getClient();
@@ -258,9 +253,6 @@ export class ServicesService {
       .sort((a, b) => a.sort_order - b.sort_order);
   }
 
-  /**
-   * Mengambil detail satu layanan publik berdasarkan slug atau ID.
-   */
   async getPublicServiceBySlugOrId(slugOrId: string): Promise<ServiceEntity> {
     try {
       const client = this.supabaseService.getClient();
@@ -312,9 +304,6 @@ export class ServicesService {
     };
   }
 
-  /**
-   * Mengambil persyaratan dari satu layanan publik.
-   */
   async getPublicRequirements(
     slugOrId: string,
   ): Promise<ServiceRequirementEntity[]> {
@@ -322,9 +311,6 @@ export class ServicesService {
     return service.requirements || [];
   }
 
-  /**
-   * [ADMIN] Mengambil seluruh layanan (termasuk non-aktif).
-   */
   async getAdminServices(): Promise<ServiceEntity[]> {
     try {
       const client = this.supabaseService.getClient();
@@ -354,9 +340,6 @@ export class ServicesService {
     return this.inMemoryServices.sort((a, b) => a.sort_order - b.sort_order);
   }
 
-  /**
-   * [ADMIN] Mengambil detail layanan lengkap berdasarkan ID.
-   */
   async getAdminServiceDetail(id: string): Promise<ServiceEntity> {
     try {
       const client = this.supabaseService.getClient();
@@ -391,9 +374,6 @@ export class ServicesService {
     return found;
   }
 
-  /**
-   * [SUPER_ADMIN] Membuat layanan baru di katalog
-   */
   async createService(dto: CreateServiceDto, actorId?: string): Promise<ServiceEntity> {
     const code = dto.code.trim().toUpperCase();
     const name = dto.name.trim();
@@ -460,9 +440,6 @@ export class ServicesService {
     return newService;
   }
 
-  /**
-   * [ADMIN] Mengubah metadata layanan.
-   */
   async updateService(
     id: string,
     dto: UpdateServiceDto,
@@ -529,9 +506,6 @@ export class ServicesService {
     return service;
   }
 
-  /**
-   * [ADMIN] Menambahkan persyaratan baru pada layanan.
-   */
   async createRequirement(
     serviceId: string,
     dto: CreateRequirementDto,
@@ -607,9 +581,6 @@ export class ServicesService {
     return newRequirement;
   }
 
-  /**
-   * [ADMIN] Mengubah persyaratan layanan.
-   */
   async updateRequirement(
     serviceId: string,
     reqId: string,
@@ -689,10 +660,6 @@ export class ServicesService {
     return existingReq;
   }
 
-  /**
-   * [ADMIN] Menghapus atau menonaktifkan persyaratan layanan.
-   * Melindungi integritas data historis: jika ada permohonan yang merujuk, persyaratan dinonaktifkan.
-   */
   async deleteRequirement(
     serviceId: string,
     reqId: string,
@@ -708,7 +675,6 @@ export class ServicesService {
 
     try {
       const client = this.supabaseService.getClient();
-      // Periksa apakah sudah ada berkas permohonan yang merujuk persyaratan ini
       const { data: refDocs } = await client
         .from('application_documents')
         .select('id')
@@ -716,7 +682,6 @@ export class ServicesService {
         .limit(1);
 
       if (refDocs && refDocs.length > 0) {
-        // Soft-deactivate untuk melindungi integritas referensial data pengajuan sebelumnya
         await client
           .from('service_requirements')
           .update({ is_active: false, updated_at: new Date().toISOString() })

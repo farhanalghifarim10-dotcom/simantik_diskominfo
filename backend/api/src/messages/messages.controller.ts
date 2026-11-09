@@ -19,10 +19,6 @@ import type {
 export class MessagesController {
   constructor(private readonly messagesService: MessagesService) {}
 
-  // ------------------------------------------------------------
-  // 1. PUBLIC TICKET MESSAGES (Terotentikasi Sesi Pelacakan)
-  // ------------------------------------------------------------
-
   @Get('public/tickets/:ticket_number/messages')
   @UseGuards(TrackingAuthGuard)
   async getPublicMessages(
@@ -62,10 +58,6 @@ export class MessagesController {
     };
   }
 
-  // ------------------------------------------------------------
-  // 2. INTERNAL APPLICATION MESSAGES (Admin & Teknisi)
-  // ------------------------------------------------------------
-
   @Get('applications/:id/messages')
   @UseGuards(AuthGuard)
   async getInternalMessages(@Param('id') id: string, @Req() req: any) {
@@ -98,7 +90,6 @@ export class MessagesController {
     };
   }
 
-  // Aliases for /admin/applications/:id/messages and /technician/applications/:id/messages
   @Get('admin/applications/:id/messages')
   @UseGuards(AuthGuard)
   async getAdminMessages(@Param('id') id: string, @Req() req: any) {

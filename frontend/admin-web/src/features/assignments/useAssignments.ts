@@ -88,9 +88,6 @@ interface ApiResponse<T> {
   message?: string;
 }
 
-/**
- * Hook to fetch active technician profiles and their active assignment counts (SUPER_ADMIN)
- */
 export function useTechniciansList(options?: { enabled?: boolean }) {
   return useQuery<TechnicianProfileItem[], Error>({
     queryKey: ['admin-technicians'],
@@ -102,9 +99,6 @@ export function useTechniciansList(options?: { enabled?: boolean }) {
   });
 }
 
-/**
- * Hook to fetch assignments and history for an application
- */
 export function useApplicationAssignments(applicationId: string | undefined) {
   return useQuery<ApplicationAssignmentsResponse, Error>({
     queryKey: ['application-assignments', applicationId],
@@ -119,9 +113,6 @@ export function useApplicationAssignments(applicationId: string | undefined) {
   });
 }
 
-/**
- * Hook to assign or re-assign a technician to an application (SUPER_ADMIN)
- */
 export function useAssignTechnician() {
   const queryClient = useQueryClient();
 
@@ -157,9 +148,6 @@ export function useAssignTechnician() {
   });
 }
 
-/**
- * Hook to fetch technician workload summary (TECHNICIAN)
- */
 export function useTechnicianWorkSummary() {
   return useQuery<TechnicianWorkSummary, Error>({
     queryKey: ['technician-work-summary'],
@@ -170,9 +158,6 @@ export function useTechnicianWorkSummary() {
   });
 }
 
-/**
- * Hook to fetch assigned applications in technician workspace (TECHNICIAN)
- */
 export function useTechnicianMyWork(query: ListTechnicianWorkQuery) {
   const queryParams = new URLSearchParams();
   if (query.search) queryParams.set('search', query.search);
@@ -193,9 +178,6 @@ export function useTechnicianMyWork(query: ListTechnicianWorkQuery) {
   });
 }
 
-/**
- * Hook to fetch application detail with technician assignment authorization check (TECHNICIAN)
- */
 export function useTechnicianApplicationDetail(id: string | undefined) {
   return useQuery<ApplicationDetail, Error>({
     queryKey: ['technician-application-detail', id],

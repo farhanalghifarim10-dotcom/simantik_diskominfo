@@ -21,12 +21,10 @@ import { AdminNotificationsPage } from '../pages/AdminNotificationsPage';
 export function AppRouter() {
   return (
     <Routes>
-      {/* Public Auth & Design System Routes */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
       <Route path="/design-system" element={<DesignSystemShowcasePage />} />
 
-      {/* Protected Admin Shell Layout */}
       <Route
         path="/"
         element={
@@ -35,14 +33,11 @@ export function AppRouter() {
           </ProtectedRoute>
         }
       >
-        {/* Common Dashboard (SUPER_ADMIN & TECHNICIAN) */}
         <Route index element={<DashboardPage />} />
 
-        {/* Permohonan Layanan */}
         <Route path="applications" element={<AdminApplicationsListPage />} />
         <Route path="applications/:id" element={<AdminApplicationDetailPage />} />
 
-        {/* Penugasan Tenaga Ahli (Khusus SUPER_ADMIN) */}
         <Route
           path="assignments"
           element={
@@ -52,7 +47,6 @@ export function AppRouter() {
           }
         />
 
-        {/* Lembar Kerja Tenaga Ahli / My Work (Khusus TECHNICIAN & SUPER_ADMIN) */}
         <Route
           path="my-work"
           element={
@@ -62,7 +56,6 @@ export function AppRouter() {
           }
         />
 
-        {/* Siklus Hidup TI (SUPER_ADMIN & TECHNICIAN) */}
         <Route
           path="lifecycle"
           element={
@@ -72,7 +65,6 @@ export function AppRouter() {
           }
         />
 
-        {/* Komunikasi & Pesan */}
         <Route
           path="messages"
           element={
@@ -82,7 +74,6 @@ export function AppRouter() {
           }
         />
 
-        {/* Notifikasi */}
         <Route
           path="notifications"
           element={
@@ -92,7 +83,6 @@ export function AppRouter() {
           }
         />
 
-        {/* Master Layanan TI (Khusus SUPER_ADMIN) */}
         <Route
           path="master/services"
           element={
@@ -102,7 +92,6 @@ export function AppRouter() {
           }
         />
 
-        {/* Master Unit OPD (Khusus SUPER_ADMIN) */}
         <Route
           path="master/opd"
           element={
@@ -112,7 +101,6 @@ export function AppRouter() {
           }
         />
 
-        {/* Manajemen Tenaga Ahli (Khusus SUPER_ADMIN) */}
         <Route
           path="technicians"
           element={
@@ -122,7 +110,6 @@ export function AppRouter() {
           }
         />
 
-        {/* Jejak Audit (Khusus SUPER_ADMIN) */}
         <Route
           path="audit"
           element={
@@ -133,7 +120,6 @@ export function AppRouter() {
         />
       </Route>
 
-      {/* 404 Catch-All */}
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );

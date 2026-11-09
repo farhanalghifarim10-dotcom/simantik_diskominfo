@@ -36,7 +36,6 @@ export function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // If already authenticated, redirect to destination or home
   useEffect(() => {
     if (isAuthenticated) {
       const from = (location.state as { from?: { pathname?: string } })?.from?.pathname || '/';
@@ -75,11 +74,7 @@ export function LoginPage() {
 
   return (
     <main className="min-h-[100dvh] w-full flex flex-col lg:flex-row bg-[#F5F5F5] overflow-x-hidden">
-      {/* =========================================================================
-          1. PANEL IDENTITAS KIRI (Architectural Teal Heritage + Official Logos)
-         ========================================================================= */}
       <section className="relative w-full lg:w-[38%] xl:w-[36%] shrink-0 min-h-[260px] lg:min-h-[100dvh] bg-cover bg-center overflow-hidden flex flex-col justify-between">
-        {/* Animated Background Image with Subtle Atmospheric Scale */}
         <motion.div
           initial={{ scale: 1.08, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -91,7 +86,6 @@ export function LoginPage() {
           aria-hidden="true"
         />
 
-        {/* Soft Contrast Gradient Overlay */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -100,11 +94,8 @@ export function LoginPage() {
           aria-hidden="true"
         />
 
-        {/* Left Panel Foreground Content */}
         <div className="relative z-10 flex flex-col justify-between h-full p-6 sm:p-8 lg:p-12 xl:p-14 space-y-8 lg:space-y-0">
-          {/* Top Section: Three Official Logos & Hierarchy Titles */}
           <div className="space-y-6 sm:space-y-8">
-            {/* 3 Official Institutional Logos with Stagger Entrance */}
             <motion.div
               initial={{ opacity: 0, y: -16 }}
               animate={{ opacity: 1, y: 0 }}
@@ -129,7 +120,6 @@ export function LoginPage() {
               />
             </motion.div>
 
-            {/* Institutional Heading */}
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
@@ -147,7 +137,6 @@ export function LoginPage() {
             </motion.div>
           </div>
 
-          {/* Bottom Card: Restricted Access Information */}
           <motion.div
             initial={{ opacity: 0, y: 24, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -172,9 +161,6 @@ export function LoginPage() {
         </div>
       </section>
 
-      {/* =========================================================================
-          2. PANEL FORM LOGIN KANAN (Clean White Form with High Contrast & Ergonomics)
-         ========================================================================= */}
       <section className="flex-1 flex flex-col justify-center items-center p-6 sm:p-10 lg:p-14 xl:p-16 bg-white">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -182,7 +168,6 @@ export function LoginPage() {
           transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
           className="w-full max-w-md mx-auto"
         >
-          {/* Form Header */}
           <div className="text-center mb-7 sm:mb-8">
             <motion.p
               initial={{ opacity: 0, y: -6 }}
@@ -209,7 +194,6 @@ export function LoginPage() {
             />
           </div>
 
-          {/* Server Error Alert */}
           {serverError && (
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -222,9 +206,7 @@ export function LoginPage() {
             </motion.div>
           )}
 
-          {/* Authentication Form */}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
-            {/* Email Kedinasan */}
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -260,7 +242,6 @@ export function LoginPage() {
               )}
             </motion.div>
 
-            {/* Kata Sandi */}
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -307,7 +288,6 @@ export function LoginPage() {
               )}
             </motion.div>
 
-            {/* Submit Button with Interactive Micro-Motion */}
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -328,7 +308,6 @@ export function LoginPage() {
             </motion.div>
           </form>
 
-          {/* Institutional Audit Notice */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

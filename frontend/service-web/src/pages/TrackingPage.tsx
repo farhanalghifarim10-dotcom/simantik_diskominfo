@@ -79,11 +79,9 @@ export function TrackingPage() {
   const urlTicket = searchParams.get('ticket') || '';
   const urlCode = searchParams.get('code') || '';
 
-  // Form input states
   const [ticketInput, setTicketInput] = useState(urlTicket);
   const [codeInput, setCodeInput] = useState(urlCode);
 
-  // Active verified tracking context
   const [activeTicket, setActiveTicket] = useState<string | null>(() => {
     return sessionStorage.getItem('simantik_tracking_ticket') || null;
   });
@@ -91,19 +89,16 @@ export function TrackingPage() {
     return sessionStorage.getItem('simantik_tracking_token') || null;
   });
 
-  // Closed ticket notification banner state
   const [closedTicketNotice, setClosedTicketNotice] = useState<{
     ticketNumber: string;
     message: string;
   } | null>(null);
 
-  // Revision form states
   const [showRevisionForm, setShowRevisionForm] = useState(false);
   const [revisionNotes, setRevisionNotes] = useState('');
   const [updatedTitle, setUpdatedTitle] = useState('');
   const [revisionFile, setRevisionFile] = useState<File | null>(null);
 
-  // Mutations & Queries
   const verifyMutation = useVerifyTracking();
   const {
     data: ticketData,
@@ -119,7 +114,6 @@ export function TrackingPage() {
 
   const revisionMutation = useSubmitRevision(activeTicket || undefined, trackingToken);
 
-  // Chat message states
   const [chatInput, setChatInput] = useState('');
   const {
     data: messagesData,
@@ -220,7 +214,6 @@ export function TrackingPage() {
     }
   }, [verifyMutation, setSearchParams, toast]);
 
-  // Auto-verify if url params exist and no active session
   useEffect(() => {
     let isMounted = true;
     if (urlTicket && urlCode && !trackingToken) {
@@ -254,7 +247,6 @@ export function TrackingPage() {
     };
   }, [urlTicket, urlCode, trackingToken]);
 
-  // Guard jika sesi yang sudah tersimpan ternyata tiketnya sudah CLOSED
   const isTicketClosed =
     ticketError &&
     ((ticketError as any)?.code === 'TICKET_CLOSED' ||
@@ -378,7 +370,6 @@ export function TrackingPage() {
   return (
     <div className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto space-y-8">
-        {/* HEADER SECTION */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -397,7 +388,6 @@ export function TrackingPage() {
           </p>
         </motion.div>
 
-        {/* CLOSED TICKET NOTICE CARD */}
         {closedTicketNotice && (
           <motion.div
             initial={{ opacity: 0, scale: 0.98, y: 15 }}
@@ -405,7 +395,6 @@ export function TrackingPage() {
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
             className="bg-white rounded-2xl border-2 border-red-200/90 shadow-md p-6 sm:p-8 space-y-6 relative overflow-hidden"
           >
-            {/* Top decorative accent bar */}
             <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-rose-500 via-[#1B5040] to-rose-500" />
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
@@ -478,7 +467,6 @@ export function TrackingPage() {
           </motion.div>
         )}
 
-        {/* 1. VERIFICATION / CREDENTIAL INPUT CARD */}
         {!trackingToken || isSessionExpired ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -573,7 +561,6 @@ export function TrackingPage() {
             </form>
           </motion.div>
         ) : (
-          /* 2. ACTIVE SESSION HEADER & CONTROLS */
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
@@ -601,7 +588,6 @@ export function TrackingPage() {
           </motion.div>
         )}
 
-        {/* 3. TICKET RESULT & DETAIL VIEW */}
         {trackingToken && !isSessionExpired && (
           <>
             {isTicketLoading ? (
@@ -612,7 +598,6 @@ export function TrackingPage() {
               </div>
             ) : ticketData ? (
               <div className="space-y-6">
-                {/* A. REVISION REQUIRED ALERT BANNER */}
                 {ticketData.can_revise && (
                   <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-6 text-amber-950 space-y-4 shadow-sm">
                     <div className="flex items-start gap-3">
@@ -651,7 +636,6 @@ export function TrackingPage() {
                   </div>
                 )}
 
-                {/* B. REVISION RESPONSE FORM ACCORDION */}
                 {showRevisionForm && ticketData.can_revise && (
                   <div className="bg-white rounded-2xl border-2 border-amber-400 p-6 sm:p-8 space-y-5 shadow-md">
                     <div className="pb-3 border-b border-slate-100">
@@ -723,9 +707,7 @@ export function TrackingPage() {
                   </div>
                 )}
 
-                {/* C. MAIN TICKET SUMMARY CARD */}
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
-                  {/* Status Banner */}
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-slate-100 gap-3">
                     <div>
                       <div className="flex items-center gap-2">
@@ -754,7 +736,6 @@ export function TrackingPage() {
                     )}
                   </div>
 
-                  {/* Metadata Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs sm:text-sm">
                     <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
                       <span className="text-slate-400 text-[11px] uppercase tracking-wider font-bold block mb-0.5">
@@ -794,7 +775,6 @@ export function TrackingPage() {
                     </div>
                   </div>
 
-                  {/* Next Step Information Advisory */}
                   <div className="p-4 rounded-xl bg-[#CAF3E4]/70 border border-[#98F7D9] text-xs sm:text-sm text-[#000408] flex items-start gap-3">
                     <InfoIcon className="w-5 h-5 text-[#1B5040] shrink-0 mt-0.5" />
                     <div>
@@ -807,7 +787,6 @@ export function TrackingPage() {
                     </div>
                   </div>
 
-                  {/* Panduan & Status Tindak Lanjut Pemohon (OPD) */}
                   <div
                     className={`p-4 sm:p-5 rounded-xl border ${
                       ticketData.action_required_by_applicant
@@ -846,7 +825,6 @@ export function TrackingPage() {
                   </div>
                 </div>
 
-                {/* D. PROGRES 7 TAHAP SIKLUS HIDUP SPBE */}
                 {ticketData.stage_progress && ticketData.stage_progress.length > 0 && (
                   <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
@@ -869,7 +847,6 @@ export function TrackingPage() {
                       )}
                     </div>
 
-                    {/* Highlight Aktivitas Tahap Aktif */}
                     {ticketData.current_stage && ticketData.stage_description && (
                       <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
                         <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
@@ -881,7 +858,6 @@ export function TrackingPage() {
                       </div>
                     )}
 
-                    {/* 7 Tahapan Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
                       {ticketData.stage_progress.map((sp, idx) => {
                         const isCurrent = sp.status === 'current';
@@ -959,7 +935,6 @@ export function TrackingPage() {
                   </div>
                 )}
 
-                {/* D. INTENTIONAL PUBLIC TIMELINE */}
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
                   <div className="pb-4 border-b border-slate-100">
                     <h3 className="text-base font-bold text-slate-900">
@@ -984,7 +959,6 @@ export function TrackingPage() {
 
                         return (
                           <div key={m.step_number} className="relative group">
-                            {/* Marker Icon */}
                             <div
                               className={`absolute -left-6 sm:-left-8 top-0.5 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all ${
                                 isDone
@@ -1041,7 +1015,6 @@ export function TrackingPage() {
                   )}
                 </div>
 
-                {/* E. PUBLIC DOCUMENTS LIST */}
                 {ticketData.documents && ticketData.documents.length > 0 && (
                   <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-4">
                     <div className="pb-3 border-b border-slate-100">
@@ -1081,7 +1054,6 @@ export function TrackingPage() {
                   </div>
                 )}
 
-                {/* F. TICKET DISCUSSION & MESSAGES (PUBLIC CHAT) */}
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-3 border-b border-slate-100 gap-2">
                     <div>
@@ -1100,7 +1072,6 @@ export function TrackingPage() {
                     </div>
                   </div>
 
-                  {/* Chat messages scrollable window */}
                   <div className="bg-slate-50/70 rounded-xl border border-slate-200 p-4 max-h-80 min-h-[160px] overflow-y-auto space-y-3">
                     {isMessagesLoading ? (
                       <div className="space-y-2">
@@ -1143,7 +1114,6 @@ export function TrackingPage() {
                     )}
                   </div>
 
-                  {/* Send Message Form */}
                   {ticketData.current_status === 'CLOSED' ? (
                     <div className="p-3.5 bg-slate-100 border border-slate-200 rounded-xl text-center text-xs text-slate-600 font-medium flex items-center justify-center gap-2">
                       <span className="text-base">🔒</span>
@@ -1182,7 +1152,6 @@ export function TrackingPage() {
           </>
         )}
 
-        {/* FOOTER HELP LINKS */}
         <div className="text-center pt-4 border-t border-slate-200 text-xs text-slate-500 space-y-2">
           <p>
             Kehilangan nomor tiket atau kode pelacakan? Hubungi helpdesk Diskominfo melalui{' '}

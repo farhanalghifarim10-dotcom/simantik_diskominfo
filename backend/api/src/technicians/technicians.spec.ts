@@ -62,7 +62,6 @@ describe('Technician Account Management (Phase 13 & Regression Fixes)', () => {
         insert: vi.fn().mockResolvedValue({ error: null }),
       };
 
-      // Buat thenable agar await client.from('...').select(...) langsung mengembalikan hasil
       chain.then = (resolve: any) => {
         if (tableName === 'assignments') {
           return Promise.resolve({
@@ -118,7 +117,6 @@ describe('Technician Account Management (Phase 13 & Regression Fixes)', () => {
       expect(res.success).toBe(true);
       expect(res.data).toEqual([]);
       expect(res.data.length).toBe(0);
-      // Memastikan tidak membocorkan 3 akun default
       expect(res.data.some((t: any) => t.full_name.includes('Ahmad Fauzi'))).toBe(false);
       expect(res.data.some((t: any) => t.full_name.includes('Siti Rahmawati'))).toBe(false);
       expect(res.data.some((t: any) => t.full_name.includes('Hendra Wijaya'))).toBe(false);
@@ -137,7 +135,7 @@ describe('Technician Account Management (Phase 13 & Regression Fixes)', () => {
           updated_at: '2026-03-01T00:00:00Z',
         },
       ];
-      assignmentsTableData = []; // Tabel penugasan kosong
+      assignmentsTableData = [];
       profilesError = null;
       assignmentsError = null;
 
@@ -155,7 +153,7 @@ describe('Technician Account Management (Phase 13 & Regression Fixes)', () => {
     });
 
     it('melempar NotFoundException (404) ketika ID teknisi tidak ditemukan di database remote', async () => {
-      profilesTableData = []; // tidak ada profil dengan id ini
+      profilesTableData = [];
       profilesError = null;
 
       await expect(
@@ -166,12 +164,10 @@ describe('Technician Account Management (Phase 13 & Regression Fixes)', () => {
     it('melempar InternalServerErrorException dan tidak fallback ke mock ketika database query error', async () => {
       profilesError = { message: 'Supabase connection timeout', code: '57P01' };
 
-      // listTechnicians melempar error, bukan mengembalikan 3 default
       await expect(adminTechniciansController.getTechnicians()).rejects.toThrow(
         InternalServerErrorException,
       );
 
-      // getTechnicianDetail melempar error, bukan mengembalikan mock
       await expect(
         adminTechniciansController.getTechnicianDetail('tech-uuid-1'),
       ).rejects.toThrow(InternalServerErrorException);
@@ -238,7 +234,6 @@ describe('Technician Account Management (Phase 13 & Regression Fixes)', () => {
       expect(tech2.active_assignments_count).toBe(1);
       expect(tech2.total_assignments_count).toBe(1);
 
-      // Password hash atau credential rahasia tidak pernah diekspos
       expect((tech1 as any).password).toBeUndefined();
     });
 
@@ -298,7 +293,6 @@ describe('Technician Account Management (Phase 13 & Regression Fixes)', () => {
     });
 
     it('rejects duplicate email', async () => {
-      // Daftarkan teknisi pertama
       await adminTechniciansController.createTechnician(
         {
           full_name: 'Ahmad Fauzi',
@@ -307,7 +301,6 @@ describe('Technician Account Management (Phase 13 & Regression Fixes)', () => {
         { user: { id: 'admin-1', role: 'SUPER_ADMIN', fullName: 'Admin' } } as any,
       );
 
-      // Pendaftaran kedua dengan email yang sama harus gagal
       await expect(
         adminTechniciansController.createTechnician(
           {
@@ -356,7 +349,6 @@ describe('Technician Account Management (Phase 13 & Regression Fixes)', () => {
       expect(res.success).toBe(true);
       expect(res.data.is_active).toBe(false);
 
-      // Simulasikan database mengembalikan status diperbarui
       profilesTableData[0].is_active = false;
       const detail = await adminTechniciansController.getTechnicianDetail(techId);
       expect(detail.data.id).toBe(techId);

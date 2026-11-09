@@ -47,9 +47,6 @@ export function ServicesPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-16 space-y-12">
-      {/* =========================================================================
-          PAGE HEADER
-         ========================================================================= */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -70,9 +67,6 @@ export function ServicesPage() {
         </p>
       </motion.div>
 
-      {/* =========================================================================
-          SPBE REGULATION NOTICE
-         ========================================================================= */}
       <motion.div
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
@@ -89,9 +83,6 @@ export function ServicesPage() {
         </Alert>
       </motion.div>
 
-      {/* =========================================================================
-          LOADING STATE
-         ========================================================================= */}
       {isLoading && (
         <div className="space-y-8">
           <div className="flex gap-3">
@@ -109,9 +100,6 @@ export function ServicesPage() {
         </div>
       )}
 
-      {/* =========================================================================
-          ERROR STATE
-         ========================================================================= */}
       {!isLoading && isError && (
         <div className="bg-white rounded-2xl border border-red-200 p-8 shadow-sm">
           <ErrorState
@@ -122,9 +110,6 @@ export function ServicesPage() {
         </div>
       )}
 
-      {/* =========================================================================
-          EMPTY STATE
-         ========================================================================= */}
       {!isLoading && !isError && (!services || services.length === 0) && (
         <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-sm">
           <EmptyState
@@ -134,9 +119,6 @@ export function ServicesPage() {
         </div>
       )}
 
-      {/* =========================================================================
-          SERVICES TABS & DETAILED BREAKDOWN
-         ========================================================================= */}
       {!isLoading && !isError && services && services.length > 0 && (
         <Tabs defaultValue={services[0].slug} variant="pills" className="w-full">
           <TabList className="mb-8 w-full sm:w-auto">
@@ -154,7 +136,6 @@ export function ServicesPage() {
 
             return (
               <TabPanel key={srv.id} value={srv.slug} className="space-y-8">
-                {/* Top Card Summary */}
                 <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm">
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-slate-100">
                     <div className="space-y-2">
@@ -192,9 +173,7 @@ export function ServicesPage() {
                     </div>
                   </div>
 
-                  {/* 2 Kolom: Kriteria Kelayakan & Alur Tahapan */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-6">
-                    {/* Column 1: Kriteria */}
                     <div className="space-y-4">
                       <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
                         <ShieldIcon size={16} className="text-[#2E8A6E]" />
@@ -220,7 +199,6 @@ export function ServicesPage() {
                       </ul>
                     </div>
 
-                    {/* Column 2: Alur Pelaksanaan */}
                     <div className="space-y-4">
                       <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
                         <ClockIcon size={16} className="text-[#2E8A6E]" />
@@ -248,9 +226,6 @@ export function ServicesPage() {
                   </div>
                 </div>
 
-                {/* =========================================================================
-                    SERVICE REQUIREMENTS SECTION: WAJIB VS OPSIONAL
-                   ========================================================================= */}
                 <div className="space-y-6">
                   <div>
                     <h3 className="text-xl font-bold text-slate-950">
@@ -261,7 +236,6 @@ export function ServicesPage() {
                     </p>
                   </div>
 
-                  {/* Bagian 1: Persyaratan Wajib */}
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 px-2 py-0.5 rounded">
@@ -305,7 +279,6 @@ export function ServicesPage() {
                     </div>
                   </div>
 
-                  {/* Bagian 2: Persyaratan Opsional / Pendukung */}
                   {optionalDocs.length > 0 && (
                     <div className="space-y-3 pt-4">
                       <div className="flex items-center gap-2">
@@ -352,9 +325,6 @@ export function ServicesPage() {
         </Tabs>
       )}
 
-      {/* =========================================================================
-          HELP & ASSISTANCE BANNER
-         ========================================================================= */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -388,7 +358,6 @@ export function ServicesPage() {
         </div>
       </motion.div>
 
-      {/* Modal Dialog for Guidance & Clear Call to Action */}
       <Dialog
         isOpen={Boolean(selectedServiceForModal)}
         onClose={() => setSelectedServiceForModal(null)}

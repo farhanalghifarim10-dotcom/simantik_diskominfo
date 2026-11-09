@@ -46,7 +46,6 @@ export function AdminLifecycleOverviewPage() {
 
   const applications: ApplicationListItem[] = data?.items || [];
 
-  // Hitung jumlah per stage
   const stageCounts = useMemo(() => {
     const map = new Map<ApplicationStage, number>();
     LIFECYCLE_STAGES.forEach((s) => map.set(s.stage, 0));
@@ -60,7 +59,6 @@ export function AdminLifecycleOverviewPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -86,7 +84,6 @@ export function AdminLifecycleOverviewPage() {
         </div>
       </div>
 
-      {/* 7-Stage Pipeline Visual Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
         {LIFECYCLE_STAGES.map((s) => {
           const isCurrent = selectedStage === s.stage;
@@ -119,7 +116,6 @@ export function AdminLifecycleOverviewPage() {
         })}
       </div>
 
-      {/* Filter & Search Bar */}
       <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="relative flex-1 max-w-md">
@@ -152,7 +148,6 @@ export function AdminLifecycleOverviewPage() {
         </div>
       </div>
 
-      {/* Application List by Stage */}
       {isLoading ? (
         <div className="space-y-3">
           <Skeleton className="h-16 w-full rounded-xl" />
@@ -211,7 +206,6 @@ export function AdminLifecycleOverviewPage() {
                   </div>
                 </div>
 
-                {/* Lifecycle Pipeline Progress Mini-Bar */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                   <div className="hidden md:flex items-center gap-1">
                     {LIFECYCLE_STAGES.map((s) => {

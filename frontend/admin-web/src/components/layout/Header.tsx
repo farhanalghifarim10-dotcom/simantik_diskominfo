@@ -25,16 +25,13 @@ export function Header({ onOpenMobile }: HeaderProps) {
 
   if (!user) return null;
 
-  // Deriving breadcrumb from pathname
   const currentNav = navigationItems.find((i) =>
     i.href === '/' ? location.pathname === '/' : location.pathname.startsWith(i.href),
   );
 
   return (
     <header className="sticky top-0 z-10 flex h-16 w-full items-center justify-between border-b border-slate-200 bg-white/95 px-4 sm:px-6 backdrop-blur-xs">
-      {/* Left: Mobile Toggle & Breadcrumbs */}
       <div className="flex items-center gap-3">
-        {/* Mobile menu trigger */}
         <button
           type="button"
           onClick={onOpenMobile}
@@ -44,7 +41,6 @@ export function Header({ onOpenMobile }: HeaderProps) {
           <MenuIcon size={20} />
         </button>
 
-        {/* Breadcrumb System */}
         <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs">
           <Link
             to="/"
@@ -64,9 +60,7 @@ export function Header({ onOpenMobile }: HeaderProps) {
         </nav>
       </div>
 
-      {/* Right: Notifications & Profile Dropdown */}
       <div className="flex items-center gap-3">
-        {/* Notification Bell */}
         <Link
           to="/notifications"
           aria-label={
@@ -84,7 +78,6 @@ export function Header({ onOpenMobile }: HeaderProps) {
           )}
         </Link>
 
-        {/* User Profile Dropdown */}
         <Dropdown
           align="right"
           trigger={

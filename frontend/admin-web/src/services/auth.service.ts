@@ -24,7 +24,6 @@ export const authService = {
       throw new Error('Login berhasil tetapi sesi otentikasi tidak ditemukan.');
     }
 
-    // Ambil profil resmi terverifikasi dari backend authority
     const profile = await this.getProfile();
 
     return {

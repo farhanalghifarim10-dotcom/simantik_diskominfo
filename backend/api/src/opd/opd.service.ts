@@ -107,10 +107,6 @@ export class OpdService {
     private readonly auditService: AuditService,
   ) {}
 
-  /**
-   * Mengambil daftar seluruh OPD.
-   * Jika forAdmin = false, hanya mengembalikan OPD yang aktif.
-   */
   async listOpds(query?: ListOpdQueryDto, forAdmin = false): Promise<OpdUnitItem[]> {
     try {
       const client = this.supabaseService.getClient();
@@ -148,7 +144,6 @@ export class OpdService {
       // Fallback
     }
 
-    // In-memory fallback
     let result = [...this.inMemoryOpds];
     if (!forAdmin) {
       result = result.filter((o) => o.is_active);
@@ -166,9 +161,6 @@ export class OpdService {
     return result.sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  /**
-   * Detail satu OPD berdasarkan ID
-   */
   async getOpdDetail(id: string): Promise<OpdUnitItem> {
     try {
       const client = this.supabaseService.getClient();
@@ -203,9 +195,6 @@ export class OpdService {
     return found;
   }
 
-  /**
-   * [SUPER_ADMIN] Tambah OPD baru
-   */
   async createOpd(dto: CreateOpdDto, actorId?: string): Promise<OpdUnitItem> {
     const code = dto.code.trim().toUpperCase();
     const name = dto.name.trim();
@@ -214,7 +203,6 @@ export class OpdService {
       throw new BadRequestException('Kode dan nama Perangkat Daerah wajib diisi.');
     }
 
-    // Periksa keunikan kode
     const existing = this.inMemoryOpds.find((o) => o.code === code);
     if (existing) {
       throw new ConflictException(`Kode OPD "${code}" telah terdaftar pada sistem.`);
@@ -255,7 +243,6 @@ export class OpdService {
 
     this.inMemoryOpds.push(newOpd);
 
-    // Audit log
     await this.auditService.record({
       actor_profile_id: actorId,
       action: 'OPD_CREATED',
@@ -267,9 +254,6 @@ export class OpdService {
     return newOpd;
   }
 
-  /**
-   * [SUPER_ADMIN] Perbarui OPD
-   */
   async updateOpd(id: string, dto: UpdateOpdDto, actorId?: string): Promise<OpdUnitItem> {
     const current = await this.getOpdDetail(id);
     const oldData = { ...current };
@@ -308,7 +292,6 @@ export class OpdService {
       // Fallback
     }
 
-    // Audit log
     await this.auditService.record({
       actor_profile_id: actorId,
       action: 'OPD_UPDATED',
@@ -321,9 +304,6 @@ export class OpdService {
     return current;
   }
 
-  /**
-   * [SUPER_ADMIN] Nonaktifkan atau aktifkan status OPD (Aman terhadap integritas referensial data historis)
-   */
   async toggleOpdStatus(id: string, isActive: boolean, actorId?: string): Promise<OpdUnitItem> {
     const opd = await this.getOpdDetail(id);
     const oldStatus = opd.is_active;
@@ -343,7 +323,6 @@ export class OpdService {
       // Fallback
     }
 
-    // Audit log
     await this.auditService.record({
       actor_profile_id: actorId,
       action: isActive ? 'OPD_ACTIVATED' : 'OPD_DEACTIVATED',

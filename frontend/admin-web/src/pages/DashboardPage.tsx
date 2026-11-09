@@ -20,7 +20,6 @@ export function DashboardPage() {
 
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
 
-  // Super Admin statistics hook
   const {
     data: adminStats,
     isLoading: isAdminLoading,
@@ -30,7 +29,6 @@ export function DashboardPage() {
     isFetching: isAdminFetching,
   } = useAdminDashboardStats(undefined, { enabled: isSuperAdmin });
 
-  // Technician work summary hook
   const {
     data: techSummary,
     isLoading: isTechLoading,
@@ -55,7 +53,6 @@ export function DashboardPage() {
     }
   };
 
-  // Metrik teragregasi
   const card1Value = isSuperAdmin
     ? adminStats?.total_applications ?? 0
     : techSummary?.total_assigned ?? 0;
@@ -74,7 +71,6 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      {/* Welcome Banner */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -134,7 +130,6 @@ export function DashboardPage() {
         </div>
       </motion.div>
 
-      {/* Error State Banner */}
       {isError && (
         <motion.div
           initial={{ opacity: 0, scale: 0.98 }}
@@ -160,9 +155,7 @@ export function DashboardPage() {
         </motion.div>
       )}
 
-      {/* Role-Aware Metric Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {/* Card 1: Total Permohonan / Tugas Ditugaskan */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -190,7 +183,6 @@ export function DashboardPage() {
           </div>
         </motion.div>
 
-        {/* Card 2: Dalam Pengerjaan */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -218,7 +210,6 @@ export function DashboardPage() {
           </div>
         </motion.div>
 
-        {/* Card 3: Tenaga Ahli Aktif / Uji Kelaikan */}
         {isSuperAdmin ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -275,7 +266,6 @@ export function DashboardPage() {
           </motion.div>
         )}
 
-        {/* Card 4: Selesai / Ditutup */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -304,7 +294,6 @@ export function DashboardPage() {
         </motion.div>
       </div>
 
-      {/* Role Notice & Quick Access */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}

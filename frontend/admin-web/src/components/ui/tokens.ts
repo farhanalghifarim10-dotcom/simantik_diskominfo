@@ -1,17 +1,5 @@
-/**
- * SIMANTIK Design System Tokens
- * Standard Visual Foundation for Diskominfo Pemkab Bandung
- *
- * Principles:
- * - High contrast (WCAG AAA/AA compliant >= 4.5:1 text, >= 3:1 UI controls)
- * - Formal Indonesian Government Digital Services (Putih, Navy, Biru ASN)
- * - 4px grid spacing system
- * - Consistent border radii (4px, 6px, 8px, 12px) - no giant rounded bubbles
- * - Meaningful motion (150ms-250ms subtle transitions, respects reduced-motion)
- */
 
 export const colors = {
-  // Official Pine Teal Palette (User Official Design Tokens)
   pine: {
     50: '#f0faf6',  // Subtle Mint Wash
     100: '#caf3e4', // Frozen Water
@@ -25,7 +13,6 @@ export const colors = {
     900: '#143d31', // Dark Pine Hover
     950: '#000408', // Black
   },
-  // Backward compatibility alias mapped directly to Pine Teal scale
   navy: {
     50: '#f0faf6',
     100: '#caf3e4',

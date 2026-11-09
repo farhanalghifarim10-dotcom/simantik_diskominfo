@@ -69,7 +69,6 @@ describe('Helpdesk Module (Layanan Bantuan & Konsultasi OPD)', () => {
       expect(res.email).toBe('budi.santoso@bandungkab.go.id');
       expect(res.status).toBe('NEW');
 
-      // Memastikan notifikasi IN_APP dipanggil dengan parameter yang benar
       expect(mockNotificationsService.notify).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'NEW_MESSAGE',
@@ -165,7 +164,6 @@ describe('Helpdesk Module (Layanan Bantuan & Konsultasi OPD)', () => {
 
   describe('2. Otorisasi & Pengambilan Kotak Masuk Konsultasi', () => {
     it('SUPER_ADMIN dan TECHNICIAN dapat mengambil daftar konsultasi', async () => {
-      // Seed data
       await helpdeskService.submitConsultation({
         opdName: 'Dinas Pertanian',
         senderName: 'Cecep Suryana',

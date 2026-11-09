@@ -41,7 +41,6 @@ export function AdminMessagesOverviewPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [consultationFilter, setConsultationFilter] = useState<'all' | 'unread' | 'read'>('all');
 
-  // Query 1: Tiket Permohonan
   const {
     data: appsData,
     isLoading: isAppsLoading,
@@ -54,7 +53,6 @@ export function AdminMessagesOverviewPage() {
     search: activeTab === 'tickets' ? searchQuery : '',
   });
 
-  // Query 2: Konsultasi Helpdesk OPD
   const {
     data: consultationsData,
     isLoading: isConsultationsLoading,
@@ -120,7 +118,6 @@ export function AdminMessagesOverviewPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -144,7 +141,6 @@ export function AdminMessagesOverviewPage() {
         </Link>
       </div>
 
-      {/* Main Tab Navigation */}
       <div className="flex border-b border-slate-200 gap-4">
         <button
           type="button"
@@ -185,12 +181,8 @@ export function AdminMessagesOverviewPage() {
         </button>
       </div>
 
-      {/* =========================================================================
-          TAB 1: DISKUSI TIKET PERMOHONAN
-         ========================================================================= */}
       {activeTab === 'tickets' && (
         <div className="space-y-6">
-          {/* Search Bar */}
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="relative flex-1 max-w-md">
@@ -211,7 +203,6 @@ export function AdminMessagesOverviewPage() {
             </div>
           </div>
 
-          {/* Discussion List */}
           {isAppsLoading ? (
             <div className="space-y-3">
               <Skeleton className="h-20 w-full rounded-2xl" />
@@ -275,12 +266,8 @@ export function AdminMessagesOverviewPage() {
         </div>
       )}
 
-      {/* =========================================================================
-          TAB 2: KOTAK MASUK KONSULTASI OPD (HELPDESK)
-         ========================================================================= */}
       {activeTab === 'consultations' && (
         <div className="space-y-6">
-          {/* Controls: Search + Filter */}
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="relative flex-1 max-w-md">
@@ -332,7 +319,6 @@ export function AdminMessagesOverviewPage() {
             </div>
           </div>
 
-          {/* Consultation List */}
           {isConsultationsLoading ? (
             <div className="space-y-3">
               <Skeleton className="h-28 w-full rounded-2xl" />
@@ -373,7 +359,6 @@ export function AdminMessagesOverviewPage() {
                         : 'bg-white border-slate-200'
                     }`}
                   >
-                    {/* Header info */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge variant="primary" className="text-xs font-semibold">
@@ -393,7 +378,6 @@ export function AdminMessagesOverviewPage() {
                         </span>
                       </div>
 
-                      {/* Action buttons */}
                       <div className="flex items-center gap-2">
                         {isUnread && (
                           <Button
@@ -410,7 +394,6 @@ export function AdminMessagesOverviewPage() {
                       </div>
                     </div>
 
-                    {/* Subject and Message Body */}
                     <div className="space-y-2">
                       <h3 className="text-base font-bold text-slate-900">
                         {item.subject}
@@ -420,7 +403,6 @@ export function AdminMessagesOverviewPage() {
                       </div>
                     </div>
 
-                    {/* PIC Contact & Quick Response Actions */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 text-xs text-slate-600">
                       <div>
                         Narahubung (PIC): <strong>{item.sender_name}</strong> • Pos-el: <span className="font-mono">{item.email}</span> • Telepon/WA: <span className="font-mono">{item.phone}</span>

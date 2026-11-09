@@ -42,7 +42,6 @@ export function Sidebar({
 
   if (!user) return null;
 
-  // Filter navigation by role
   const filteredNav = navigationItems.filter((item) =>
     item.allowedRoles.includes(user.role),
   );
@@ -143,7 +142,6 @@ export function Sidebar({
   const sidebarContent = (
     <div className="flex h-full flex-col justify-between overflow-y-auto p-4 scrollbar-none">
       <div className="space-y-6">
-        {/* Header Logo */}
         <div className="flex items-center justify-between border-b border-slate-100 pb-4">
           <Link to="/" onClick={onCloseMobile} className="inline-block">
             {isCollapsed ? (
@@ -155,7 +153,6 @@ export function Sidebar({
             )}
           </Link>
 
-          {/* Mobile close button */}
           <button
             type="button"
             onClick={onCloseMobile}
@@ -166,7 +163,6 @@ export function Sidebar({
           </button>
         </div>
 
-        {/* User Role Banner */}
         {!isCollapsed && (
           <div className="rounded-xl bg-slate-50 border border-slate-200/80 p-3 flex items-center justify-between gap-2.5">
             <div className="flex flex-col min-w-0 flex-1">
@@ -187,7 +183,6 @@ export function Sidebar({
           </div>
         )}
 
-        {/* Nav Sections */}
         <nav className="space-y-4">
           {renderNavSection(mainItems, 'Menu Utama')}
           {renderNavSection(opsItems, 'Operasional & Tiket')}
@@ -195,7 +190,6 @@ export function Sidebar({
         </nav>
       </div>
 
-      {/* Footer & Logout */}
       <div className="pt-4 border-t border-slate-100 space-y-2">
         {isCollapsed ? (
           <Tooltip content="Keluar Sistem" position="right" className="w-full justify-center">
@@ -219,7 +213,6 @@ export function Sidebar({
           </button>
         )}
 
-        {/* Desktop Collapse Toggle */}
         {isCollapsed ? (
           <Tooltip content="Perluas Menu" position="right" className="w-full justify-center">
             <button
@@ -250,7 +243,6 @@ export function Sidebar({
 
   return (
     <>
-      {/* Desktop Sidebar */}
       <aside
         className={`hidden md:flex flex-col shrink-0 border-r border-slate-200 bg-white transition-all duration-200 ease-in-out z-20 ${
           isCollapsed ? 'w-20' : 'w-64'
@@ -259,21 +251,18 @@ export function Sidebar({
         {sidebarContent}
       </aside>
 
-      {/* Mobile Sidebar Overlay Drawer */}
       {isMobileOpen && (
         <div
           className="fixed inset-0 z-50 flex md:hidden"
           role="dialog"
           aria-modal="true"
         >
-          {/* Backdrop */}
           <div
             className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs transition-opacity"
             onClick={onCloseMobile}
             aria-hidden="true"
           />
 
-          {/* Drawer content */}
           <div className="relative flex w-full max-w-xs flex-1 flex-col bg-white shadow-xl">
             {sidebarContent}
           </div>

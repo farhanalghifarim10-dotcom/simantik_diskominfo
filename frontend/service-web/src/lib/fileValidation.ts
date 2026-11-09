@@ -36,15 +36,6 @@ export interface FileValidationResult {
   resolvedMime?: string;
 }
 
-/**
- * Validasi sisi klien untuk berkas unggahan permohonan SIMANTIK.
- * Memverifikasi:
- * 1. Keberadaan ekstensi file yang sah.
- * 2. Ekstensi berada dalam allowlist baseline (PDF, DOC, DOCX, XLS, XLSX, JPG, JPEG, PNG).
- * 3. Menolak file teks (.txt), executable (.exe, .bat), script, dan file berbahaya lainnya.
- * 4. Memastikan kesesuaian dengan persyaratan layanan jika ditentukan secara spesifik (narrowing).
- * 5. Batas ukuran berkas maksimum.
- */
 export function validateClientFile(
   file: File,
   allowedFileTypes?: string | null,
@@ -67,7 +58,6 @@ export function validateClientFile(
     };
   }
 
-  // Cegah tipe MIME terlarang jika dideteksi browser
   if (file.type) {
     const browserMime = file.type.toLowerCase();
     const forbiddenMimes = [
@@ -93,7 +83,6 @@ export function validateClientFile(
     };
   }
 
-  // Pembatasan khusus per persyaratan layanan (Narrowing)
   if (allowedFileTypes) {
     const allowedMimes = allowedFileTypes
       .split(',')
@@ -112,7 +101,6 @@ export function validateClientFile(
     }
   }
 
-  // Validasi ukuran berkas
   const maxMb = maxFileSizeMb || 10;
   const maxBytes = maxMb * 1024 * 1024;
   if (file.size > maxBytes) {

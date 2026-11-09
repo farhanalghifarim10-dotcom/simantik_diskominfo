@@ -65,11 +65,6 @@ export class TechniciansService {
     private readonly auditService: AuditService,
   ) {}
 
-  /**
-   * Memeriksa apakah fallback in-memory diizinkan secara eksplisit.
-   * Hanya diaktifkan jika berada di lingkungan test dengan flag ALLOW_IN_MEMORY_FALLBACK=true.
-   * Tidak pernah diaktifkan pada lingkungan yang terhubung ke Supabase remote.
-   */
   private isFallbackAllowed(): boolean {
     return (
       process.env.ALLOW_IN_MEMORY_FALLBACK === 'true' &&
@@ -77,11 +72,6 @@ export class TechniciansService {
     );
   }
 
-  /**
-   * Mengambil daftar teknisi internal beserta status aktif dan beban penugasan.
-   * Mengembalikan [] jika database kosong (tanpa menyamarkan dengan data dummy).
-   * Melempar InternalServerErrorException jika query database gagal.
-   */
   async listTechnicians(query?: ListTechniciansQueryDto): Promise<TechnicianAccountItem[]> {
     const isExplicitFallbackAllowed = this.isFallbackAllowed();
 
@@ -110,13 +100,10 @@ export class TechniciansService {
           );
         }
       } else if (data !== null && data !== undefined) {
-        // Query basis data berhasil dieksekusi.
-        // Jika data kosong ([]), kembalikan [] sebagai hasil yang valid.
         if (data.length === 0) {
           return [];
         }
 
-        // Ambil data penugasan aktual untuk menghitung beban kerja teknisi
         const { data: assignments, error: assignmentsError } = await client
           .from('assignments')
           .select('technician_id, application_id, is_current');
@@ -201,7 +188,6 @@ export class TechniciansService {
       return [];
     }
 
-    // In-memory fallback (hanya diizinkan di lingkungan test dengan ALLOW_IN_MEMORY_FALLBACK=true)
     let result = [...this.inMemoryTechnicians];
     if (query?.is_active !== undefined) {
       result = result.filter((t) => t.is_active === query.is_active);
@@ -216,11 +202,6 @@ export class TechniciansService {
     return result.sort((a, b) => a.full_name.localeCompare(b.full_name));
   }
 
-  /**
-   * Detail profil teknisi beserta riwayat penugasannya.
-   * Menghasilkan NotFoundException/404 jika ID teknisi tidak ditemukan di database.
-   * Melempar InternalServerErrorException jika query database gagal.
-   */
   async getTechnicianDetail(id: string): Promise<TechnicianDetailItem> {
     const isExplicitFallbackAllowed = this.isFallbackAllowed();
 
@@ -286,7 +267,6 @@ export class TechniciansService {
           recent_assignments: mappedAssignments,
         };
       } else {
-        // Query berhasil tetapi profil tidak ditemukan di database
         if (!isExplicitFallbackAllowed) {
           throw new NotFoundException(`Profil tenaga ahli dengan ID "${id}" tidak ditemukan.`);
         }
@@ -333,10 +313,6 @@ export class TechniciansService {
     };
   }
 
-  /**
-   * [SUPER_ADMIN] Mendaftarkan teknisi baru (Integrasi aman Supabase Auth)
-   * TIDAK PERNAH mengekspos password atau kredensial rahasia pada respon.
-   */
   async createTechnician(
     dto: CreateTechnicianDto,
     actorId?: string,
@@ -351,7 +327,6 @@ export class TechniciansService {
       throw new BadRequestException('Alamat email valid wajib diisi.');
     }
 
-    // Periksa keunikan email
     const duplicate = this.inMemoryTechnicians.find((t) => t.email.toLowerCase() === email);
     if (duplicate) {
       throw new ConflictException(`Alamat email "${email}" telah terdaftar pada sistem.`);
@@ -364,7 +339,6 @@ export class TechniciansService {
     try {
       const client = this.supabaseService.getClient();
 
-      // Coba buat pengguna di Supabase Auth via admin API
       const { data: authUser, error: authError } = await client.auth.admin.createUser({
         email,
         password,
@@ -379,7 +353,6 @@ export class TechniciansService {
         userId = authUser.user.id;
       }
 
-      // Masukkan profil ke tabel profiles
       await client.from('profiles').upsert({
         id: userId,
         full_name: fullName,
@@ -405,7 +378,6 @@ export class TechniciansService {
 
     this.inMemoryTechnicians.push(newTechnician);
 
-    // Audit log (tanpa password)
     await this.auditService.record({
       actor_profile_id: actorId,
       action: 'TECHNICIAN_ACCOUNT_CREATED',
@@ -417,9 +389,6 @@ export class TechniciansService {
     return newTechnician;
   }
 
-  /**
-   * [SUPER_ADMIN] Memperbarui profil teknisi
-   */
   async updateTechnician(
     id: string,
     dto: UpdateTechnicianDto,
@@ -472,7 +441,6 @@ export class TechniciansService {
       // Fallback
     }
 
-    // Update in-memory
     const inMemIdx = this.inMemoryTechnicians.findIndex((t) => t.id === id);
     if (inMemIdx !== -1) {
       this.inMemoryTechnicians[inMemIdx] = {
@@ -484,7 +452,6 @@ export class TechniciansService {
       };
     }
 
-    // Audit log
     await this.auditService.record({
       actor_profile_id: actorId,
       action: 'TECHNICIAN_ACCOUNT_UPDATED',
@@ -497,10 +464,6 @@ export class TechniciansService {
     return technician;
   }
 
-  /**
-   * [SUPER_ADMIN] Mengaktifkan atau menonaktifkan akun teknisi
-   * PENTING: Tidak menghapus data historis (riwayat penugasan, log audit, catatan teknis tetap aman).
-   */
   async toggleTechnicianStatus(
     id: string,
     isActive: boolean,
@@ -522,13 +485,11 @@ export class TechniciansService {
         .eq('id', id);
 
       if (!isActive) {
-        // Blokir sesi Supabase Auth tanpa menghapus pengguna
         await client.auth.admin.updateUserById(id, {
           user_metadata: { is_active: false },
           ban_duration: '876000h', // Ban 100 tahun (soft deactivation)
         });
       } else {
-        // Cabut larangan
         await client.auth.admin.updateUserById(id, {
           user_metadata: { is_active: true },
           ban_duration: 'none',
@@ -538,14 +499,12 @@ export class TechniciansService {
       // Fallback
     }
 
-    // Update in-memory
     const inMemIdx = this.inMemoryTechnicians.findIndex((t) => t.id === id);
     if (inMemIdx !== -1) {
       this.inMemoryTechnicians[inMemIdx].is_active = isActive;
       this.inMemoryTechnicians[inMemIdx].updated_at = technician.updated_at;
     }
 
-    // Audit log
     await this.auditService.record({
       actor_profile_id: actorId,
       action: isActive ? 'TECHNICIAN_ACTIVATED' : 'TECHNICIAN_DEACTIVATED',

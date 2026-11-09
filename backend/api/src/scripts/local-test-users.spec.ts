@@ -45,17 +45,14 @@ describe('Local Test Users Provisioning Safeguards', () => {
     });
 
     it('menolak port yang tidak sesuai dengan gateway API lokal Supabase', () => {
-      // Port DB 54322
       expect(() => {
         validateSupabaseLocalUrl('http://127.0.0.1:54322');
       }).toThrow(/PORT MISMATCH/);
 
-      // Port Studio 54323
       expect(() => {
         validateSupabaseLocalUrl('http://127.0.0.1:54323');
       }).toThrow(/PORT MISMATCH/);
 
-      // Port default web 80 / 3000
       expect(() => {
         validateSupabaseLocalUrl('http://127.0.0.1:3000');
       }).toThrow(/PORT MISMATCH/);
@@ -192,7 +189,7 @@ describe('Local Test Users Provisioning Safeguards', () => {
         ],
       });
 
-      const spec = DEFAULT_LOCAL_TEST_USERS[0]; // Mencoba menjadikannya SUPER_ADMIN
+      const spec = DEFAULT_LOCAL_TEST_USERS[0];
 
       await expect(
         provisionLocalUser(mockClient as any, {
@@ -201,7 +198,6 @@ describe('Local Test Users Provisioning Safeguards', () => {
         })
       ).rejects.toThrow(/ROLE CONFLICT VIOLATION/);
 
-      // Memastikan update role profil tidak dilakukan
       expect(mockClient.profileSpies.update).not.toHaveBeenCalled();
     });
 
@@ -251,9 +247,6 @@ describe('Local Test Users Provisioning Safeguards', () => {
   });
 });
 
-/**
- * Helper Mock Supabase Client untuk testing tanpa menyentuh jaringan / database
- */
 function createMockSupabaseClient(initialData: {
   authUsers: any[];
   profiles: any[];

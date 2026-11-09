@@ -102,7 +102,6 @@ export function AdminNotificationsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -142,7 +141,6 @@ export function AdminNotificationsPage() {
         </div>
       </div>
 
-      {/* Filter Tabs */}
       <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-xs">
         <div className="flex items-center gap-2 text-xs">
           <Button
@@ -172,7 +170,6 @@ export function AdminNotificationsPage() {
         </div>
       </div>
 
-      {/* Notifications List */}
       {isLoading ? (
         <div className="space-y-3">
           <Skeleton className="h-20 w-full rounded-2xl" />

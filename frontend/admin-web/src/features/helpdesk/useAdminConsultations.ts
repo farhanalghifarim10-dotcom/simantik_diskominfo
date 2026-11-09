@@ -21,9 +21,6 @@ interface ApiResponse<T> {
   message?: string;
 }
 
-/**
- * Hook untuk memuat daftar permohonan konsultasi dari OPD melalui Helpdesk
- */
 export function useAdminConsultations() {
   return useQuery<ConsultationItem[], Error>({
     queryKey: ['admin-helpdesk-consultations'],
@@ -36,9 +33,6 @@ export function useAdminConsultations() {
   });
 }
 
-/**
- * Hook untuk menandai konsultasi sebagai telah dibaca
- */
 export function useMarkConsultationRead() {
   const queryClient = useQueryClient();
 

@@ -104,7 +104,6 @@ const LIFECYCLE_STAGES: { stage: ApplicationStage; label: string; description: s
 export class TrackingService {
   private readonly logger = new Logger(TrackingService.name);
 
-  // In-memory application store for testing and fallback
   private inMemoryTrackRecords: Map<string, InMemApplicationTrack> = new Map();
 
   constructor(
@@ -115,16 +114,10 @@ export class TrackingService {
     this.seedFallbackApplications();
   }
 
-  /**
-   * Helper untuk mendaftarkan data in-memory (berguna untuk testing integrasi dan fallback)
-   */
   registerInMemoryApplication(record: InMemApplicationTrack): void {
     this.inMemoryTrackRecords.set(record.ticket_number.toUpperCase(), record);
   }
 
-  /**
-   * Memperbarui status permohonan di in-memory store jika status diubah oleh admin/workflow.
-   */
   updateInMemoryStatus(
     ticketNumber: string,
     toStatus: ApplicationStatus,
@@ -159,9 +152,6 @@ export class TrackingService {
     }
   }
 
-  /**
-   * Memperbarui tracking_code_hash permohonan di in-memory store jika diterbitkan ulang.
-   */
   updateInMemoryTrackingCodeHash(
     ticketNumber: string,
     newTrackingCodeHash: string,
@@ -176,7 +166,6 @@ export class TrackingService {
   }
 
   private seedFallbackApplications() {
-    // Seed default application untuk testing tracking
     const ticket = 'SIM-2026-000101';
     const plainCode = 'TRK-A1B2C3D4';
     const hash = crypto.createHash('sha256').update(plainCode).digest('hex');
@@ -221,10 +210,6 @@ export class TrackingService {
     });
   }
 
-  /**
-   * 1. Verifikasi kredensial pelacakan publik (Nomor Tiket + Kode Pelacakan).
-   * Mencegah brute force dengan rate limiting.
-   */
   async verifyCredential(
     dto: VerifyTrackingDto,
     clientIp: string = '127.0.0.1',
@@ -241,10 +226,8 @@ export class TrackingService {
     }
 
     const rateLimitKey = `${clientIp}:${ticketNumber}`;
-    // Periksa apakah sedang diblokir karena percobaan gagal sebelumnya
     this.rateLimiter.assertNotBlocked(rateLimitKey);
 
-    // Hitung hash dari input kode pelacakan
     const inputHashExact = crypto
       .createHash('sha256')
       .update(trackingCode)
@@ -256,7 +239,6 @@ export class TrackingService {
 
     let appRecord: InMemApplicationTrack | null = null;
 
-    // 1. Coba cari di Supabase
     try {
       const client = this.supabaseService.getClient();
       const { data, error } = await client
@@ -301,7 +283,6 @@ export class TrackingService {
       // Supabase unavailable / fallback
     }
 
-    // 2. Coba periksa in-memory fallback jika belum ditemukan
     if (!appRecord) {
       const mem = this.inMemoryTrackRecords.get(ticketNumber);
       if (mem) {
@@ -315,7 +296,6 @@ export class TrackingService {
       }
     }
 
-    // Jika gagal verifikasi
     if (!appRecord) {
       this.rateLimiter.recordFailure(rateLimitKey);
       throw new UnauthorizedException({
@@ -325,7 +305,6 @@ export class TrackingService {
       });
     }
 
-    // Periksa apakah tiket telah resmi DITUTUP oleh Administrator
     if (appRecord.current_status === 'CLOSED') {
       throw new ForbiddenException({
         statusCode: 403,
@@ -334,10 +313,8 @@ export class TrackingService {
       });
     }
 
-    // Berhasil verifikasi: reset kegagalan rate limit
     this.rateLimiter.reset(rateLimitKey);
 
-    // Hasilkan short-lived session token (15 menit)
     const session = this.tokenService.generateSessionToken(
       appRecord.ticket_number,
       appRecord.id,
@@ -351,10 +328,6 @@ export class TrackingService {
     };
   }
 
-  /**
-   * 2. Proyeksi Aman Ringkasan Tiket Publik.
-   * Melakukan data minimization dan menyembunyikan identitas internal.
-   */
   async getPublicTicketSummary(
     ticketNumber: string,
     session: TrackingSessionPayload,
@@ -377,7 +350,6 @@ export class TrackingService {
       });
     }
 
-    // Tolak akses jika tiket telah DITUTUP oleh Administrator
     if (app.current_status === 'CLOSED') {
       throw new ForbiddenException({
         statusCode: 403,
@@ -386,14 +358,11 @@ export class TrackingService {
       });
     }
 
-    // Masking data sensitif pemohon
     const applicantNameMasked = this.maskName(app.applicant_name);
     const applicantEmailMasked = this.maskEmail(app.applicant_email);
 
-    // Deskripsi next-step informatif
     const nextStep = this.resolveNextStepAdvisory(app.current_status);
 
-    // Ambil alasan revisi jika statusnya REVISION_REQUIRED
     let revisionReason: string | null = null;
     if (app.current_status === 'REVISION_REQUIRED') {
       revisionReason = app.revision_note || this.findLatestRevisionNote(app.status_history);
@@ -432,10 +401,6 @@ export class TrackingService {
     };
   }
 
-  /**
-   * 3. Proyeksi Timeline Publik.
-   * Proyeksi intensional yang aman, bukan raw dump log audit internal teknisi.
-   */
   async getPublicTimeline(
     ticketNumber: string,
     session: TrackingSessionPayload,
@@ -481,10 +446,6 @@ export class TrackingService {
     };
   }
 
-  /**
-   * 4. Alur Tanggapan Revisi oleh Pemohon Publik.
-   * Hanya diizinkan jika status tiket sedang dalam REVISION_REQUIRED.
-   */
   async submitRevision(
     ticketNumber: string,
     session: TrackingSessionPayload,
@@ -517,7 +478,6 @@ export class TrackingService {
       });
     }
 
-    // Validasi aturan bisnis: hanya boleh revisi jika status saat ini REVISION_REQUIRED
     if (app.current_status !== 'REVISION_REQUIRED') {
       throw new BadRequestException({
         statusCode: 400,
@@ -526,7 +486,6 @@ export class TrackingService {
       });
     }
 
-    // Validasi berkas lampiran tambahan jika ada (wajibkan base64 buffer > 0 dan lolos validasi keamanan)
     const validatedRevisionDocs: {
       original_filename: string;
       mime_type: string;
@@ -564,11 +523,9 @@ export class TrackingService {
     let insertedHistoryId: string | null = null;
     let insertedMessageId: string | null = null;
 
-    // 1. Perbarui Supabase jika terhubung
     try {
       const client = this.supabaseService.getClient();
 
-      // a. Upload berkas revisi ke bucket privat simantik-documents dan simpan metadata di application_documents
       for (const doc of validatedRevisionDocs) {
         const docId = crypto.randomUUID();
         const storagePath = generateSecureStorageKey(`applications/${normalizedTicket}`, doc.original_filename);
@@ -612,7 +569,6 @@ export class TrackingService {
         insertedDocIds.push(docId);
       }
 
-      // b. Perbarui status aplikasi (dengan conditional optimistic check bahwa status masih REVISION_REQUIRED)
       const { data: updatedRows, error: appUpdateError } = await client
         .from('applications')
         .update({
@@ -649,7 +605,6 @@ export class TrackingService {
 
       applicationStatusUpdated = true;
 
-      // c. Catat di status history dengan ID unik eksplisit
       const historyId = crypto.randomUUID();
       const { error: historyError } = await client.from('application_status_history').insert({
         id: historyId,
@@ -665,7 +620,6 @@ export class TrackingService {
       }
       insertedHistoryId = historyId;
 
-      // d. Catat pesan komunikasi publik dengan ID unik eksplisit
       const messageId = crypto.randomUUID();
       const { error: msgError } = await client.from('messages').insert({
         id: messageId,
@@ -683,7 +637,6 @@ export class TrackingService {
       }
       insertedMessageId = messageId;
     } catch (err: any) {
-      // Kompensasi rollback selektif: hanya bersihkan artefak yang terbuat pada percobaan ini tanpa menghapus data historis lama
       if (uploadedStoragePaths.length > 0) {
         try {
           const client = this.supabaseService.getClient();
@@ -733,7 +686,6 @@ export class TrackingService {
               updated_at: app.updated_at,
             };
             if (dto.updated_title) revertPayload.title = app.title;
-            // Gunakan filter id dan current_status agar tidak menimpa transisi konkuren yang sah
             const { data: revertedRows, error: revertErr } = await client
               .from('applications')
               .update(revertPayload)
@@ -782,11 +734,10 @@ export class TrackingService {
       }
     }
 
-    // 2. Perbarui in-memory record (sinkron untuk mode fallback testing dan query lokal)
     app.current_status = newStatus;
     app.updated_at = now;
     if (dto.updated_title) app.title = dto.updated_title.trim();
-    app.revision_note = undefined; // reset catatan kebutuhan revisi setelah dijawab
+    app.revision_note = undefined;
     app.status_history.unshift({
       from_status: previousStatus,
       to_status: newStatus,
@@ -817,12 +768,7 @@ export class TrackingService {
     };
   }
 
-  // ------------------------------------------------------------
-  // PRIVATE HELPER METHODS
-  // ------------------------------------------------------------
-
   private async findApplicationData(ticketNumber: string): Promise<InMemApplicationTrack | null> {
-    // Coba Supabase
     try {
       const client = this.supabaseService.getClient();
       const { data, error } = await client
@@ -839,7 +785,6 @@ export class TrackingService {
         .maybeSingle();
 
       if (!error && data) {
-        // Ambil riwayat tahapan tanpa membocorkan internal notes atau identitas teknis
         let stageHistory: {
           from_stage: ApplicationStage | null;
           to_stage: ApplicationStage;
@@ -903,7 +848,6 @@ export class TrackingService {
       const p = parts[0];
       return p.length > 2 ? `${p.slice(0, 2)}***` : `${p}***`;
     }
-    // Tampilkan kata pertama dan inisial kata kedua + bintang
     const first = parts[0];
     const secondInitial = parts[1].charAt(0).toUpperCase();
     return `${first} ${secondInitial}***`;
@@ -1124,9 +1068,6 @@ export class TrackingService {
     return revEntry?.note || null;
   }
 
-  /**
-   * Membentuk proyeksi milestone publik yang intensional dan terstruktur
-   */
   private buildIntentionalPublicMilestones(
     currentStatus: ApplicationStatus,
     history: { to_status: ApplicationStatus; changed_at: string; note: string | null }[],
@@ -1239,15 +1180,11 @@ export class TrackingService {
     return milestones;
   }
 
-  /**
-   * Constant-time comparison for SHA-256 hash strings to prevent timing side-channel attacks.
-   */
   private safeHashCompare(storedHashHex: string, candidateHashHex: string): boolean {
     if (!storedHashHex || !candidateHashHex) return false;
     const cleanStored = storedHashHex.trim().toLowerCase();
     const cleanCandidate = candidateHashHex.trim().toLowerCase();
 
-    // Pastikan kedua hash valid hex 64-karakter (SHA-256 digest hex)
     if (cleanStored.length !== 64 || cleanCandidate.length !== 64) {
       return false;
     }

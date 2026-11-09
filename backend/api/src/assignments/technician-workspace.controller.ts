@@ -32,10 +32,6 @@ export class TechnicianWorkspaceController {
     private readonly assignmentsService: AssignmentsService,
   ) {}
 
-  /**
-   * GET /api/v1/technician/my-work/summary
-   * Mengambil ringkasan metrik beban kerja teknisi (Total, Dalam Pengerjaan, Pending, Selesai).
-   */
   @Get('my-work/summary')
   async getMyWorkSummary(@Req() req: AuthenticatedRequest) {
     const data = await this.assignmentsService.getTechnicianWorkSummary(
@@ -47,10 +43,6 @@ export class TechnicianWorkspaceController {
     };
   }
 
-  /**
-   * GET /api/v1/technician/my-work
-   * Mengambil daftar seluruh permohonan yang ditugaskan kepada teknisi login.
-   */
   @Get('my-work')
   async getMyWork(
     @Query() query: ListTechnicianWorkQueryDto,
@@ -66,10 +58,6 @@ export class TechnicianWorkspaceController {
     };
   }
 
-  /**
-   * GET /api/v1/technician/applications/:id
-   * Mengambil detail permohonan dengan otorisasi penugasan teknisi.
-   */
   @Get('applications/:id')
   async getTechnicianApplicationDetail(
     @Param('id') id: string,
@@ -85,10 +73,6 @@ export class TechnicianWorkspaceController {
     };
   }
 
-  /**
-   * POST /api/v1/technician/applications/:id/transitions
-   * Eksekusi perubahan status permohonan oleh teknisi (hanya pada tiket tugasannya).
-   */
   @Post('applications/:id/transitions')
   async executeTechnicianTransition(
     @Param('id') id: string,
@@ -107,10 +91,6 @@ export class TechnicianWorkspaceController {
     };
   }
 
-  /**
-   * POST /api/v1/technician/applications/:id/stage-transitions
-   * Pemindahan tahapan siklus hidup SPBE oleh teknisi (hanya pada tiket tugasannya).
-   */
   @Post('applications/:id/stage-transitions')
   async executeTechnicianStageTransition(
     @Param('id') id: string,

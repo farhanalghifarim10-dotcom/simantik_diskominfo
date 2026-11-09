@@ -45,7 +45,6 @@ const DEFAULT_OPD_UNITS: OpdUnitEntity[] = [
 export class ApplicationsService {
   private readonly logger = new Logger(ApplicationsService.name);
 
-  // In-memory application store for idempotency and fallback testing
   private inMemoryApplications: Map<string, ApplicationSubmissionResult> = new Map();
   private inMemoryIdempotencyKeys: Map<string, ApplicationSubmissionResult> = new Map();
 
@@ -56,9 +55,6 @@ export class ApplicationsService {
     @Optional() private readonly auditService?: AuditService,
   ) {}
 
-  /**
-   * Mengambil daftar OPD unit aktif untuk dropdown pemohon.
-   */
   async getOpdUnits(): Promise<OpdUnitEntity[]> {
     try {
       const client = this.supabaseService.getClient();
@@ -78,14 +74,10 @@ export class ApplicationsService {
     return DEFAULT_OPD_UNITS.filter((o) => o.is_active);
   }
 
-  /**
-   * Alur lengkap submisi permohonan publik.
-   */
   async submitApplication(
     payload: SubmitApplicationPayload,
     documents: UploadedDocumentInput[] = [],
   ): Promise<ApplicationSubmissionResult> {
-    // 1. Idempotency Check
     if (payload.idempotency_key && payload.idempotency_key.trim()) {
       const key = payload.idempotency_key.trim();
       const existing = this.inMemoryIdempotencyKeys.get(key);
@@ -94,7 +86,6 @@ export class ApplicationsService {
       }
     }
 
-    // 2. Validasi Layanan
     if (!payload.service_id) {
       throw new BadRequestException('Layanan harus dipilih.');
     }
@@ -102,7 +93,6 @@ export class ApplicationsService {
       payload.service_id,
     );
 
-    // 3. Validasi OPD Unit
     if (!payload.opd_unit_id) {
       throw new BadRequestException('Unit kerja OPD pemohon wajib dipilih.');
     }
@@ -114,7 +104,6 @@ export class ApplicationsService {
       );
     }
 
-    // 4. Validasi Data Pemohon
     if (!payload.applicant_name || payload.applicant_name.trim().length < 3) {
       throw new BadRequestException('Nama lengkap pemohon wajib diisi (minimal 3 karakter).');
     }
@@ -129,7 +118,6 @@ export class ApplicationsService {
       throw new BadRequestException('Jabatan pemohon di OPD wajib diisi.');
     }
 
-    // 5. Validasi Rincian Permohonan
     if (!payload.title || payload.title.trim().length < 5) {
       throw new BadRequestException('Judul permohonan wajib diisi (minimal 5 karakter).');
     }
@@ -149,7 +137,6 @@ export class ApplicationsService {
       throw new BadRequestException('Keluaran (output) yang diharapkan wajib diisi.');
     }
 
-    // Jika layanan peningkatan/enhancement, wajib ada informasi aplikasi eksisting
     if (service.type === 'ENHANCEMENT') {
       if (!payload.existing_application_name || payload.existing_application_name.trim().length < 2) {
         throw new BadRequestException(
@@ -158,7 +145,6 @@ export class ApplicationsService {
       }
     }
 
-    // 6. Validasi Syarat & Ketentuan (Terms & Conditions)
     if (!payload.terms_accepted) {
       throw new BadRequestException(
         'Pemohon wajib menyetujui syarat dan ketentuan SPBE Pemerintah Daerah Kabupaten Bandung.',
@@ -168,13 +154,11 @@ export class ApplicationsService {
       throw new BadRequestException('Versi syarat dan ketentuan (terms_version) wajib disertakan.');
     }
 
-    // 7. Validasi Dokumen Persyaratan
     const serviceReqs = service.requirements || [];
     const requiredDocumentReqs = serviceReqs.filter(
       (r) => r.is_required && r.type === 'DOCUMENT',
     );
 
-    // Pastikan setiap dokumen wajib memiliki file terunggah
     for (const req of requiredDocumentReqs) {
       const hasUploaded = documents.some((doc) => doc.requirement_id === req.id);
       if (!hasUploaded) {
@@ -184,7 +168,6 @@ export class ApplicationsService {
       }
     }
 
-    // Validasi tipe berkas, ekstensi, magic bytes, buffer biner, dan batasan per persyaratan
     for (const doc of documents) {
       let buf = doc.buffer;
       if (!buf && doc.base64_data !== undefined) {
@@ -216,13 +199,10 @@ export class ApplicationsService {
       );
     }
 
-    // 8. Generate Ticket Number & Tracking Credential
-    // [IMPLEMENTATION ASSUMPTION] Format sementara hingga regulasi SOP Diskominfo resmi
     const randomSuffix = crypto.randomInt(100000, 999999).toString();
     const currentYear = new Date().getFullYear();
     const ticketNumber = `SIM-${currentYear}-${randomSuffix}`;
 
-    // Generate random secret tracking credential (8 karakter hex kapital, format: TRK-XXXXXXXX)
     const trackingSecret = `TRK-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
     const trackingCodeHash = crypto
       .createHash('sha256')
@@ -233,10 +213,8 @@ export class ApplicationsService {
     const applicantId = crypto.randomUUID();
     const submissionTime = new Date().toISOString();
 
-    // 9. Persistensi ke Database Supabase
     const client = this.supabaseService.getClient();
 
-    // Fallback in-memory hanya diizinkan bila secara eksplisit diaktifkan untuk automated test/offline dev
     const isExplicitFallbackAllowed =
       process.env.ALLOW_IN_MEMORY_FALLBACK === 'true' &&
       process.env.NODE_ENV === 'test';
@@ -248,7 +226,6 @@ export class ApplicationsService {
     let statusHistoryInserted = false;
 
     try {
-      // a. Simpan Applicant
       const { error: applicantError } = await client.from('applicants').insert({
         id: applicantId,
         opd_unit_id: payload.opd_unit_id,
@@ -274,7 +251,6 @@ export class ApplicationsService {
       }
       applicantInserted = true;
 
-      // b. Simpan Application
       const { error: appError } = await client.from('applications').insert({
         id: applicationId,
         ticket_number: ticketNumber,
@@ -324,13 +300,11 @@ export class ApplicationsService {
       }
       applicationInserted = true;
 
-      // c. Simpan Dokumen
       for (const doc of documents) {
         const docId = crypto.randomUUID();
         const storagePath = generateSecureStorageKey(`applications/${ticketNumber}`, doc.original_filename);
 
         if (doc.buffer) {
-          // Upload ke private bucket simantik-documents
           const { error: uploadError } = await client.storage
             .from('simantik-documents')
             .upload(storagePath, doc.buffer, {
@@ -375,7 +349,6 @@ export class ApplicationsService {
         insertedDocumentIds.push(docId);
       }
 
-      // d. Catat Status History Awal
       const { error: historyError } = await client
         .from('application_status_history')
         .insert({
@@ -396,9 +369,6 @@ export class ApplicationsService {
       }
       statusHistoryInserted = true;
 
-      // e. Catat Event Audit: APPLICATION_SUBMITTED
-      // Pemohon publik tidak memiliki akun profil internal Supabase, sehingga actor_profile_id bernilai null.
-      // Metadata yang dicatat adalah metadata minimum non-sensitif (tanpa tracking_code, hash, password, atau payload file).
       if (this.auditService) {
         try {
           await this.auditService.record({
@@ -420,17 +390,12 @@ export class ApplicationsService {
             },
           });
         } catch (auditErr: any) {
-          // Analisis kegagalan audit setelah data permohonan tersimpan:
-          // Permohonan utama sudah sah dan terbit di 4 tabel domain.
-          // Kegagalan penulisan audit log sekunder tidak boleh membatalkan submission pemohon
-          // (karena akan memicu false failure, mendorong resubmission dan tiket duplikat).
           this.logger.error(
             `Gagal mencatat audit log APPLICATION_SUBMITTED untuk permohonan ${ticketNumber}: ${auditErr?.message || auditErr}`,
           );
         }
       }
     } catch (err: any) {
-      // Jalankan kompensasi best-effort rollback untuk mencegah data parsial
       await this.rollbackPartialSubmission(client, {
         applicantId: applicantInserted ? applicantId : null,
         applicationId: applicationInserted ? applicationId : null,
@@ -439,7 +404,6 @@ export class ApplicationsService {
         statusHistoryInserted,
       });
 
-      // Jika error berupa NestJS HttpException yang disengaja, langsung teruskan
       if (
         err instanceof BadRequestException ||
         err instanceof ConflictException ||
@@ -448,7 +412,6 @@ export class ApplicationsService {
         throw err;
       }
 
-      // Jika fallback eksplisit tidak aktif, jangan pernah menelan error dan jangan return false success
       if (!isExplicitFallbackAllowed) {
         this.logger.error(
           `Kesalahan persistensi basis data: ${err?.message || err}`,
@@ -478,13 +441,11 @@ export class ApplicationsService {
         '[IMPLEMENTATION ASSUMPTION] Format nomor tiket menggunakan format SIM-2026-XXXXXX sementara menunggu ketetapan resmi SOP Diskominfo.',
     };
 
-    // Simpan di in-memory cache untuk idempotensi dan testing
     this.inMemoryApplications.set(applicationId, result);
     if (payload.idempotency_key && payload.idempotency_key.trim()) {
       this.inMemoryIdempotencyKeys.set(payload.idempotency_key.trim(), result);
     }
 
-    // Jika mode test fallback dan trackingService terhubung, daftarkan agar dapat dilacak pada testing
     if (this.trackingService) {
       this.trackingService.registerInMemoryApplication({
         id: applicationId,
@@ -519,11 +480,6 @@ export class ApplicationsService {
     return result;
   }
 
-  /**
-   * Kompensasi best-effort untuk membersihkan data parsial jika langkah insert gagal di tengah alur.
-   * Catatan: PostgREST REST client tidak mendukung multi-statement ACID transaction secara langsung.
-   * Untuk transaksi atomik murni di level basis data, direkomendasikan Stored Procedure / RPC PostgreSQL.
-   */
   private async rollbackPartialSubmission(
     client: any,
     state: {

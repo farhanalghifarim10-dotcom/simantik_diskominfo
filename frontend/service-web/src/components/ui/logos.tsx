@@ -1,24 +1,11 @@
 import type { ImgHTMLAttributes } from 'react';
 
-/**
- * Official Three-Logo Hierarchy Component
- *
- * Institutional Hierarchy:
- * 1. Pemerintah Daerah Kabupaten Bandung (Entitas Pemerintahan Tertinggi / Induk)
- * 2. Dinas Komunikasi dan Informatika (Instansi Pengampu & Penyelenggara Layanan)
- * 3. SIMANTIK (Sistem Manajemen Layanan Teknologi Informasi)
- */
-
 export interface LogoProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> {
   size?: number | string;
   variant?: 'emblem' | 'full';
   useWhiteBackground?: boolean;
 }
 
-/**
- * Lambang Resmi Pemerintah Daerah Kabupaten Bandung
- * Identitas Pemerintah Daerah (Induk)
- */
 export function PemkabBandungLogo({
   size = 36,
   className = '',
@@ -52,10 +39,6 @@ export function PemkabBandungLogo({
   );
 }
 
-/**
- * Lambang Resmi Diskominfo (Dinas Komunikasi dan Informatika)
- * Identitas Instansi Pengampu Layanan TI Kabupaten Bandung
- */
 export function DiskominfoLogo({
   size = 36,
   className = '',
@@ -85,11 +68,6 @@ export function DiskominfoLogo({
   );
 }
 
-/**
- * Logo Resmi SIMANTIK
- * Identitas Produk / Aplikasi Layanan TI Kabupaten Bandung
- * Mendukung varian 'emblem' (default untuk area ringkas seperti navbar) dan 'full' (format vertikal utuh dengan tipografi)
- */
 export function SimantikLogo({
   size = 36,
   variant = 'emblem',
@@ -125,16 +103,10 @@ export function SimantikLogo({
   );
 }
 
-/**
- * Shortcut untuk Emblem Khusus SIMANTIK (cropped emblem)
- */
 export function SimantikEmblem(props: LogoProps) {
   return <SimantikLogo {...props} variant="emblem" />;
 }
 
-/**
- * Shortcut untuk Logo SIMANTIK Versi Lengkap (vertikal)
- */
 export function SimantikFullLogo(props: LogoProps) {
   return <SimantikLogo {...props} variant="full" />;
 }
@@ -145,13 +117,6 @@ export interface LogoHierarchyProps {
   className?: string;
 }
 
-/**
- * Komponen Terpadu Hierarki 3 Logo
- * Menampilkan hubungan kelembagaan yang sah:
- * 1. Pemkab Bandung (Pemerintah Daerah Induk)
- * 2. Diskominfo (Instansi Pengampu Teknis)
- * 3. SIMANTIK (Identitas Produk Layanan TI)
- */
 export function LogoHierarchy({
   layout = 'horizontal',
   subtitle = 'Pemerintah Daerah Kabupaten Bandung',
@@ -176,7 +141,6 @@ export function LogoHierarchy({
   if (layout === 'vertical') {
     return (
       <div className={`flex flex-col items-center text-center gap-3.5 ${className}`}>
-        {/* Baris 3 Lambang Resmi Berjejer */}
         <div className="flex items-center justify-center gap-3 p-2 rounded-xl bg-white/80 border border-slate-100 shadow-2xs">
           <PemkabBandungLogo size={38} title="Pemerintah Daerah Kabupaten Bandung" />
           <div className="h-6 w-px bg-slate-200" aria-hidden="true" />
@@ -217,10 +181,8 @@ export function LogoHierarchy({
     );
   }
 
-  // Layout default: horizontal (Navbar Header)
   return (
     <div className={`flex items-center gap-3 sm:gap-3.5 ${className}`}>
-      {/* Logo Daerah & Dinas */}
       <div className="flex items-center gap-2">
         <PemkabBandungLogo size={34} title="Pemerintah Daerah Kabupaten Bandung" />
         <div className="h-5 w-px bg-slate-200" aria-hidden="true" />
@@ -229,7 +191,6 @@ export function LogoHierarchy({
 
       <div className="h-6 w-px bg-slate-200 hidden sm:block" aria-hidden="true" />
 
-      {/* Identitas Produk SIMANTIK */}
       <div className="flex items-center gap-2.5">
         <SimantikLogo size={34} variant="emblem" />
         <div className="flex flex-col">

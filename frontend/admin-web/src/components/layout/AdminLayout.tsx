@@ -13,7 +13,6 @@ export function AdminLayout() {
   return (
     <ToastProvider>
       <div className="flex h-screen w-full overflow-hidden bg-slate-50">
-        {/* Sidebar */}
         <Sidebar
           isCollapsed={isCollapsed}
           onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
@@ -21,12 +20,9 @@ export function AdminLayout() {
           onCloseMobile={() => setIsMobileOpen(false)}
         />
 
-        {/* Main Content Area */}
         <div className="flex flex-1 flex-col overflow-hidden">
-          {/* Header */}
           <Header onOpenMobile={() => setIsMobileOpen(true)} />
 
-          {/* Page Body with Motion Page Transitions */}
           <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
             <motion.div
               key={location.pathname}

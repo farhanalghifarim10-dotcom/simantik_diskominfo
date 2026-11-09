@@ -160,7 +160,6 @@ describe('Submission Wizard State & Category Transition Regression Tests', () =>
     });
 
     it('should prevent zombie/orphan documents from appearing in review or submission payload', () => {
-      // Misalkan state mengandung dokumen lama dan dokumen baru (seperti bug awal 4 entri)
       const dirtyStateWithZombies: Record<string, UploadedFileState> = {
         ...uploadedPembangunanDocs,
         'b1111111-1111-1111-1111-111111111111': {
@@ -177,13 +176,11 @@ describe('Submission Wizard State & Category Transition Regression Tests', () =>
         },
       };
 
-      // Saat ditinjau untuk Pengembangan Aplikasi Eksisting:
       const filteredForPengembangan = filterValidUploadedDocuments(
         dirtyStateWithZombies,
         servicePengembangan,
       );
 
-      // Harus tepat 2 dokumen yang sah untuk Pengembangan, bukan 4!
       expect(filteredForPengembangan).toHaveLength(2);
       expect(filteredForPengembangan.map((d) => d.requirement_id)).toEqual([
         'b1111111-1111-1111-1111-111111111111',
@@ -219,7 +216,6 @@ describe('Submission Wizard State & Category Transition Regression Tests', () =>
         'SIM-PBB (https://simpbb.bandungkab.go.id)',
       );
 
-      // Bidang khusus eksisting harus direset
       expect(transition.newExistingApplicationName).toBe('');
     });
 

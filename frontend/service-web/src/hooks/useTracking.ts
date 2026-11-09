@@ -102,10 +102,6 @@ interface ApiResponse<T> {
   message?: string;
 }
 
-// ------------------------------------------------------------
-// API CALLS
-// ------------------------------------------------------------
-
 export async function verifyTrackingCredential(
   ticketNumber: string,
   trackingCode: string,
@@ -170,10 +166,6 @@ export async function submitPublicRevision(
   );
 }
 
-// ------------------------------------------------------------
-// REACT QUERY HOOKS
-// ------------------------------------------------------------
-
 export function useVerifyTracking() {
   return useMutation({
     mutationFn: ({ ticketNumber, trackingCode }: { ticketNumber: string; trackingCode: string }) =>
@@ -212,10 +204,6 @@ export function useSubmitRevision(ticketNumber?: string, token?: string | null) 
     },
   });
 }
-
-// ------------------------------------------------------------
-// PUBLIC MESSAGES (TICKET CHAT)
-// ------------------------------------------------------------
 
 export interface PublicMessageItem {
   id: string;

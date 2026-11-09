@@ -38,10 +38,8 @@ export class TrackingAuthGuard implements CanActivate {
       token = token.slice(7).trim();
     }
 
-    // Verifikasi tanda tangan dan masa kedaluwarsa token
     const session = this.trackingTokenService.verifySessionToken(token);
 
-    // Verifikasi kesesuaian nomor tiket (mencegah manipulasi nomor tiket berbeda dengan token)
     const routeTicket =
       request.params?.ticket_number || request.params?.ticketNumber;
 
@@ -57,7 +55,6 @@ export class TrackingAuthGuard implements CanActivate {
       });
     }
 
-    // Lampirkan sesi pada objek request
     request.trackingSession = session;
     return true;
   }

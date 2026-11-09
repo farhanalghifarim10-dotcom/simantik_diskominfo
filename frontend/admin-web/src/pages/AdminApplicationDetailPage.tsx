@@ -69,7 +69,6 @@ export function AdminApplicationDetailPage() {
     application?.current_status || '',
   );
 
-  // Assignment Queries & Mutation
   const {
     data: assignmentsData,
     isLoading: isAssignmentsLoading,
@@ -80,23 +79,19 @@ export function AdminApplicationDetailPage() {
   const { data: techniciansList } = useTechniciansList({ enabled: isSuperAdmin });
   const assignMutation = useAssignTechnician();
 
-  // Assignment Modal State
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [selectedTechId, setSelectedTechId] = useState('');
   const [assignNote, setAssignNote] = useState('');
   const [assignError, setAssignError] = useState('');
 
-  // Mutations
   const transitionMutation = useExecuteTransition();
   const stageTransitionMutation = useExecuteStageTransition();
   const addNoteMutation = useAddInternalNote();
 
-  // State for Transition Action Dialog
   const [activeTransition, setActiveTransition] = useState<TransitionOption | null>(null);
   const [transitionNote, setTransitionNote] = useState('');
   const [transitionError, setTransitionError] = useState('');
 
-  // State for Stage Change Dialog
   const [stageModalOpen, setStageModalOpen] = useState(false);
   const [selectedTargetStage, setSelectedTargetStage] = useState<ApplicationStage>('ANALYSIS');
   const [stageNote, setStageNote] = useState('');
@@ -107,16 +102,12 @@ export function AdminApplicationDetailPage() {
     setStageModalOpen(true);
   };
 
-  // State for Internal Note Input
   const [newInternalNote, setNewInternalNote] = useState('');
 
-  // State for Reissue Tracking Code Modal (Khusus Super Admin)
   const [reissueModalOpen, setReissueModalOpen] = useState(false);
 
-  // State for Downloading/Opening Document
   const [downloadingDocId, setDownloadingDocId] = useState<string | null>(null);
 
-  // Open Assign Modal Handler
   const handleOpenAssignModal = () => {
     setSelectedTechId(
       assignmentsData?.current_assignment?.technician_id ||
@@ -128,7 +119,6 @@ export function AdminApplicationDetailPage() {
     setAssignModalOpen(true);
   };
 
-  // Confirm Assign Handler
   const handleConfirmAssign = async () => {
     if (!application || !selectedTechId) {
       setAssignError('Silakan tentukan tenaga ahli penanggung jawab.');
@@ -155,14 +145,12 @@ export function AdminApplicationDetailPage() {
     }
   };
 
-  // Trigger Status Transition Dialog
   const handleOpenTransitionDialog = (option: TransitionOption) => {
     setActiveTransition(option);
     setTransitionNote('');
     setTransitionError('');
   };
 
-  // Confirm Status Transition
   const handleConfirmTransition = async () => {
     if (!application || !activeTransition) return;
 
@@ -191,7 +179,6 @@ export function AdminApplicationDetailPage() {
     }
   };
 
-  // Confirm Stage Transition
   const handleConfirmStageTransition = async () => {
     if (!application) return;
 
@@ -219,7 +206,6 @@ export function AdminApplicationDetailPage() {
     }
   };
 
-  // Submit Internal Note
   const handleAddInternalNote = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!application || !newInternalNote.trim()) return;
@@ -246,7 +232,6 @@ export function AdminApplicationDetailPage() {
     }
   };
 
-  // Handle Secure Document Download
   const handleDownloadDocument = async (docId: string, filename: string) => {
     if (!application) return;
     setDownloadingDocId(docId);
@@ -302,7 +287,6 @@ export function AdminApplicationDetailPage() {
 
   return (
     <div className="space-y-6">
-      {/* Breadcrumb & Navigation */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-2 text-xs text-slate-500">
           <Link to="/" className="hover:text-slate-900">
@@ -325,7 +309,6 @@ export function AdminApplicationDetailPage() {
         </Link>
       </div>
 
-      {/* Main Header Card with Live Status & Workflow Actions */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 pb-6 border-b border-slate-100">
           <div className="space-y-2 max-w-3xl">
@@ -376,7 +359,6 @@ export function AdminApplicationDetailPage() {
               )}
             </div>
 
-            {/* Prominent Tenaga Ahli Penanggung Jawab Summary */}
             <div className="flex flex-wrap items-center gap-2 pt-2 text-xs">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200">
                 <UsersIcon size={14} className="text-[#1B5040] shrink-0" />
@@ -419,7 +401,6 @@ export function AdminApplicationDetailPage() {
             </div>
           </div>
 
-          {/* Current Operational Status & Stage Indicators */}
           <div className="shrink-0 flex flex-col items-start lg:items-end gap-2 bg-slate-50 p-4 rounded-xl border border-slate-100 min-w-[240px]">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
               Status Terkini
@@ -447,7 +428,6 @@ export function AdminApplicationDetailPage() {
           </div>
         </div>
 
-        {/* WORKFLOW ACTION PANEL (Allowed Transitions from Centralized Engine) */}
         <div className="bg-gradient-to-r from-[#CAF3E4]/50 via-slate-50/60 to-slate-50 p-5 rounded-xl border border-[#98F7D9] flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
           <div className="space-y-1">
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -493,7 +473,6 @@ export function AdminApplicationDetailPage() {
         </div>
       </div>
 
-      {/* Tabs Layout for Detailed Sections */}
       <Tabs defaultValue={defaultTab}>
         <TabList className="bg-white border border-slate-200 p-1 rounded-xl shadow-sm mb-6 flex overflow-x-auto">
           <Tab value="overview" className="flex-1 py-2.5 text-xs sm:text-sm font-semibold">
@@ -519,10 +498,8 @@ export function AdminApplicationDetailPage() {
           </Tab>
         </TabList>
 
-        {/* TAB 1: RINCIAN PERMOHONAN & PEMOHON */}
         <TabPanel value="overview" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left 2 Cols: Rincian Usulan Aplikasi */}
             <div className="lg:col-span-2 space-y-6">
               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5">
                 <h3 className="text-base font-bold text-slate-900 pb-3 border-b border-slate-100 flex items-center gap-2">
@@ -612,9 +589,7 @@ export function AdminApplicationDetailPage() {
               </div>
             </div>
 
-            {/* Right 1 Col: Applicant Information & Terms Evidence */}
             <div className="space-y-6">
-              {/* Applicant Card */}
               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
                 <h3 className="text-base font-bold text-slate-900 pb-3 border-b border-slate-100">
                   Data Pemohon Resmi (PIC OPD)
@@ -680,7 +655,6 @@ export function AdminApplicationDetailPage() {
                 </div>
               </div>
 
-              {/* Technician Assignment Card */}
               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3 border-b border-slate-100">
                   <h3 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2 min-w-0">
@@ -762,7 +736,6 @@ export function AdminApplicationDetailPage() {
                 )}
               </div>
 
-              {/* Terms Acceptance Evidence Card */}
               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
                 <h3 className="text-base font-bold text-slate-900 pb-3 border-b border-slate-100 flex items-center gap-2">
                   <CheckCircleIcon size={16} className="text-emerald-600" />
@@ -798,7 +771,6 @@ export function AdminApplicationDetailPage() {
           </div>
         </TabPanel>
 
-        {/* TAB 2: DOKUMENTASI LIFECYCLE & DOKUMEN TEKNIS */}
         <TabPanel value="lifecycle" className="space-y-6">
           <LifecycleWorkspace
             applicationId={application.id}
@@ -808,7 +780,6 @@ export function AdminApplicationDetailPage() {
           />
         </TabPanel>
 
-        {/* TAB 3: DOKUMEN PERSYARATAN */}
         <TabPanel value="documents" className="space-y-6">
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
             <div>
@@ -895,10 +866,8 @@ export function AdminApplicationDetailPage() {
           </div>
         </TabPanel>
 
-        {/* TAB 3: RIWAYAT STATUS & TAHAPAN */}
         <TabPanel value="history" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Riwayat Status */}
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
               <h3 className="text-base font-bold text-slate-900 pb-3 border-b border-slate-100">
                 Riwayat Transisi Status Operasional
@@ -934,7 +903,6 @@ export function AdminApplicationDetailPage() {
               </div>
             </div>
 
-            {/* Riwayat Stage */}
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
               <h3 className="text-base font-bold text-slate-900 pb-3 border-b border-slate-100">
                 Riwayat Tahapan Lifecycle SPBE
@@ -976,7 +944,6 @@ export function AdminApplicationDetailPage() {
               )}
             </div>
 
-            {/* Riwayat Penugasan Tenaga Ahli */}
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 lg:col-span-2">
               <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3 border-b border-slate-100">
                 <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 min-w-0">
@@ -1046,7 +1013,6 @@ export function AdminApplicationDetailPage() {
           </div>
         </TabPanel>
 
-        {/* TAB 4: CATATAN INTERNAL */}
         <TabPanel value="notes" className="space-y-6">
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
             <div>
@@ -1058,7 +1024,6 @@ export function AdminApplicationDetailPage() {
               </p>
             </div>
 
-            {/* Form Tambah Catatan */}
             <form onSubmit={handleAddInternalNote} className="space-y-3">
               <Textarea
                 placeholder="Tuliskan catatan teknis, temuan verifikasi, atau arahan internal..."
@@ -1078,7 +1043,6 @@ export function AdminApplicationDetailPage() {
               </div>
             </form>
 
-            {/* List of Internal Notes */}
             <div className="space-y-3 pt-4 border-t border-slate-100">
               {application.internal_notes.length === 0 ? (
                 <div className="p-8 text-center text-xs text-slate-400">
@@ -1113,7 +1077,6 @@ export function AdminApplicationDetailPage() {
           </div>
         </TabPanel>
 
-        {/* TAB 5: JEJAK AUDIT */}
         <TabPanel value="audit" className="space-y-6">
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
             <div>
@@ -1158,13 +1121,11 @@ export function AdminApplicationDetailPage() {
           </div>
         </TabPanel>
 
-        {/* TAB 7: KOMUNIKASI & TICKET CHAT */}
         <TabPanel value="messages" className="space-y-6">
           <TicketDiscussionPanel applicationId={application.id} />
         </TabPanel>
       </Tabs>
 
-      {/* DIALOG KONFIRMASI STATUS TRANSITION */}
       <Dialog
         isOpen={Boolean(activeTransition)}
         onClose={() => setActiveTransition(null)}
@@ -1236,7 +1197,6 @@ export function AdminApplicationDetailPage() {
         </div>
       </Dialog>
 
-      {/* DIALOG UBAH LIFECYCLE STAGE */}
       <Dialog
         isOpen={stageModalOpen}
         onClose={() => setStageModalOpen(false)}
@@ -1289,7 +1249,6 @@ export function AdminApplicationDetailPage() {
         </div>
       </Dialog>
 
-      {/* DIALOG ASSIGN / RE-ASSIGN TECHNICIAN */}
       <Dialog
         isOpen={assignModalOpen}
         onClose={() => setAssignModalOpen(false)}
@@ -1364,7 +1323,6 @@ export function AdminApplicationDetailPage() {
         </div>
       </Dialog>
 
-      {/* Modal Penerbitan Ulang Kode Pelacakan (Khusus SUPER_ADMIN) */}
       {isSuperAdmin && (
         <ReissueTrackingCodeModal
           isOpen={reissueModalOpen}

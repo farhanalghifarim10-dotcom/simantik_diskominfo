@@ -54,7 +54,6 @@ import {
 function ShowcaseContent() {
   const { toast } = useToast();
 
-  // State controls for interactive demos
   const [dialogOpen, setDialogOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -65,7 +64,6 @@ function ShowcaseContent() {
   return (
     <div className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto space-y-12">
-        {/* Header Identitas Kelembagaan */}
         <div className="rounded-xl border border-slate-200 bg-white p-6 sm:p-8 shadow-xs">
           <LogoHierarchy layout="horizontal" />
           <div className="mt-6 pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -81,7 +79,6 @@ function ShowcaseContent() {
           </div>
         </div>
 
-        {/* 1. Logo Hierarchy Variations */}
         <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
           <Heading level={3}>1. Hierarki Tiga Logo Resmi</Heading>
           <Text variant="small">
@@ -134,7 +131,6 @@ function ShowcaseContent() {
           </div>
         </section>
 
-        {/* 2. Typography & Tokens */}
         <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
           <Heading level={3}>2. Tipografi & Skala Teks</Heading>
           <div className="space-y-3 pt-2">
@@ -166,7 +162,6 @@ function ShowcaseContent() {
           </div>
         </section>
 
-        {/* 3. Buttons & Interactions */}
         <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
           <Heading level={3}>3. Tombol & Status Aksi</Heading>
           <div className="flex flex-wrap items-center gap-3 pt-2">
@@ -193,7 +188,6 @@ function ShowcaseContent() {
           </div>
         </section>
 
-        {/* 4. Form Controls */}
         <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
           <Heading level={3}>4. Kontrol Formulir Terstandar</Heading>
 
@@ -283,7 +277,6 @@ function ShowcaseContent() {
           </div>
         </section>
 
-        {/* 5. Badges: Status & Lifecycle Stage */}
         <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
           <Heading level={3}>5. Status Operasional & Tahapan Lifecycle</Heading>
           <Text variant="small">
@@ -321,7 +314,6 @@ function ShowcaseContent() {
           </div>
         </section>
 
-        {/* 6. Alerts & Notifications */}
         <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
           <Heading level={3}>6. Alert & Pemberitahuan</Heading>
           <div className="space-y-3 pt-2">
@@ -340,7 +332,6 @@ function ShowcaseContent() {
           </div>
         </section>
 
-        {/* 7. Dialogs, Drawers & Dropdown Actions */}
         <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
           <Heading level={3}>7. Modal, Drawer, Dropdown & Toast</Heading>
           <div className="flex flex-wrap gap-3 pt-2">
@@ -393,7 +384,6 @@ function ShowcaseContent() {
             </Button>
           </div>
 
-          {/* Modal Demo */}
           <Dialog
             isOpen={dialogOpen}
             onClose={() => setDialogOpen(false)}
@@ -426,7 +416,6 @@ function ShowcaseContent() {
             </div>
           </Dialog>
 
-          {/* Confirmation Dialog Demo */}
           <ConfirmationDialog
             isOpen={confirmOpen}
             onClose={() => setConfirmOpen(false)}
@@ -444,7 +433,6 @@ function ShowcaseContent() {
             confirmLabel="Ya, Batalkan Tiket"
           />
 
-          {/* Drawer Demo */}
           <Drawer
             isOpen={drawerOpen}
             onClose={() => setDrawerOpen(false)}
@@ -465,7 +453,6 @@ function ShowcaseContent() {
           </Drawer>
         </section>
 
-        {/* 8. Tabs Navigation */}
         <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
           <Heading level={3}>8. Komponen Tab Navigasi</Heading>
 
@@ -498,7 +485,6 @@ function ShowcaseContent() {
           </Tabs>
         </section>
 
-        {/* 9. Table & Pagination */}
         <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <Heading level={3}>9. Tabel Primitif & Paginasi</Heading>
@@ -594,7 +580,6 @@ function ShowcaseContent() {
           />
         </section>
 
-        {/* 10. Skeleton, Empty & Error States */}
         <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
           <Heading level={3}>10. Loading Skeleton, Empty State & Error State</Heading>
 

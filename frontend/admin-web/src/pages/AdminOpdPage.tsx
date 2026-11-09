@@ -40,7 +40,6 @@ export function AdminOpdPage() {
   const updateOpdMutation = useUpdateOpd();
   const toggleStatusMutation = useToggleOpdStatus();
 
-  // Dialog State: Create / Edit
   const [modalOpen, setModalOpen] = useState(false);
   const [editingOpd, setEditingOpd] = useState<OpdUnit | null>(null);
   const [formData, setFormData] = useState({
@@ -49,7 +48,6 @@ export function AdminOpdPage() {
     is_active: true,
   });
 
-  // Confirmation Dialog: Deactivate / Activate
   const [statusDialogOpd, setStatusDialogOpd] = useState<OpdUnit | null>(null);
 
   const handleOpenCreate = () => {
@@ -142,7 +140,6 @@ export function AdminOpdPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-slate-200">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
@@ -157,7 +154,6 @@ export function AdminOpdPage() {
         </Button>
       </div>
 
-      {/* Filter & Search Bar */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-3 items-center justify-between">
         <div className="w-full md:w-80">
           <Input
@@ -183,7 +179,6 @@ export function AdminOpdPage() {
         </div>
       </div>
 
-      {/* Main Content Area */}
       {isLoading ? (
         <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-3">
           <Skeleton className="h-8 w-full" />
@@ -276,7 +271,6 @@ export function AdminOpdPage() {
         </div>
       )}
 
-      {/* Modal Tambah / Edit OPD */}
       <Dialog
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -348,7 +342,6 @@ export function AdminOpdPage() {
         </form>
       </Dialog>
 
-      {/* Confirmation Dialog Toggle Status */}
       <ConfirmationDialog
         isOpen={Boolean(statusDialogOpd)}
         onClose={() => setStatusDialogOpd(null)}

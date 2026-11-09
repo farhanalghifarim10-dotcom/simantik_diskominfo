@@ -36,10 +36,6 @@ export class AdminApplicationsController {
     private readonly adminApplicationsService: AdminApplicationsService,
   ) {}
 
-  /**
-   * GET /api/v1/admin/applications
-   * Mengambil daftar permohonan dengan pagination, filter, search, dan sort.
-   */
   @Get()
   @Roles('SUPER_ADMIN', 'TECHNICIAN')
   async listApplications(
@@ -56,10 +52,6 @@ export class AdminApplicationsController {
     };
   }
 
-  /**
-   * GET /api/v1/admin/applications/stats
-   * Mengambil agregasi metrik statistik dashboard SUPER_ADMIN & TECHNICIAN.
-   */
   @Get('stats')
   @Roles('SUPER_ADMIN', 'TECHNICIAN')
   async getDashboardStats(
@@ -76,10 +68,6 @@ export class AdminApplicationsController {
     };
   }
 
-  /**
-   * GET /api/v1/admin/applications/:id
-   * Mengambil detail lengkap permohonan, riwayat, bukti telaah, dan opsi transisi yang diizinkan.
-   */
   @Get(':id')
   @Roles('SUPER_ADMIN', 'TECHNICIAN')
   async getApplicationDetail(
@@ -96,10 +84,6 @@ export class AdminApplicationsController {
     };
   }
 
-  /**
-   * POST /api/v1/admin/applications/:id/transitions
-   * Mengeksekusi transisi status permohonan melalui engine alur kerja terpusat.
-   */
   @Post(':id/transitions')
   @Roles('SUPER_ADMIN', 'TECHNICIAN')
   async executeTransition(
@@ -119,10 +103,6 @@ export class AdminApplicationsController {
     };
   }
 
-  /**
-   * POST /api/v1/admin/applications/:id/stage-transitions
-   * Mengeksekusi pemindahan tahapan siklus hidup (lifecycle stage) SPBE.
-   */
   @Post(':id/stage-transitions')
   @Roles('SUPER_ADMIN', 'TECHNICIAN')
   async executeStageTransition(
@@ -142,10 +122,6 @@ export class AdminApplicationsController {
     };
   }
 
-  /**
-   * POST /api/v1/admin/applications/:id/verify
-   * Shortcut aksi: Mulai proses verifikasi berkas permohonan (SUBMITTED -> VERIFICATION).
-   */
   @Post(':id/verify')
   @Roles('SUPER_ADMIN')
   async verifyApplication(
@@ -165,10 +141,6 @@ export class AdminApplicationsController {
     };
   }
 
-  /**
-   * POST /api/v1/admin/applications/:id/request-revision
-   * Shortcut aksi: Minta revisi kepada pemohon OPD (-> REVISION_REQUIRED).
-   */
   @Post(':id/request-revision')
   @Roles('SUPER_ADMIN')
   async requestRevision(
@@ -188,10 +160,6 @@ export class AdminApplicationsController {
     };
   }
 
-  /**
-   * POST /api/v1/admin/applications/:id/approve
-   * Shortcut aksi: Setujui permohonan layanan (-> APPROVED).
-   */
   @Post(':id/approve')
   @Roles('SUPER_ADMIN')
   async approveApplication(
@@ -211,10 +179,6 @@ export class AdminApplicationsController {
     };
   }
 
-  /**
-   * POST /api/v1/admin/applications/:id/reject
-   * Shortcut aksi: Tolak permohonan layanan (-> REJECTED).
-   */
   @Post(':id/reject')
   @Roles('SUPER_ADMIN')
   async rejectApplication(
@@ -234,10 +198,6 @@ export class AdminApplicationsController {
     };
   }
 
-  /**
-   * POST /api/v1/admin/applications/:id/notes
-   * Tambahkan catatan internal khusus staf/administrator Diskominfo.
-   */
   @Post(':id/notes')
   @Roles('SUPER_ADMIN', 'TECHNICIAN')
   async addInternalNote(
@@ -257,10 +217,6 @@ export class AdminApplicationsController {
     };
   }
 
-  /**
-   * GET /api/v1/admin/applications/:id/documents/:docId/signed-url
-   * Mengambil URL unduh bertanda tangan (signed URL) untuk akses berkas privat.
-   */
   @Get(':id/documents/:docId/signed-url')
   @Roles('SUPER_ADMIN', 'TECHNICIAN')
   async getDocumentSignedUrl(
@@ -279,12 +235,6 @@ export class AdminApplicationsController {
     };
   }
 
-  /**
-   * POST /api/v1/admin/applications/:id/reissue-tracking-code
-   * Menerbitkan ulang kode pelacakan untuk permohonan yang sudah ada.
-   * Hanya dapat diakses oleh SUPER_ADMIN setelah proses verifikasi identitas pemohon.
-   * Kode baru ditampilkan hanya satu kali dalam respons agar dapat disampaikan via kanal resmi.
-   */
   @Post(':id/reissue-tracking-code')
   @Roles('SUPER_ADMIN')
   async reissueTrackingCode(

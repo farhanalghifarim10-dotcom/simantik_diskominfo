@@ -32,9 +32,6 @@ export const TARGET_ACCOUNTS: TargetAccountConfig[] = [
   },
 ];
 
-/**
- * Membaca input password secara tersembunyi (masking asterisk) dari terminal.
- */
 export async function promptHiddenPassword(query: string): Promise<string> {
   return new Promise((resolve) => {
     if (process.stdin.isTTY) {
@@ -77,9 +74,6 @@ export async function promptHiddenPassword(query: string): Promise<string> {
   });
 }
 
-/**
- * Memperbarui password untuk akun pengujian lokal secara aman dan terisolasi.
- */
 export async function updateLocalPasswords(options?: {
   onlyEmail?: string;
   superAdminPassword?: string;
@@ -95,7 +89,6 @@ export async function updateLocalPasswords(options?: {
 
   const adminClient = createLocalAdminClient(config.supabaseUrl, config.serviceRoleKey);
 
-  // Tentukan akun target yang akan diproses
   const filterEmail =
     options?.onlyEmail ||
     process.env.LOCAL_TARGET_EMAIL ||
@@ -112,7 +105,6 @@ export async function updateLocalPasswords(options?: {
 
   console.log(`\n[FASE 1/3] Pre-flight Validation: Memeriksa integritas seluruh akun dan profil...`);
 
-  // 1. Pre-flight Check: Periksa keberadaan semua akun di auth.users terlebih dahulu
   const { data: listData, error: listError } = await adminClient.auth.admin.listUsers();
   if (listError) {
     throw new Error(`AUTH ERROR: Gagal membaca daftar auth.users: ${listError.message}`);
@@ -131,7 +123,6 @@ export async function updateLocalPasswords(options?: {
     userMap.set(t.email, { id: foundUser.id, email: foundUser.email! });
   }
 
-  // 2. Pre-flight Check: Periksa keberadaan dan kecocokan role profil di public.profiles
   for (const t of targetsToProcess) {
     const userInfo = userMap.get(t.email)!;
     const { data: profile, error: profError } = await adminClient
@@ -163,7 +154,6 @@ export async function updateLocalPasswords(options?: {
 
   console.log(`[OK] Seluruh akun dan profil valid. Siap memperbarui password.`);
 
-  // 3. Pengambilan password aman (hanya untuk akun target yang diproses)
   console.log(`\n[FASE 2/3] Pengambilan Password Baru...`);
   const passwordMap = new Map<string, string>();
 
@@ -189,10 +179,8 @@ export async function updateLocalPasswords(options?: {
     passwordMap.set(t.email, pass);
   }
 
-  // 4. Eksekusi pembaruan password di Supabase Auth
   console.log(`\n[FASE 3/3] Memperbarui password dan memverifikasi login lokal...`);
 
-  // Dapatkan publishable / anon key lokal untuk verifikasi login terpisah
   const publishableKey =
     process.env.LOCAL_SUPABASE_PUBLISHABLE_KEY ||
     process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
@@ -202,7 +190,6 @@ export async function updateLocalPasswords(options?: {
     const userInfo = userMap.get(t.email)!;
     const newPassword = passwordMap.get(t.email)!;
 
-    // Perbarui password via Admin API menggunakan adminClient
     const { error: updateError } = await adminClient.auth.admin.updateUserById(userInfo.id, {
       password: newPassword,
       email_confirm: true,
@@ -212,8 +199,6 @@ export async function updateLocalPasswords(options?: {
       throw new Error(`UPDATE ERROR: Gagal memperbarui password untuk ${t.email}: ${updateError.message}`);
     }
 
-    // PENTING: Verifikasi login dilakukan dengan client terpisah dan terisolasi
-    // agar session token tidak menimpa header service-role pada adminClient!
     const verifyClient = createClient(config.supabaseUrl, publishableKey, {
       auth: {
         autoRefreshToken: false,
@@ -245,7 +230,6 @@ export async function updateLocalPasswords(options?: {
   console.log('===========================================================');
 }
 
-// CLI Execution entrypoint
 const isDirectRun =
   process.argv[1] &&
   (process.argv[1].endsWith('set-local-test-passwords.ts') ||

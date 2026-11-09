@@ -173,9 +173,6 @@ interface ApiResponse<T> {
   message?: string;
 }
 
-/**
- * Hook to fetch paginated applications with search, filter, sort
- */
 export function useAdminApplications(query: ListApplicationsQuery) {
   const queryParams = new URLSearchParams();
   if (query.search) queryParams.set('search', query.search);
@@ -199,9 +196,6 @@ export function useAdminApplications(query: ListApplicationsQuery) {
   });
 }
 
-/**
- * Hook to fetch complete application detail
- */
 export function useAdminApplicationDetail(id: string | undefined) {
   return useQuery<ApplicationDetail, Error>({
     queryKey: ['admin-application-detail', id],
@@ -214,9 +208,6 @@ export function useAdminApplicationDetail(id: string | undefined) {
   });
 }
 
-/**
- * Hook to execute workflow status transition
- */
 export function useExecuteTransition() {
   const queryClient = useQueryClient();
 
@@ -242,9 +233,6 @@ export function useExecuteTransition() {
   });
 }
 
-/**
- * Hook to execute lifecycle stage transition
- */
 export function useExecuteStageTransition() {
   const queryClient = useQueryClient();
 
@@ -270,9 +258,6 @@ export function useExecuteStageTransition() {
   });
 }
 
-/**
- * Hook to add an internal note
- */
 export function useAddInternalNote() {
   const queryClient = useQueryClient();
 
@@ -293,9 +278,6 @@ export function useAddInternalNote() {
   });
 }
 
-/**
- * Helper to fetch signed URL for document viewing/downloading
- */
 export async function fetchDocumentSignedUrl(
   applicationId: string,
   docId: string,
@@ -316,9 +298,6 @@ export interface DashboardStats {
   completed_closed: number;
 }
 
-/**
- * Hook to fetch dashboard aggregation stats (SUPER_ADMIN)
- */
 export function useAdminDashboardStats(year?: number, options?: { enabled?: boolean }) {
   const queryString = year ? `?year=${year}` : '';
   return useQuery<DashboardStats, Error>({
@@ -341,9 +320,6 @@ export interface ReissueTrackingCodeResult {
   message: string;
 }
 
-/**
- * Hook to reissue tracking code for an application (Khusus SUPER_ADMIN)
- */
 export function useReissueTrackingCode() {
   const queryClient = useQueryClient();
   return useMutation<

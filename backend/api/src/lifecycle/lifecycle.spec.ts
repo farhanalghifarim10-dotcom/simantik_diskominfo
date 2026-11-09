@@ -227,7 +227,6 @@ describe('LifecycleService', () => {
       expect(test.tester).toBe('Sdr. QA Diskominfo');
       expect(test.attachment_filename).toBe('uat_signoff.pdf');
 
-      // Create a load test record
       await service.createTest(
         appId,
         {
@@ -239,7 +238,6 @@ describe('LifecycleService', () => {
         assignedTechnicianUser,
       );
 
-      // Create a security test record
       await service.createTest(
         appId,
         {
@@ -250,7 +248,6 @@ describe('LifecycleService', () => {
         assignedTechnicianUser,
       );
 
-      // Create an integration test record
       await service.createTest(
         appId,
         {
@@ -262,21 +259,17 @@ describe('LifecycleService', () => {
         assignedTechnicianUser,
       );
 
-      // Filter by type
       const funcTests = await service.getTests(appId, superAdminUser, { type: 'FUNCTION' });
       expect(funcTests.length).toBe(1);
       expect(funcTests[0].test_type).toBe('FUNCTION');
 
-      // Filter by result
       const passTests = await service.getTests(appId, superAdminUser, { result: 'PASS' });
       expect(passTests.length).toBe(2);
 
-      // Get single detail
       const singleTest = await service.getTest(appId, test.id, assignedTechnicianUser);
       expect(singleTest.test_name).toBe('Uji Validasi Form Usulan');
       expect(singleTest.test_scope).toBe('Formulir permohonan baru');
 
-      // Update test record
       const updated = await service.updateTest(
         appId,
         test.id,
@@ -288,7 +281,6 @@ describe('LifecycleService', () => {
       );
       expect(updated.findings).toBe('Catatan tambahan pasca re-test');
 
-      // Get signed attachment URL
       const attachmentUrl = await service.getTestAttachmentUrl(appId, test.id, superAdminUser);
       expect(attachmentUrl.signed_url).toBeDefined();
       expect(attachmentUrl.filename).toBe('uat_signoff.pdf');
@@ -334,7 +326,6 @@ describe('LifecycleService', () => {
       expect(record.executor).toBe('Tim Programmer Diskominfo');
       expect(record.attachment_filename).toBe('patch_notes.txt');
 
-      // Create PREVENTIVE record
       await service.createMaintenanceRecord(
         appId,
         {
@@ -350,7 +341,6 @@ describe('LifecycleService', () => {
         superAdminUser,
       );
 
-      // Create PERFECTIVE record
       await service.createMaintenanceRecord(
         appId,
         {
@@ -366,7 +356,6 @@ describe('LifecycleService', () => {
         superAdminUser,
       );
 
-      // Create ADAPTIVE record
       await service.createMaintenanceRecord(
         appId,
         {
@@ -382,18 +371,15 @@ describe('LifecycleService', () => {
         superAdminUser,
       );
 
-      // Filter by type
       const correctiveList = await service.getMaintenanceRecords(appId, superAdminUser, {
         type: 'CORRECTIVE',
       });
       expect(correctiveList.length).toBe(1);
       expect(correctiveList[0].maintenance_type).toBe('CORRECTIVE');
 
-      // Get single detail
       const detail = await service.getMaintenanceRecord(appId, record.id, assignedTechnicianUser);
       expect(detail.reason).toContain('Error format pelaporan NIP');
 
-      // Update maintenance record
       const updated = await service.updateMaintenanceRecord(
         appId,
         record.id,
@@ -404,7 +390,6 @@ describe('LifecycleService', () => {
       );
       expect(updated.result).toBe('Diverifikasi kembali oleh penanggung jawab OPD');
 
-      // Get signed attachment URL
       const attachment = await service.getMaintenanceAttachmentUrl(
         appId,
         record.id,
@@ -454,16 +439,13 @@ describe('LifecycleService', () => {
       expect(evaluation.achievement).toContain('Tercapai 94%');
       expect(evaluation.attachment_filename).toBe('laporan_evaluasi_q3.pdf');
 
-      // Get all evaluations
       const allEvals = await service.getEvaluations(appId, assignedTechnicianUser);
       expect(allEvals.length).toBe(1);
 
-      // Get single detail
       const detail = await service.getEvaluation(appId, evaluation.id, assignedTechnicianUser);
       expect(detail.id).toBe(evaluation.id);
       expect(detail.recommendations).toBe('Menyelenggarakan webinar pendampingan berkala');
 
-      // Update evaluation
       const updated = await service.updateEvaluation(
         appId,
         evaluation.id,
@@ -474,7 +456,6 @@ describe('LifecycleService', () => {
       );
       expect(updated.follow_up).toBe('Bimtek daring telah dijadwalkan pada 25 Oktober 2026');
 
-      // Get attachment signed URL
       const attachment = await service.getEvaluationAttachmentUrl(
         appId,
         evaluation.id,
@@ -483,7 +464,6 @@ describe('LifecycleService', () => {
       expect(attachment.signed_url).toBeDefined();
       expect(attachment.filename).toBe('laporan_evaluasi_q3.pdf');
 
-      // Delete evaluation
       await service.deleteEvaluation(appId, evaluation.id, superAdminUser);
       const remaining = await service.getEvaluations(appId, superAdminUser);
       expect(remaining.length).toBe(0);
@@ -536,7 +516,6 @@ describe('LifecycleService', () => {
     const appId = 'app-overview-test';
 
     it('returns structured summary across all lifecycle stages', async () => {
-      // Seed analysis and a test record
       await service.upsertAnalysis(
         appId,
         { objectives: 'Otomasi Pelayanan' },

@@ -1,13 +1,5 @@
 import type { Transition, Variants } from 'motion/react';
 
-/**
- * SIMANTIK Government Service Motion Principles
- * - Subtle, purposeful, non-distracting
- * - Durations between 150ms and 250ms
- * - Gentle ease curves
- * - Accessibility: zero-delay instant fallback when prefers-reduced-motion is active
- */
-
 export const standardEase = [0.16, 1, 0.3, 1] as const;
 
 export const transitionFast: Transition = {

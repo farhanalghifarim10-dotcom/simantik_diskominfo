@@ -151,7 +151,6 @@ describe('Public Application Submission Vertical Slice', () => {
     });
 
     it('should reject submission when a required document is missing', async () => {
-      // Omit requirement a2222222-2222-2222-2222-222222222222 (KAK)
       const missingKakDocuments = [validDocuments[0]];
 
       await expect(
@@ -388,16 +387,12 @@ describe('Public Application Submission Vertical Slice', () => {
       expect(response.success).toBe(true);
       expect(response.data).toBeDefined();
 
-      // Ticket number check
       expect(response.data.ticket_number).toMatch(/^SIM-2026-\d{6}$/);
 
-      // Tracking code check (format ringkas TRK-XXXXXXXX, 8 hex characters)
       expect(response.data.tracking_code).toMatch(/^TRK-[0-9A-F]{8}$/);
 
-      // Initial status
       expect(response.data.current_status).toBe('SUBMITTED');
 
-      // Terms version and assumption notice
       expect(response.data.terms_version).toBe('v1.0-2026');
       expect(response.data.format_note).toContain('[IMPLEMENTATION ASSUMPTION]');
       expect(response.data.documents_count).toBe(2);
@@ -528,7 +523,6 @@ describe('Public Application Submission Vertical Slice', () => {
         }),
       ).rejects.toThrow(BadRequestException);
 
-      // Pastikan rollback kompensasi memanggil penghapusan applicant yang sempat diinsert
       expect(mockApplicantDelete).toHaveBeenCalled();
     });
 
@@ -598,7 +592,6 @@ describe('Public Application Submission Vertical Slice', () => {
         }),
       ).rejects.toThrow(InternalServerErrorException);
 
-      // Verifikasi semua artefak parsial dibersihkan via rollback kompensasi
       expect(mockDocDelete).toHaveBeenCalled();
       expect(mockAppDelete).toHaveBeenCalled();
       expect(mockApplicantDelete).toHaveBeenCalled();
@@ -693,7 +686,6 @@ describe('Public Application Submission Vertical Slice', () => {
       const appService = new ApplicationsService(customSupabase, servicesService);
       const controller = new ApplicationsController(appService);
 
-      // 'AB==' has non-zero unused bits in RFC 4648
       const nonCanonicalDocs = [
         {
           ...validDocuments[0],
@@ -782,13 +774,10 @@ describe('Public Application Submission Vertical Slice', () => {
 
       const ticketNumber = res.data.ticket_number;
 
-      // Check each uploaded storage path
       for (const storagePath of uploadedPaths) {
-        // Format MUST BE applications/{ticketNumber}/{uuid}.pdf
         const uuidRegex = new RegExp(`^applications\\/${ticketNumber}\\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\\.pdf$`);
         expect(storagePath).toMatch(uuidRegex);
 
-        // Original filenames and sensitive words MUST NOT appear in the storage path
         expect(storagePath).not.toContain('Surat');
         expect(storagePath).not.toContain('Permohonan');
         expect(storagePath).not.toContain('Kadis');
@@ -797,7 +786,6 @@ describe('Public Application Submission Vertical Slice', () => {
         expect(storagePath).not.toContain('Presensi');
       }
 
-      // Check application_documents records in DB
       expect(insertedDocRecords.length).toBe(2);
       expect(insertedDocRecords[0].original_filename).toBe('Surat Permohonan Kadis Resmi DISKOMINFO.pdf');
       expect(insertedDocRecords[0].storage_path).toBe(uploadedPaths[0]);
@@ -864,13 +852,11 @@ describe('Public Application Submission Vertical Slice', () => {
       expect(res.success).toBe(true);
       expect(uploadedPaths.length).toBe(2);
 
-      // Storage key must be pure ASCII UUID path
       expect(uploadedPaths[0]).toMatch(/^applications\/SIM-2026-\d{6}\/[a-f0-9-]{36}\.pdf$/);
       expect(uploadedPaths[0]).not.toContain('Bandung');
       expect(uploadedPaths[0]).not.toContain('Bedas');
       expect(uploadedPaths[0]).not.toContain('📄');
 
-      // Sanitized original filename in DB record retains natural Unicode
       expect(insertedDocRecords[0].original_filename).toBe(unicodeName);
       expect(insertedDocRecords[0].storage_path).toBe(uploadedPaths[0]);
     });
@@ -972,7 +958,6 @@ describe('Public Application Submission Vertical Slice', () => {
         }),
       ).rejects.toThrow(InternalServerErrorException);
 
-      // Verify that mockStorageRemove was called with the exact UUID paths generated
       expect(uploadedPaths.length).toBe(2);
       expect(mockStorageRemove).toHaveBeenCalledTimes(1);
       const cleanedPaths = mockStorageRemove.mock.calls[0][0];
@@ -1013,7 +998,6 @@ describe('Public Application Submission Vertical Slice', () => {
       expect(auditCall.entity_id).toBe(res.data.id);
       expect(auditCall.old_data).toBeNull();
 
-      // Verifikasi metadata minimum aman di new_data
       expect(auditCall.new_data).toBeDefined();
       expect(auditCall.new_data?.ticket_number).toBe(res.data.ticket_number);
       expect(auditCall.new_data?.service_id).toBe(validPayload.service_id);
@@ -1021,7 +1005,6 @@ describe('Public Application Submission Vertical Slice', () => {
       expect(auditCall.new_data?.documents_count).toBe(validDocuments.length);
       expect(auditCall.new_data?.terms_version).toBe(validPayload.terms_version);
 
-      // Verifikasi TIDAK ADA kebocoran credential sensitif di audit log
       expect(auditCall.new_data?.tracking_code).toBeUndefined();
       expect(auditCall.new_data?.tracking_code_hash).toBeUndefined();
       expect(auditCall.new_data?.password).toBeUndefined();
@@ -1041,7 +1024,6 @@ describe('Public Application Submission Vertical Slice', () => {
       );
       const controller = new ApplicationsController(appService);
 
-      // Submisi tanpa dokumen wajib harus gagal validasi
       await expect(
         controller.submit({
           ...validPayload,
@@ -1098,7 +1080,6 @@ describe('Public Application Submission Vertical Slice', () => {
         }),
       ).rejects.toThrow(InternalServerErrorException);
 
-      // Verifikasi event APPLICATION_SUBMITTED TIDAK diciptakan untuk submission gagal
       expect(mockAuditService.record).not.toHaveBeenCalled();
     });
 
@@ -1115,7 +1096,6 @@ describe('Public Application Submission Vertical Slice', () => {
       );
       const controller = new ApplicationsController(appService);
 
-      // Submisi permohonan harus tetap sukses mengembalikan tiket & tracking code
       const res = await controller.submit({
         ...validPayload,
         documents: validDocuments,

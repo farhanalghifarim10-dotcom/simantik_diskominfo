@@ -9,7 +9,6 @@ import {
 } from './file-validator.js';
 
 describe('File Validator Utility (UAT-04)', () => {
-  // Safe dummy buffers
   const dummyPdfBuffer = Buffer.from('%PDF-1.4 safe dummy content');
   const dummyPngBuffer = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00]);
   const dummyJpgBuffer = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46]);
@@ -18,7 +17,7 @@ describe('File Validator Utility (UAT-04)', () => {
   const dummyDocOleBuffer = Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]);
   const dummyXlsOleBuffer = Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]);
   const dummyTxtBuffer = Buffer.from('Just plain text file content without magic bytes');
-  const dummyExeBuffer = Buffer.from([0x4d, 0x5a, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00]); // MZ executable
+  const dummyExeBuffer = Buffer.from([0x4d, 0x5a, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00]);
   const dummyBatBuffer = Buffer.from('@echo off\r\ndir\r\n');
 
   describe('A. Valid PDF is accepted', () => {
@@ -341,7 +340,7 @@ describe('File Validator Utility (UAT-04)', () => {
     });
 
     it('should reject filename exceeding 255 characters', () => {
-      const veryLongName = 'a'.repeat(252) + '.pdf'; // 256 chars
+      const veryLongName = 'a'.repeat(252) + '.pdf';
       try {
         validateUploadedFile({
           original_filename: veryLongName,
@@ -411,22 +410,16 @@ describe('File Validator Utility (UAT-04)', () => {
     });
 
     it('should reject Base64 with invalid padding or truncated length (not divisible by 4)', () => {
-      // Length 9 (not divisible by 4)
       expect(() => parseAndValidateBase64('JVBERi0xL', 'test.pdf')).toThrow(BadRequestException);
-      // Length 11
       expect(() => parseAndValidateBase64('JVBERi0xLjQ', 'test.pdf')).toThrow(BadRequestException);
-      // Invalid padding characters
       expect(() => parseAndValidateBase64('JVBERi0x===', 'test.pdf')).toThrow(BadRequestException);
       expect(() => parseAndValidateBase64('JVBERi0x====', 'test.pdf')).toThrow(BadRequestException);
       expect(() => parseAndValidateBase64('JVBE=i0x', 'test.pdf')).toThrow(BadRequestException);
     });
 
     it('should reject Base64 with non-canonical padding bits or trailing garbage', () => {
-      // In Base64, 'AB==' has index 1 for 'B', where non-zero bits are placed in unused padding bits
-      // Buffer.from normally ignores this and decodes to 0x00, re-encoding to 'AA=='
       expect(() => parseAndValidateBase64('AB==', 'test.pdf')).toThrow(BadRequestException);
 
-      // Trailing characters after valid 4-byte block that would normally be discarded by loose parsers
       const validBase64 = dummyPdfBuffer.toString('base64');
       expect(() => parseAndValidateBase64(validBase64 + 'AAAA====', 'test.pdf')).toThrow(BadRequestException);
     });
@@ -452,16 +445,13 @@ describe('File Validator Utility (UAT-04)', () => {
 
       const key = generateSecureStorageKey(prefix, originalFilename);
 
-      // Verify prefix is preserved
       expect(key.startsWith('applications/SIM-2026-000101/')).toBe(true);
 
-      // Verify original filename is completely absent from storage key
       expect(key).not.toContain('Surat');
       expect(key).not.toContain('Dinas');
       expect(key).not.toContain('Pendidikan');
       expect(key).not.toContain('Final');
 
-      // Verify key basename matches UUID v4 pattern and safe extension
       const filenamePart = key.replace('applications/SIM-2026-000101/', '');
       expect(filenamePart).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.pdf$/);
     });

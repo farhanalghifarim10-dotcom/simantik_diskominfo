@@ -20,9 +20,6 @@ export type MaintenanceType =
   | 'CORRECTIVE'
   | 'PREVENTIVE';
 
-// ------------------------------------------------------------
-// 1. ANALYSIS
-// ------------------------------------------------------------
 export interface AnalysisRecord {
   id: string;
   application_id: string;
@@ -55,9 +52,6 @@ export interface UpsertAnalysisDto {
   supporting_analysis?: string;
 }
 
-// ------------------------------------------------------------
-// 2. PLANNING (Project Plan)
-// ------------------------------------------------------------
 export interface ProjectPlanRecord {
   id: string;
   application_id: string;
@@ -96,9 +90,6 @@ export interface UpsertProjectPlanDto {
   reporting_plan?: string;
 }
 
-// ------------------------------------------------------------
-// 3. DESIGN
-// ------------------------------------------------------------
 export interface DesignRecord {
   id: string;
   application_id: string;
@@ -127,9 +118,6 @@ export interface UpsertDesignDto {
   integration_design?: string;
 }
 
-// ------------------------------------------------------------
-// 4. IMPLEMENTATION
-// ------------------------------------------------------------
 export interface ImplementationRecord {
   id: string;
   application_id: string;
@@ -158,9 +146,6 @@ export interface UpsertImplementationDto {
   handover_notes?: string;
 }
 
-// ------------------------------------------------------------
-// 5. TESTING
-// ------------------------------------------------------------
 export interface TestRecordItem {
   id: string;
   application_id: string;
@@ -225,9 +210,6 @@ export interface UpdateTestRecordDto {
   attachment_filename?: string;
 }
 
-// ------------------------------------------------------------
-// 6. MAINTENANCE
-// ------------------------------------------------------------
 export interface MaintenanceRecordItem {
   id: string;
   application_id: string;
@@ -293,9 +275,6 @@ export interface UpdateMaintenanceRecordDto {
   attachment_filename?: string;
 }
 
-// ------------------------------------------------------------
-// 7. EVALUATION
-// ------------------------------------------------------------
 export interface EvaluationRecordItem {
   id: string;
   application_id: string;
@@ -348,9 +327,6 @@ export interface UpdateEvaluationDto {
   attachment_filename?: string;
 }
 
-// ------------------------------------------------------------
-// 8. TECHNICAL DOCUMENTS
-// ------------------------------------------------------------
 export interface TechnicalDocumentItem {
   id: string;
   application_id: string;
@@ -378,9 +354,6 @@ export interface UploadTechnicalDocumentDto {
   base64_data?: string;
 }
 
-// ------------------------------------------------------------
-// 9. OVERVIEW SUMMARY
-// ------------------------------------------------------------
 export interface LifecycleOverview {
   application_id: string;
   ticket_number: string;

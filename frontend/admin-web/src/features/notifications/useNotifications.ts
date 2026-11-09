@@ -24,9 +24,6 @@ interface ApiResponse<T> {
   message?: string;
 }
 
-/**
- * Hook untuk mengambil daftar notifikasi pengguna
- */
 export function useNotifications() {
   return useQuery<NotificationItem[], Error>({
     queryKey: ['admin-notifications'],
@@ -37,9 +34,6 @@ export function useNotifications() {
   });
 }
 
-/**
- * Hook untuk mengambil jumlah notifikasi belum dibaca
- */
 export function useUnreadNotificationsCount() {
   return useQuery<number, Error>({
     queryKey: ['admin-notifications-unread-count'],
@@ -49,14 +43,10 @@ export function useUnreadNotificationsCount() {
       );
       return res.data?.unread_count ?? 0;
     },
-    // Polling halus setiap 30 detik untuk kenyamanan pengguna
     refetchInterval: 30000,
   });
 }
 
-/**
- * Hook untuk menandai satu notifikasi sebagai telah dibaca
- */
 export function useMarkNotificationRead() {
   const queryClient = useQueryClient();
 
@@ -73,9 +63,6 @@ export function useMarkNotificationRead() {
   });
 }
 
-/**
- * Hook untuk menandai seluruh notifikasi sebagai telah dibaca
- */
 export function useMarkAllNotificationsRead() {
   const queryClient = useQueryClient();
 

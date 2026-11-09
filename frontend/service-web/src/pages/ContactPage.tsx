@@ -67,9 +67,6 @@ export function ContactPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-16 space-y-12">
-      {/* =========================================================================
-          PAGE HEADER
-         ========================================================================= */}
       <div className="border-b border-slate-200 pb-8 space-y-3">
         <div className="flex items-center gap-2 text-xs font-semibold text-[#2E8A6E] uppercase tracking-wider">
           <Link to="/" className="hover:underline text-slate-500">Beranda</Link>
@@ -85,9 +82,6 @@ export function ContactPage() {
         </p>
       </div>
 
-      {/* =========================================================================
-          CONFIGURABLE PLACEHOLDER ADVISORY
-         ========================================================================= */}
       <Alert variant="warning" title="Pemberitahuan Data Kontak">
         <p className="text-xs sm:text-sm text-slate-700">
           Kontak telepon dan WhatsApp pada portal shell ini menggunakan nilai <strong>placeholder terkonfigurasi</strong>. 
@@ -95,18 +89,13 @@ export function ContactPage() {
         </p>
       </Alert>
 
-      {/* =========================================================================
-          CONTACT INFO CARDS + INQUIRY FORM
-         ========================================================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Column (5 cols): Official Institutional Channels */}
         <div className="lg:col-span-5 space-y-6">
           <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
             <h2 className="text-xl font-bold text-slate-900 border-b border-slate-100 pb-4">
               Kanal Pelayanan Resmi
             </h2>
 
-            {/* Alamat Fisik */}
             <div className="space-y-1.5 text-xs sm:text-sm">
               <span className="font-bold uppercase tracking-wider text-[11px] block text-[#1B5040]">
                 Alamat Kantor Instansi
@@ -124,7 +113,6 @@ export function ContactPage() {
               </p>
             </div>
 
-            {/* Jam Layanan */}
             <div className="space-y-1.5 text-xs sm:text-sm pt-4 border-t border-slate-100">
               <span className="font-bold uppercase tracking-wider text-[11px] block text-[#1B5040]">
                 Waktu Pelayanan Operasional
@@ -148,7 +136,6 @@ export function ContactPage() {
               </div>
             </div>
 
-            {/* Kanal Komunikasi Placeholder */}
             <div className="space-y-3 pt-4 border-t border-slate-100 text-xs sm:text-sm">
               <span className="font-bold uppercase tracking-wider text-[11px] block text-[#1B5040]">
                 Telepon & Komunikasi Digital
@@ -181,7 +168,6 @@ export function ContactPage() {
           </div>
         </div>
 
-        {/* Right Column (7 cols): Public Inquiry Form */}
         <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
           <div className="space-y-1 border-b border-slate-100 pb-4">
             <h2 className="text-xl font-bold text-slate-900">

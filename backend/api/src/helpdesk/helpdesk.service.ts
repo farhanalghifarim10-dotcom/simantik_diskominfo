@@ -22,9 +22,6 @@ export class HelpdeskService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  /**
-   * Membersihkan tag HTML untuk pencegahan injeksi / XSS
-   */
   private sanitizeText(input: string): string {
     if (!input) return '';
     return input
@@ -34,23 +31,14 @@ export class HelpdeskService {
       .trim();
   }
 
-  /**
-   * Helper pengujian: Mengosongkan data in-memory
-   */
   clearInMemoryConsultations(): void {
     this.inMemoryConsultations.clear();
   }
 
-  /**
-   * Helper pengujian: Menambahkan data contoh in-memory
-   */
   seedInMemoryConsultation(item: ConsultationItem): void {
     this.inMemoryConsultations.set(item.id, item);
   }
 
-  /**
-   * Validasi dan sanitasi data pengajuan formulir konsultasi
-   */
   private validateDto(dto: CreateConsultationDto): {
     opdName: string;
     senderName: string;
@@ -120,9 +108,6 @@ export class HelpdeskService {
     return { opdName, senderName, email, phone, subject, message };
   }
 
-  /**
-   * Parsing notifikasi Supabase menjadi objek ConsultationItem
-   */
   private parseNotificationToConsultation(notif: any): ConsultationItem {
     let opdName = 'OPD Pemkab Bandung';
     let subject = 'Konsultasi SPBE';
@@ -167,11 +152,6 @@ export class HelpdeskService {
     };
   }
 
-  /**
-   * 1. SUBMIT KONSULTASI (Akses Publik)
-   * Menyimpan pesan konsultasi, membuat notifikasi internal in-app untuk tim Diskominfo,
-   * serta mengirimkan email konfirmasi ke pemohon jika email aktif.
-   */
   async submitConsultation(dto: CreateConsultationDto): Promise<ConsultationItem> {
     const validated = this.validateDto(dto);
     const now = new Date().toISOString();
@@ -179,7 +159,6 @@ export class HelpdeskService {
     const notifTitle = `[Konsultasi OPD] ${validated.opdName} - ${validated.subject}`;
     const notifBody = `Pengirim: ${validated.senderName} | Pos-el: ${validated.email} | Telp: ${validated.phone}\n\nTopik: ${validated.subject}\n\nPesan:\n${validated.message}`;
 
-    // 1. Simpan dan distribusikan notifikasi internal IN_APP (recipient_profile_id null, application_id null)
     let notifRecord: any;
     try {
       notifRecord = await this.notificationsService.notify({
@@ -189,7 +168,6 @@ export class HelpdeskService {
         body: notifBody,
       });
     } catch {
-      // Fallback ID jika notifikasi gagal
       notifRecord = { id: crypto.randomUUID(), created_at: now };
     }
 
@@ -209,10 +187,8 @@ export class HelpdeskService {
       notification_id: notifRecord?.id,
     };
 
-    // 2. Simpan ke in-memory map
     this.inMemoryConsultations.set(consultationId, consultationItem);
 
-    // 3. Kirimkan email notifikasi konfirmasi ke pemohon via EmailService (opsional / background)
     try {
       await this.notificationsService.notify({
         type: 'SYSTEM',
@@ -228,9 +204,6 @@ export class HelpdeskService {
     return consultationItem;
   }
 
-  /**
-   * 2. GET DAFTAR KONSULTASI (Akses Internal Admin / Teknisi)
-   */
   async getConsultations(user: AuthenticatedUser): Promise<ConsultationItem[]> {
     if (user.role !== 'SUPER_ADMIN' && user.role !== 'TECHNICIAN') {
       throw new ForbiddenException({
@@ -241,7 +214,6 @@ export class HelpdeskService {
 
     const itemsMap = new Map<string, ConsultationItem>();
 
-    // 1. Ambil dari Supabase notifications (channel = IN_APP, title diawali [Konsultasi OPD])
     try {
       const client = this.supabaseService.getClient();
       const { data, error } = await client
@@ -262,22 +234,17 @@ export class HelpdeskService {
       // Fallback
     }
 
-    // 2. Gabungkan dengan data in-memory fallback
     for (const [id, item] of this.inMemoryConsultations.entries()) {
       if (!itemsMap.has(id)) {
         itemsMap.set(id, item);
       }
     }
 
-    // Urutkan created_at terbaru
     return Array.from(itemsMap.values()).sort(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
     );
   }
 
-  /**
-   * 3. TANDAI KONSULTASI SEBAGAI DIBACA
-   */
   async markAsRead(id: string, user: AuthenticatedUser): Promise<ConsultationItem> {
     if (user.role !== 'SUPER_ADMIN' && user.role !== 'TECHNICIAN') {
       throw new ForbiddenException({
@@ -288,14 +255,12 @@ export class HelpdeskService {
 
     const now = new Date().toISOString();
 
-    // 1. Update notifikasi di notificationsService
     try {
       await this.notificationsService.markAsRead(id, user);
     } catch {
       // Abaikan jika notifikasi tidak ada
     }
 
-    // 2. Update status in-memory jika ada
     const existing = this.inMemoryConsultations.get(id);
     if (existing) {
       existing.status = 'READ';
@@ -304,7 +269,6 @@ export class HelpdeskService {
       return existing;
     }
 
-    // 3. Jika tidak ada di in-memory, cari di Supabase
     try {
       const client = this.supabaseService.getClient();
       const { data } = await client

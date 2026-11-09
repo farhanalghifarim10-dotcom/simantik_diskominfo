@@ -52,7 +52,6 @@ export const DEFAULT_MOCK_TECHNICIANS: TechnicianProfileItem[] = [
 
 @Injectable()
 export class AssignmentsService {
-  // In-memory assignment store for fallback and unit test consistency
   private inMemoryAssignments: Map<string, AssignmentHistoryItem[]> = new Map();
   private inMemoryTechnicians: TechnicianProfileItem[] = [...DEFAULT_MOCK_TECHNICIANS];
 
@@ -82,9 +81,6 @@ export class AssignmentsService {
     this.inMemoryAssignments.set(seedAppId, [initialAssignment]);
   }
 
-  /**
-   * 1. Daftar teknisi aktif beserta beban kerja aktif masing-masing
-   */
   async listTechnicians(): Promise<TechnicianProfileItem[]> {
     try {
       const client = this.supabaseService.getClient();
@@ -95,7 +91,6 @@ export class AssignmentsService {
         .eq('is_active', true);
 
       if (!error && data && data.length > 0) {
-        // Hitung active assignments untuk masing-masing teknisi berdasarkan status tiket aktif
         const { data: currentAssignments } = await client
           .from('assignments')
           .select('technician_id, application_id')
@@ -142,7 +137,6 @@ export class AssignmentsService {
       // Fallback
     }
 
-    // In-memory fallback: hitung beban kerja aktif
     const activeCountMap = new Map<string, number>();
     const terminalStatuses = ['COMPLETED', 'CLOSED', 'REJECTED', 'CANCELLED'];
 
@@ -179,9 +173,6 @@ export class AssignmentsService {
     }));
   }
 
-  /**
-   * 2. Riwayat dan status penugasan terkini pada suatu permohonan
-   */
   async getApplicationAssignments(
     applicationId: string,
   ): Promise<ApplicationAssignmentsResponse> {
@@ -237,9 +228,6 @@ export class AssignmentsService {
     };
   }
 
-  /**
-   * 3. Penugasan / Re-assignment Teknisi Utama oleh SUPER_ADMIN
-   */
   async assignTechnician(
     applicationId: string,
     dto: CreateAssignmentDto,
@@ -249,7 +237,6 @@ export class AssignmentsService {
       throw new ForbiddenException('Hanya SUPER_ADMIN yang berwenang melakukan penugasan tenaga ahli.');
     }
 
-    // Validasi permohonan ada
     const app = await this.adminApplicationsService.getApplicationDetail(applicationId, adminUser);
 
     const nonAssignableStatuses = ['COMPLETED', 'CLOSED', 'REJECTED', 'CANCELLED'];
@@ -259,7 +246,6 @@ export class AssignmentsService {
       );
     }
 
-    // Validasi teknisi valid & aktif
     const technicians = await this.listTechnicians();
     const technician = technicians.find((t) => t.id === dto.technician_id);
     if (!technician) {
@@ -274,7 +260,6 @@ export class AssignmentsService {
     try {
       const client = this.supabaseService.getClient();
 
-      // a. Jika ada penugasan aktif sebelumnya, nonaktifkan (archive)
       if (existingCurrent) {
         await client
           .from('assignments')
@@ -285,7 +270,6 @@ export class AssignmentsService {
           .eq('id', existingCurrent.id);
       }
 
-      // b. Insert penugasan baru
       const newId = crypto.randomUUID();
       await client.from('assignments').insert({
         id: newId,
@@ -297,7 +281,6 @@ export class AssignmentsService {
         is_current: true,
       });
 
-      // c. Audit Log
       await client.from('audit_logs').insert({
         actor_profile_id: adminUser.id,
         application_id: applicationId,
@@ -315,7 +298,6 @@ export class AssignmentsService {
         created_at: now,
       });
 
-      // d. Simpan pesan internal penugasan
       await client.from('messages').insert({
         application_id: applicationId,
         sender_type: 'ADMIN',
@@ -331,7 +313,6 @@ export class AssignmentsService {
       // Fallback in-memory
     }
 
-    // In-memory store updates
     const list = this.inMemoryAssignments.get(applicationId) || [];
     if (existingCurrent) {
       existingCurrent.is_current = false;
@@ -361,9 +342,6 @@ export class AssignmentsService {
     return newAssignment;
   }
 
-  /**
-   * 4. Memeriksa otorisasi penugasan teknisi (Backend Authoritative Enforcement)
-   */
   async checkTechnicianAuthorization(
     applicationId: string,
     technicianId: string,
@@ -372,9 +350,6 @@ export class AssignmentsService {
     return assignments.current_assignment?.technician_id === technicianId;
   }
 
-  /**
-   * 5. Ringkasan beban kerja teknisi (Workload Summary Metrics)
-   */
   async getTechnicianWorkSummary(technicianId: string): Promise<TechnicianWorkSummary> {
     const allWork = await this.getTechnicianMyWork(technicianId, { page_size: 1000 });
     const items = allWork.items;
@@ -387,9 +362,6 @@ export class AssignmentsService {
     };
   }
 
-  /**
-   * 6. Daftar pekerjaan yang ditugaskan kepada teknisi ("My Work")
-   */
   async getTechnicianMyWork(
     technicianId: string,
     query: ListTechnicianWorkQueryDto,
@@ -427,7 +399,6 @@ export class AssignmentsService {
         .order('assigned_at', { ascending: false });
 
       if (!error && assignmentsData) {
-        // Fallback jika nested join applications tidak terselesaikan oleh PostgREST relationship cache
         const hasJoinedApps = assignmentsData.some((row: any) => row.applications);
         const appsMap = new Map<string, any>();
 
@@ -524,7 +495,6 @@ export class AssignmentsService {
       // Fallback
     }
 
-    // In-memory fallback
     const assignedAppIds: { appId: string; assignedAt: string; note: string | null }[] = [];
     for (const [appId, list] of this.inMemoryAssignments.entries()) {
       const current = list.find((a) => a.is_current && a.technician_id === technicianId);
@@ -610,9 +580,6 @@ export class AssignmentsService {
     };
   }
 
-  /**
-   * 7. Detail pekerjaan teknisi dengan validasi otorisasi penugasan
-   */
   async getTechnicianApplicationDetail(
     applicationId: string,
     user: AuthenticatedUser,
@@ -629,9 +596,6 @@ export class AssignmentsService {
     return this.adminApplicationsService.getApplicationDetail(applicationId, user);
   }
 
-  /**
-   * 8. Eksekusi transisi status oleh teknisi dengan validasi otorisasi
-   */
   async executeTechnicianTransition(
     applicationId: string,
     dto: ExecuteTransitionDto,
@@ -649,9 +613,6 @@ export class AssignmentsService {
     return this.adminApplicationsService.executeTransition(applicationId, dto, user);
   }
 
-  /**
-   * 9. Eksekusi pemindahan tahapan lifecycle oleh teknisi dengan validasi otorisasi
-   */
   async executeTechnicianStageTransition(
     applicationId: string,
     dto: ExecuteStageTransitionDto,

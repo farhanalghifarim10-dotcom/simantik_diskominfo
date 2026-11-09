@@ -88,9 +88,6 @@ export function Badge({
   );
 }
 
-/**
- * Pemetaan Status Operasional SIMANTIK
- */
 export type ApplicationStatus =
   | 'SUBMITTED'
   | 'VERIFICATION'
@@ -138,9 +135,6 @@ export function StatusBadge({
   );
 }
 
-/**
- * Pemetaan Tahapan Lifecycle Aplikasi (Permenkomdigi No. 6 Tahun 2025)
- */
 export type ApplicationStage =
   | 'ANALYSIS'
   | 'PLANNING'

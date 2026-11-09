@@ -13,7 +13,7 @@ describe('Messages & Notifications Modules (Ticket Chat & Alerting)', () => {
 
   const mockConfigService = {
     get: (key: string) => {
-      if (key === 'email.resendApiKey') return null; // test simulation mode
+      if (key === 'email.resendApiKey') return null;
       if (key === 'email.fromEmail') return 'SIMANTIK <test@simantik.bandungkab.go.id>';
       return null;
     },
@@ -85,7 +85,6 @@ describe('Messages & Notifications Modules (Ticket Chat & Alerting)', () => {
       mockAssignmentsService,
     );
 
-    // Initial seed messages in-memory for testing
     messagesService.setInMemoryMessages(testAppId, [
       {
         id: 'msg-pub-1',
@@ -131,13 +130,11 @@ describe('Messages & Notifications Modules (Ticket Chat & Alerting)', () => {
       );
 
       expect(publicMessages).toHaveLength(2);
-      // Ensure all returned messages have visibility === 'PUBLIC'
       publicMessages.forEach((m) => {
         expect(m.visibility).toBe('PUBLIC');
         expect(m.message).not.toContain('[CATATAN INTERNAL]');
       });
 
-      // Internal message must be absent
       const internalFound = publicMessages.find((m) => m.id === 'msg-int-1');
       expect(internalFound).toBeUndefined();
     });
@@ -188,7 +185,6 @@ describe('Messages & Notifications Modules (Ticket Chat & Alerting)', () => {
       expect(newMsg.sender_type).toBe('PUBLIC_APPLICANT');
       expect(newMsg.message).toBe('Berikut lampiran tambahan yang diperlukan.');
 
-      // Check polling retrieval
       const updated = await messagesService.getPublicMessages(
         testTicket,
         validPublicSession,
@@ -217,7 +213,6 @@ describe('Messages & Notifications Modules (Ticket Chat & Alerting)', () => {
       expect(note.visibility).toBe('INTERNAL');
       expect(note.sender_type).toBe('ADMIN');
 
-      // Verify public still cannot see this new internal note
       const publicMsgs = await messagesService.getPublicMessages(
         testTicket,
         validPublicSession,
@@ -237,7 +232,6 @@ describe('Messages & Notifications Modules (Ticket Chat & Alerting)', () => {
 
       expect(reply.visibility).toBe('PUBLIC');
 
-      // Verify public CAN see this reply
       const publicMsgs = await messagesService.getPublicMessages(
         testTicket,
         validPublicSession,
@@ -305,7 +299,6 @@ describe('Messages & Notifications Modules (Ticket Chat & Alerting)', () => {
       });
       expect(res1.status).toBe('SENT');
 
-      // Second immediate identical email
       const res2 = await emailService.sendEmail({
         to: 'applicant@bandungkab.go.id',
         subject: `[SIMANTIK] Status #${testTicket}`,

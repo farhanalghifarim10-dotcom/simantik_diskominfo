@@ -95,11 +95,8 @@ describe('Notifications Module & RBAC Flow', () => {
     });
 
     it('should allow SUPER_ADMIN to see all IN_APP notifications (broadcast & targeted)', async () => {
-      // 1 Broadcast in-app
       notificationsService.seedInMemoryNotification(createMockNotif('n-broadcast', 'IN_APP', null));
-      // 1 Targeted to technician 1
       notificationsService.seedInMemoryNotification(createMockNotif('n-tech1', 'IN_APP', technician1.id));
-      // 1 Email channel (should be excluded)
       notificationsService.seedInMemoryNotification(createMockNotif('n-email', 'EMAIL', null));
 
       const adminNotifs = await notificationsService.getUserNotifications(superAdminUser);
@@ -110,11 +107,8 @@ describe('Notifications Module & RBAC Flow', () => {
     });
 
     it('should enforce TECHNICIAN isolation: sees own and broadcast, but not other technicians', async () => {
-      // 1 Broadcast in-app
       notificationsService.seedInMemoryNotification(createMockNotif('n-broadcast', 'IN_APP', null));
-      // 1 Targeted to technician 1
       notificationsService.seedInMemoryNotification(createMockNotif('n-tech1', 'IN_APP', technician1.id));
-      // 1 Targeted to technician 2
       notificationsService.seedInMemoryNotification(createMockNotif('n-tech2', 'IN_APP', technician2.id));
 
       const tech1Notifs = await notificationsService.getUserNotifications(technician1);
@@ -127,9 +121,7 @@ describe('Notifications Module & RBAC Flow', () => {
 
   describe('2. Unread Count Calculation', () => {
     it('should accurately calculate unread count', async () => {
-      // 1 Unread broadcast
       notificationsService.seedInMemoryNotification(createMockNotif('n-1', 'IN_APP', null, null));
-      // 1 Read broadcast
       notificationsService.seedInMemoryNotification(createMockNotif('n-2', 'IN_APP', null, '2026-10-10T10:00:00.000Z'));
 
       const count = await notificationsService.getUnreadCount(superAdminUser);

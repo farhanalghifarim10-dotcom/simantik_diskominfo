@@ -13,7 +13,6 @@ import type {
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
 
-  // In-memory store untuk testing & offline fallback
   private readonly inMemoryNotifications: Map<string, NotificationItem> = new Map();
 
   constructor(
@@ -21,9 +20,6 @@ export class NotificationsService {
     private readonly emailService: EmailService,
   ) {}
 
-  /**
-   * Menghasilkan template netral non-dogmatis untuk notifikasi SIMANTIK.
-   */
   generateNeutralTemplate(
     type: NotificationType,
     params: {
@@ -119,9 +115,6 @@ export class NotificationsService {
     return { title, body, html };
   }
 
-  /**
-   * Membuat dan mendistribusikan notifikasi (IN_APP atau EMAIL).
-   */
   async notify(payload: CreateNotificationPayload): Promise<NotificationItem> {
     const template = this.generateNeutralTemplate(payload.type, {
       ticketNumber: payload.ticket_number,
@@ -150,7 +143,6 @@ export class NotificationsService {
       created_at: now,
     };
 
-    // 1. Jika Channel EMAIL: Kirim melalui EmailService (Resend abstraction)
     if (payload.channel === 'EMAIL' && payload.recipient_email) {
       const emailRes = await this.emailService.sendEmail({
         to: payload.recipient_email,
@@ -171,7 +163,6 @@ export class NotificationsService {
       record.sent_at = now;
     }
 
-    // 2. Simpan ke database Supabase
     try {
       const client = this.supabaseService.getClient();
       await client.from('notifications').insert({
@@ -196,9 +187,6 @@ export class NotificationsService {
     return record;
   }
 
-  /**
-   * Helper untuk menormalisasi user parameter baik objek AuthenticatedUser maupun string ID.
-   */
   private resolveUser(userOrId: AuthenticatedUser | string): AuthenticatedUser {
     if (typeof userOrId === 'string') {
       return {
@@ -211,26 +199,14 @@ export class NotificationsService {
     return userOrId;
   }
 
-  /**
-   * Helper pengujian: Menghapus seluruh notifikasi tersimpan di memori.
-   */
   clearInMemoryNotifications(): void {
     this.inMemoryNotifications.clear();
   }
 
-  /**
-   * Helper pengujian: Mendaftarkan notifikasi secara langsung ke memori.
-   */
   seedInMemoryNotification(item: NotificationItem): void {
     this.inMemoryNotifications.set(item.id, item);
   }
 
-  /**
-   * Mengambil daftar notifikasi in-app untuk pengguna internal dengan penegakan RBAC.
-   * - SUPER_ADMIN: Memiliki hak visibilitas terhadap seluruh notifikasi IN_APP internal.
-   * - TECHNICIAN: Hanya melihat notifikasi yang ditujukan langsung ke profilnya atau broadcast tanpa penerima spesifik.
-   * - Bergabung dengan tabel applications untuk melengkapi ticket_number.
-   */
   async getUserNotifications(userOrId: AuthenticatedUser | string): Promise<NotificationItem[]> {
     const user = this.resolveUser(userOrId);
 
@@ -246,7 +222,6 @@ export class NotificationsService {
         .order('created_at', { ascending: false })
         .limit(50);
 
-      // Teknisi dibatasi hanya notifikasi personal atau broadcast
       if (user.role === 'TECHNICIAN') {
         query = query.or(`recipient_profile_id.eq.${user.id},recipient_profile_id.is.null`);
       }
@@ -272,10 +247,6 @@ export class NotificationsService {
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }
 
-  /**
-   * Menandai satu notifikasi sebagai telah dibaca (read_at).
-   * Memvalidasi otorisasi: SUPER_ADMIN dapat menandai notifikasi apapun; TECHNICIAN hanya yang menjadi haknya.
-   */
   async markAsRead(
     notificationId: string,
     userOrId: AuthenticatedUser | string,
@@ -311,9 +282,6 @@ export class NotificationsService {
     }
   }
 
-  /**
-   * Menandai seluruh notifikasi yang belum dibaca sebagai telah dibaca (read_at).
-   */
   async markAllAsRead(
     userOrId: AuthenticatedUser | string,
   ): Promise<{ affected: number }> {
@@ -357,9 +325,6 @@ export class NotificationsService {
     return { affected };
   }
 
-  /**
-   * Menghitung jumlah notifikasi belum dibaca untuk pengguna internal.
-   */
   async getUnreadCount(userOrId: AuthenticatedUser | string): Promise<number> {
     const notifs = await this.getUserNotifications(userOrId);
     return notifs.filter((n) => !n.read_at).length;

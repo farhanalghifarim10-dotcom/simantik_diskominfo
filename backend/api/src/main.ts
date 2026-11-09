@@ -10,13 +10,11 @@ async function bootstrap() {
   });
   const configService = app.get(ConfigService);
 
-  // Parse JSON and URL-encoded bodies with 50MB limit to support base64 documents
   app.use(json({ limit: '50mb' }));
   app.use(urlencoded({ extended: true, limit: '50mb' }));
 
   app.setGlobalPrefix('api/v1');
 
-  // Enforce uniform and sanitized error responses
   app.useGlobalFilters(new HttpExceptionFilter());
 
   app.enableCors({

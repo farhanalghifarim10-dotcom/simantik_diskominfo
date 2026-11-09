@@ -43,18 +43,12 @@ type AuthenticatedRequest = Request & {
 export class LifecycleController {
   constructor(private readonly lifecycleService: LifecycleService) {}
 
-  // ------------------------------------------------------------
-  // OVERVIEW
-  // ------------------------------------------------------------
   @Get()
   async getOverview(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     const data = await this.lifecycleService.getLifecycleOverview(id, req.user);
     return { data };
   }
 
-  // ------------------------------------------------------------
-  // 1. ANALYSIS
-  // ------------------------------------------------------------
   @Get('analysis')
   async getAnalysis(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     const data = await this.lifecycleService.getAnalysis(id, req.user);
@@ -71,9 +65,6 @@ export class LifecycleController {
     return { data };
   }
 
-  // ------------------------------------------------------------
-  // 2. PLANNING (Project Plan)
-  // ------------------------------------------------------------
   @Get('planning')
   async getPlanning(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     const data = await this.lifecycleService.getProjectPlan(id, req.user);
@@ -90,9 +81,6 @@ export class LifecycleController {
     return { data };
   }
 
-  // ------------------------------------------------------------
-  // 3. DESIGN
-  // ------------------------------------------------------------
   @Get('design')
   async getDesign(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     const data = await this.lifecycleService.getDesign(id, req.user);
@@ -109,9 +97,6 @@ export class LifecycleController {
     return { data };
   }
 
-  // ------------------------------------------------------------
-  // 4. IMPLEMENTATION
-  // ------------------------------------------------------------
   @Get('implementation')
   async getImplementation(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     const data = await this.lifecycleService.getImplementation(id, req.user);
@@ -128,9 +113,6 @@ export class LifecycleController {
     return { data };
   }
 
-  // ------------------------------------------------------------
-  // 5. TESTING
-  // ------------------------------------------------------------
   @Get('tests')
   async getTests(
     @Param('id') id: string,
@@ -193,9 +175,6 @@ export class LifecycleController {
     return { data: { success: true } };
   }
 
-  // ------------------------------------------------------------
-  // 6. MAINTENANCE
-  // ------------------------------------------------------------
   @Get('maintenance')
   async getMaintenance(
     @Param('id') id: string,
@@ -257,9 +236,6 @@ export class LifecycleController {
     return { data: { success: true } };
   }
 
-  // ------------------------------------------------------------
-  // 7. EVALUATION
-  // ------------------------------------------------------------
   @Get('evaluations')
   async getEvaluations(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     const data = await this.lifecycleService.getEvaluations(id, req.user);
@@ -317,9 +293,6 @@ export class LifecycleController {
     return { data: { success: true } };
   }
 
-  // ------------------------------------------------------------
-  // 8. TECHNICAL DOCUMENTS
-  // ------------------------------------------------------------
   @Get('technical-documents')
   async getTechnicalDocuments(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     const data = await this.lifecycleService.getTechnicalDocuments(id, req.user);

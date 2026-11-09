@@ -51,14 +51,12 @@ export function TechnicianMyWorkPage() {
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
-  // Workload Summary
   const {
     data: summary,
     isLoading: summaryLoading,
     refetch: refetchSummary,
   } = useTechnicianWorkSummary();
 
-  // Assigned Work
   const {
     data: workData,
     isLoading: workLoading,
@@ -85,7 +83,6 @@ export function TechnicianMyWorkPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
           <div className="flex items-center gap-2">
@@ -113,9 +110,7 @@ export function TechnicianMyWorkPage() {
         </div>
       </div>
 
-      {/* METRIC CARDS / WORKLOAD SUMMARY */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {/* Card 1: Total Ditugaskan */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
           <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
             Total Ditugaskan
@@ -132,7 +127,6 @@ export function TechnicianMyWorkPage() {
           </div>
         </div>
 
-        {/* Card 2: Sedang Dikerjakan */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between border-l-4 border-l-[#1B5040]">
           <span className="text-xs font-bold text-[#1B5040] uppercase tracking-wider">
             Sedang Dikerjakan
@@ -151,7 +145,6 @@ export function TechnicianMyWorkPage() {
           </div>
         </div>
 
-        {/* Card 3: Menunggu Mulai / Analisis */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between border-l-4 border-l-[#1B5040]">
           <span className="text-xs font-bold text-[#1B5040] uppercase tracking-wider">
             Disetujui / Telaah
@@ -170,7 +163,6 @@ export function TechnicianMyWorkPage() {
           </div>
         </div>
 
-        {/* Card 4: Selesai */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between border-l-4 border-l-emerald-600">
           <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">
             Tuntas Selesai
@@ -190,7 +182,6 @@ export function TechnicianMyWorkPage() {
         </div>
       </div>
 
-      {/* FILTER & SEARCH BAR */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
         <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
           <div className="md:col-span-5">
@@ -232,7 +223,6 @@ export function TechnicianMyWorkPage() {
         </form>
       </div>
 
-      {/* WORK LIST TABLE */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         {workLoading && (
           <div className="p-6 space-y-4">
@@ -298,7 +288,6 @@ export function TechnicianMyWorkPage() {
                       key={item.id}
                       className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
                     >
-                      {/* Ticket & Assigned Date */}
                       <td className="px-5 py-4 whitespace-nowrap">
                         <Link
                           to={`/applications/${item.id}`}
@@ -311,7 +300,6 @@ export function TechnicianMyWorkPage() {
                         </span>
                       </td>
 
-                      {/* OPD & Applicant */}
                       <td className="px-5 py-4">
                         <div className="font-semibold text-slate-900 line-clamp-1">
                           {item.applicant.opd_name}
@@ -321,7 +309,6 @@ export function TechnicianMyWorkPage() {
                         </div>
                       </td>
 
-                      {/* Title & Service */}
                       <td className="px-5 py-4 max-w-xs">
                         <Link
                           to={`/applications/${item.id}`}
@@ -341,17 +328,14 @@ export function TechnicianMyWorkPage() {
                         )}
                       </td>
 
-                      {/* Status */}
                       <td className="px-5 py-4 whitespace-nowrap">
                         {getStatusBadge(item.current_status)}
                       </td>
 
-                      {/* Stage */}
                       <td className="px-5 py-4 whitespace-nowrap">
                         {getStageBadge(item.current_stage)}
                       </td>
 
-                      {/* Action */}
                       <td className="px-5 py-4 text-right whitespace-nowrap">
                         <Link to={`/applications/${item.id}`}>
                           <Button variant="primary" size="sm" className="font-semibold text-xs shadow-sm">
@@ -366,7 +350,6 @@ export function TechnicianMyWorkPage() {
               </table>
             </div>
 
-            {/* Pagination footer */}
             <div className="px-5 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
               <div>
                 Menampilkan halaman <strong>{workData.page}</strong> dari <strong>{workData.total_pages}</strong> (Total <strong>{workData.total}</strong> penugasan aktif)

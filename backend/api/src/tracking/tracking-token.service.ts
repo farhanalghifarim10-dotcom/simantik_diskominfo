@@ -6,7 +6,7 @@ import type { TrackingSessionPayload } from './tracking.types.js';
 @Injectable()
 export class TrackingTokenService {
   private readonly secret: string;
-  private readonly ttlSeconds: number = 15 * 60; // 15 minutes TTL
+  private readonly ttlSeconds: number = 15 * 60;
 
   constructor(private readonly configService: ConfigService) {
     this.secret =
@@ -15,9 +15,6 @@ export class TrackingTokenService {
       'simantik-tracking-secure-fallback-secret-2026';
   }
 
-  /**
-   * Menghasilkan short-lived signed tracking session token (15 menit).
-   */
   generateSessionToken(ticketNumber: string, applicationId: string): {
     token: string;
     expires_in: number;
@@ -51,10 +48,6 @@ export class TrackingTokenService {
     };
   }
 
-  /**
-   * Memvalidasi keabsahan token dan memeriksa masa kedaluwarsa.
-   * Melempar UnauthorizedException dengan kode standar jika tidak valid / kedaluwarsa.
-   */
   verifySessionToken(token: string): TrackingSessionPayload {
     if (!token || typeof token !== 'string') {
       throw new UnauthorizedException({
@@ -75,7 +68,6 @@ export class TrackingTokenService {
 
     const [encodedHeader, encodedPayload, signature] = parts;
 
-    // Verifikasi tanda tangan HMAC-SHA256
     const expectedSignature = crypto
       .createHmac('sha256', this.secret)
       .update(`${encodedHeader}.${encodedPayload}`)

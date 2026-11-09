@@ -81,19 +81,16 @@ export function LifecycleWorkspace({
 }: LifecycleWorkspaceProps) {
   const [activeSection, setActiveSection] = useState<ActiveSection>('ANALYSIS');
 
-  // Overview query
   const {
     data: overview,
     isLoading: overviewLoading,
     isError: overviewError,
   } = useLifecycleOverview(applicationId);
 
-  // Editable flag: super admin or assigned technician
   const canEdit = isSuperAdmin || overview?.user_can_edit === true;
 
   return (
     <div className="space-y-6">
-      {/* 1. REGULATORY & LIFECYCLE CONCEPT BANNER */}
       <div className="bg-gradient-to-r from-[#0D2820] via-[#143D31] to-[#0D2820] rounded-2xl p-6 text-white shadow-md border border-[#246854]">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="space-y-1 max-w-3xl">
@@ -140,7 +137,6 @@ export function LifecycleWorkspace({
         </div>
       </div>
 
-      {/* 2. STAGE NAVIGATION BAR */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-1.5 flex overflow-x-auto gap-1">
         {[
           { key: 'ANALYSIS', label: '1. Analisis', badge: overview?.stages_status?.ANALYSIS?.has_record },
@@ -233,9 +229,6 @@ export function LifecycleWorkspace({
   );
 }
 
-// ============================================================
-// 1. ANALYSIS SECTION (Kajian Teknis Tenaga Ahli)
-// ============================================================
 function AnalysisSection({
   applicationId,
   canEdit,
@@ -302,7 +295,6 @@ function AnalysisSection({
 
   return (
     <div className="space-y-6">
-      {/* A. PANEL REFERENSI USULAN OPD (READ-ONLY) */}
       {application && (
         <div className="bg-slate-50/90 rounded-2xl border border-slate-200/90 overflow-hidden shadow-2xs">
           <div
@@ -338,7 +330,6 @@ function AnalysisSection({
 
           {contextOpen && (
             <div className="p-5 sm:p-6 border-t border-slate-200 space-y-4 text-xs sm:text-sm">
-              {/* Ringkasan Metadata OPD */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div className="p-3 rounded-xl bg-white border border-slate-200">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
@@ -368,7 +359,6 @@ function AnalysisSection({
                 </div>
               </div>
 
-              {/* Uraian Kebutuhan & Masalah Versi OPD */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="p-3.5 rounded-xl bg-white border border-slate-200 space-y-1">
                   <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
@@ -446,7 +436,6 @@ function AnalysisSection({
         </div>
       )}
 
-      {/* B. FORMULIR KAJIAN TEKNIS TENAGA AHLI */}
       <form onSubmit={handleSave} className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-slate-100 gap-2">
           <div>
@@ -468,7 +457,6 @@ function AnalysisSection({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs sm:text-sm">
-          {/* 1. problems */}
           <div>
             <label className="font-bold text-slate-800 block mb-0.5">
               Kajian Permasalahan Teknis dan Kondisi Eksisting
@@ -485,7 +473,6 @@ function AnalysisSection({
             />
           </div>
 
-          {/* 2. needs */}
           <div>
             <label className="font-bold text-slate-800 block mb-0.5">
               Spesifikasi Kebutuhan Teknis
@@ -502,7 +489,6 @@ function AnalysisSection({
             />
           </div>
 
-          {/* 3. objectives */}
           <div>
             <label className="font-bold text-slate-800 block mb-0.5">
               Target Teknis dan Kriteria Penerimaan
@@ -519,7 +505,6 @@ function AnalysisSection({
             />
           </div>
 
-          {/* 4. stakeholders */}
           <div>
             <label className="font-bold text-slate-800 block mb-0.5">
               Pemetaan Pemangku Kepentingan dan Tanggung Jawab
@@ -536,7 +521,6 @@ function AnalysisSection({
             />
           </div>
 
-          {/* 5. scope */}
           <div>
             <label className="font-bold text-slate-800 block mb-0.5">
               Batasan dan Ruang Lingkup Pengerjaan Teknis
@@ -553,7 +537,6 @@ function AnalysisSection({
             />
           </div>
 
-          {/* 6. risks */}
           <div>
             <label className="font-bold text-slate-800 block mb-0.5">
               Risiko Teknis, Dependensi, dan Mitigasi
@@ -570,7 +553,6 @@ function AnalysisSection({
             />
           </div>
 
-          {/* 7. target_users */}
           <div>
             <label className="font-bold text-slate-800 block mb-0.5">
               Profil Pengguna dan Kebutuhan Akses
@@ -586,7 +568,6 @@ function AnalysisSection({
             />
           </div>
 
-          {/* 8 & 9. target_timeline & target_location */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="font-bold text-slate-800 block mb-0.5">
@@ -618,7 +599,6 @@ function AnalysisSection({
             </div>
           </div>
 
-          {/* 10. supporting_analysis */}
           <div className="md:col-span-2">
             <label className="font-bold text-slate-800 block mb-0.5">
               Analisis Gap, Integrasi, Interoperabilitas, dan Kepatuhan SPBE
@@ -648,9 +628,6 @@ function AnalysisSection({
   );
 }
 
-// ============================================================
-// 2. PLANNING SECTION (Project Plan)
-// ============================================================
 function PlanningSection({
   applicationId,
   canEdit,
@@ -912,9 +889,6 @@ function PlanningSection({
   );
 }
 
-// ============================================================
-// 3. DESIGN SECTION
-// ============================================================
 function DesignSection({
   applicationId,
   canEdit,
@@ -1107,9 +1081,6 @@ function DesignSection({
   );
 }
 
-// ============================================================
-// 4. IMPLEMENTATION SECTION
-// ============================================================
 function ImplementationSection({
   applicationId,
   canEdit,
@@ -1302,9 +1273,6 @@ function ImplementationSection({
   );
 }
 
-// ============================================================
-// 5. TESTING SECTION
-// ============================================================
 function TestingSection({
   applicationId,
   canEdit,
@@ -1484,7 +1452,6 @@ function TestingSection({
 
   return (
     <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
-      {/* DISCLAIMER NOTICE */}
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-amber-900 text-xs flex gap-3 items-start">
         <span className="text-amber-600 font-bold text-sm shrink-0">ℹ️</span>
         <div className="space-y-1">
@@ -1497,7 +1464,6 @@ function TestingSection({
         </div>
       </div>
 
-      {/* HEADER & FILTERS */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-slate-100 gap-4">
         <div>
           <h3 className="text-base font-bold text-slate-900">
@@ -1514,7 +1480,6 @@ function TestingSection({
         )}
       </div>
 
-      {/* FILTER CONTROLS */}
       <div className="flex flex-wrap items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
         <span className="font-bold text-slate-600">Filter Dimensi:</span>
         <Select
@@ -1677,7 +1642,6 @@ function TestingSection({
         </div>
       )}
 
-      {/* DETAIL MODAL PENGUJIAN */}
       <Dialog
         isOpen={Boolean(detailModalTest)}
         onClose={() => setDetailModalTest(null)}
@@ -1802,7 +1766,6 @@ function TestingSection({
         )}
       </Dialog>
 
-      {/* MODAL TAMBAH / EDIT PENGUJIAN */}
       <Dialog
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -1996,9 +1959,6 @@ function TestingSection({
   );
 }
 
-// ============================================================
-// 6. MAINTENANCE SECTION
-// ============================================================
 function MaintenanceSection({
   applicationId,
   canEdit,
@@ -2161,7 +2121,6 @@ function MaintenanceSection({
 
   return (
     <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
-      {/* DISCLAIMER NOTICE */}
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-amber-900 text-xs flex gap-3 items-start">
         <span className="text-amber-600 font-bold text-sm shrink-0">ℹ️</span>
         <div className="space-y-1">
@@ -2174,7 +2133,6 @@ function MaintenanceSection({
         </div>
       </div>
 
-      {/* HEADER & ACTIONS */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-slate-100 gap-4">
         <div>
           <h3 className="text-base font-bold text-slate-900">
@@ -2191,7 +2149,6 @@ function MaintenanceSection({
         )}
       </div>
 
-      {/* FILTER CONTROLS */}
       <div className="flex flex-wrap items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
         <span className="font-bold text-slate-600">Filter Tipe Pemeliharaan:</span>
         <Select
@@ -2321,7 +2278,6 @@ function MaintenanceSection({
         </div>
       )}
 
-      {/* DETAIL MODAL PEMELIHARAAN */}
       <Dialog
         isOpen={Boolean(detailRecord)}
         onClose={() => setDetailRecord(null)}
@@ -2431,7 +2387,6 @@ function MaintenanceSection({
         )}
       </Dialog>
 
-      {/* MODAL TAMBAH / EDIT PEMELIHARAAN */}
       <Dialog
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -2582,9 +2537,6 @@ function MaintenanceSection({
   );
 }
 
-// ============================================================
-// 7. EVALUATION SECTION
-// ============================================================
 function EvaluationSection({
   applicationId,
   canEdit,
@@ -2773,7 +2725,6 @@ function EvaluationSection({
 
   return (
     <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
-      {/* DISCLAIMER REGULASI */}
       <div className="p-3.5 rounded-xl border border-amber-200 bg-amber-50/70 text-xs text-amber-900 flex items-start gap-2.5">
         <span className="text-amber-600 font-bold shrink-0 mt-0.5">ℹ</span>
         <div>
@@ -2907,7 +2858,6 @@ function EvaluationSection({
         </div>
       )}
 
-      {/* DETAIL MODAL */}
       <Dialog
         isOpen={Boolean(detailItem)}
         onClose={() => setDetailItem(null)}
@@ -2987,7 +2937,6 @@ function EvaluationSection({
         )}
       </Dialog>
 
-      {/* MODAL TAMBAH EVALUASI */}
       <Dialog
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -3102,7 +3051,6 @@ function EvaluationSection({
         </form>
       </Dialog>
 
-      {/* MODAL EDIT EVALUASI */}
       <Dialog
         isOpen={Boolean(editItem)}
         onClose={() => setEditItem(null)}
@@ -3217,9 +3165,6 @@ function EvaluationSection({
   );
 }
 
-// ============================================================
-// 8. TECHNICAL DOCUMENTS SECTION (Private Storage)
-// ============================================================
 function TechnicalDocumentsSection({
   applicationId,
   canEdit,
@@ -3414,7 +3359,6 @@ function TechnicalDocumentsSection({
         </div>
       )}
 
-      {/* MODAL UNGGAH DOKUMEN */}
       <Dialog
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}

@@ -18,7 +18,6 @@ interface FaqItem {
 }
 
 const FAQ_DATA: FaqItem[] = [
-  // Kategori: Umum
   {
     id: 'u-1',
     category: 'umum',
@@ -38,7 +37,6 @@ const FAQ_DATA: FaqItem[] = [
     answer: 'Tidak ada biaya. Seluruh layanan telaah, konsultasi arsitektur, dan pengembangan yang difasilitasi oleh Diskominfo Kabupaten Bandung bersumber dari APBD dan diselenggarakan secara cuma-cuma bagi seluruh OPD.',
   },
 
-  // Kategori: Dokumen
   {
     id: 'd-1',
     category: 'dokumen',
@@ -58,7 +56,6 @@ const FAQ_DATA: FaqItem[] = [
     answer: 'OPD dapat berkonsultasi terlebih dahulu dengan Bidang Aptika Diskominfo melalui Helpdesk untuk mendapatkan asistensi dan template panduan penyusunan KAK SPBE.',
   },
 
-  // Kategori: Tracking
   {
     id: 't-1',
     category: 'tracking',
@@ -78,7 +75,6 @@ const FAQ_DATA: FaqItem[] = [
     answer: 'Estimasi Telaah: Menyesuaikan Kelengkapan Berkas & Antrean.',
   },
 
-  // Kategori: Teknis & Pengujian
   {
     id: 'k-1',
     category: 'teknis',
@@ -110,9 +106,6 @@ export function HelpPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-16 space-y-12">
-      {/* =========================================================================
-          PAGE HEADER
-         ========================================================================= */}
       <div className="border-b border-slate-200 pb-8 space-y-3">
         <div className="flex items-center gap-2 text-xs font-semibold text-[#2E8A6E] uppercase tracking-wider">
           <Link to="/" className="hover:underline text-slate-500">Beranda</Link>
@@ -128,9 +121,6 @@ export function HelpPage() {
         </p>
       </div>
 
-      {/* =========================================================================
-          SEARCH & FILTER BAR
-         ========================================================================= */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
         <div className="max-w-2xl">
           <label htmlFor="faqSearch" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
@@ -151,7 +141,6 @@ export function HelpPage() {
           </div>
         </div>
 
-        {/* Filter Pills */}
         <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-100">
           <button
             type="button"
@@ -211,9 +200,6 @@ export function HelpPage() {
         </div>
       </div>
 
-      {/* =========================================================================
-          FAQ ACCORDION LIST
-         ========================================================================= */}
       <div className="space-y-4">
         {filteredFaqs.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-3">
@@ -271,9 +257,6 @@ export function HelpPage() {
         )}
       </div>
 
-      {/* =========================================================================
-          OPD PREPARATION CHECKLIST CARD
-         ========================================================================= */}
       <div className="bg-[#0D2820] text-white rounded-2xl p-6 sm:p-8 space-y-4 border border-[#246854]">
         <div className="flex items-center gap-2 text-[#2BD9A5] text-xs font-bold uppercase tracking-wider">
           <ShieldIcon size={16} />
@@ -310,9 +293,6 @@ export function HelpPage() {
         </div>
       </div>
 
-      {/* =========================================================================
-          STILL NEED HELP BANNER
-         ========================================================================= */}
       <div className="border border-[#98F7D9] bg-[#CAF3E4]/70 rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
         <div className="space-y-1 text-center sm:text-left">
           <h4 className="text-base font-bold text-[#000408]">

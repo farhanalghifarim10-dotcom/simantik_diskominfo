@@ -14,7 +14,6 @@ describe('Services Vertical Slice', () => {
   let adminController: AdminServicesController;
 
   beforeEach(() => {
-    // Supabase service mock that throws by default so fallback in-memory is tested predictably
     supabaseServiceMock = {
       getClient: vi.fn().mockReturnValue({
         from: vi.fn().mockReturnValue({
@@ -75,7 +74,6 @@ describe('Services Vertical Slice', () => {
       expect(Array.isArray(response.data)).toBe(true);
       expect(response.data.length).toBeGreaterThan(0);
 
-      // Verify requirement fields
       const firstReq = response.data[0];
       expect(firstReq).toHaveProperty('id');
       expect(firstReq).toHaveProperty('name');
@@ -136,7 +134,6 @@ describe('Services Vertical Slice', () => {
       expect(response.data.is_required).toBe(false);
       expect(response.data.is_placeholder).toBe(true);
 
-      // Verify requirement is in service detail
       const detail = await adminController.getServiceDetail('11111111-1111-1111-1111-111111111111');
       expect(detail.data.requirements?.some((r) => r.id === response.data.id)).toBe(true);
     });
@@ -157,7 +154,6 @@ describe('Services Vertical Slice', () => {
     });
 
     it('should allow admin to delete a requirement', async () => {
-      // First create one to delete
       const created = await adminController.createRequirement('11111111-1111-1111-1111-111111111111', {
         name: 'Temporary Requirement',
         type: 'DATA',
@@ -170,7 +166,6 @@ describe('Services Vertical Slice', () => {
       );
       expect(deleteRes.success).toBe(true);
 
-      // Verify it's gone
       const detail = await adminController.getServiceDetail('11111111-1111-1111-1111-111111111111');
       expect(detail.data.requirements?.some((r) => r.id === created.data.id)).toBe(false);
     });
@@ -223,7 +218,6 @@ describe('Services Vertical Slice', () => {
       const reflector = new Reflector();
       const guard = new RolesGuard(reflector);
 
-      // Simulate technician user context trying to call updateService
       const mockTechnicianContext = {
         getHandler: () => adminController.updateService,
         getClass: () => AdminServicesController,
@@ -238,7 +232,6 @@ describe('Services Vertical Slice', () => {
         /does not have sufficient permissions/,
       );
 
-      // Simulate unauthenticated user context
       const mockAnonContext = {
         getHandler: () => adminController.updateService,
         getClass: () => AdminServicesController,

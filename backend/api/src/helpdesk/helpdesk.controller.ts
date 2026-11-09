@@ -15,10 +15,6 @@ import type { CreateConsultationDto } from './helpdesk.types.js';
 export class HelpdeskController {
   constructor(private readonly helpdeskService: HelpdeskService) {}
 
-  // ------------------------------------------------------------
-  // 1. PUBLIC SUBMISSION (Portal Layanan Helpdesk & Kontak)
-  // ------------------------------------------------------------
-
   @Post('public/helpdesk/consultations')
   async submitPublicConsultation(@Body() body: CreateConsultationDto) {
     const data = await this.helpdeskService.submitConsultation(body);
@@ -29,15 +25,10 @@ export class HelpdeskController {
     };
   }
 
-  // Alias endpoint jika dipanggil tanpa prefix public
   @Post('helpdesk/consultations')
   async submitConsultationAlias(@Body() body: CreateConsultationDto) {
     return this.submitPublicConsultation(body);
   }
-
-  // ------------------------------------------------------------
-  // 2. INTERNAL ADMIN & TECHNICIAN INBOX
-  // ------------------------------------------------------------
 
   @Get('admin/helpdesk/consultations')
   @UseGuards(AuthGuard)
@@ -62,7 +53,6 @@ export class HelpdeskController {
     };
   }
 
-  // Aliases for /helpdesk/consultations when called by internal client
   @Get('helpdesk/consultations')
   @UseGuards(AuthGuard)
   async getConsultationsInternalAlias(@Req() req: any) {

@@ -15,10 +15,6 @@ import type { SubmitRevisionDto, VerifyTrackingDto } from './tracking.types.js';
 export class TrackingController {
   constructor(private readonly trackingService: TrackingService) {}
 
-  /**
-   * 1. Verifikasi kredensial pelacakan (Nomor Tiket + Kode Pelacakan)
-   * Mengembalikan short-lived session token (15 menit).
-   */
   @Post('tracking/verify')
   async verify(@Body() body: VerifyTrackingDto, @Req() req: any) {
     const clientIp =
@@ -36,10 +32,6 @@ export class TrackingController {
     };
   }
 
-  /**
-   * 2. Ringkasan Proyeksi Aman Tiket Publik
-   * Wajib menyertakan Authorization Bearer <token> sesi pelacakan yang sah.
-   */
   @Get('tickets/:ticket_number')
   @UseGuards(TrackingAuthGuard)
   async getTicket(
@@ -58,10 +50,6 @@ export class TrackingController {
     };
   }
 
-  /**
-   * 3. Proyeksi Timeline Publik Intensional
-   * Wajib menyertakan Authorization Bearer <token> sesi pelacakan yang sah.
-   */
   @Get('tickets/:ticket_number/timeline')
   @UseGuards(TrackingAuthGuard)
   async getTimeline(
@@ -80,10 +68,6 @@ export class TrackingController {
     };
   }
 
-  /**
-   * 4. Kirim Tanggapan Perbaikan / Revisi Pemohon
-   * Hanya dapat dipanggil ketika tiket berada pada status REVISION_REQUIRED.
-   */
   @Post('tickets/:ticket_number/revision')
   @UseGuards(TrackingAuthGuard)
   async submitRevision(

@@ -149,7 +149,7 @@ describe('TrackingModule (Public Tracking & Revision Flow)', () => {
       expect(res.ticket_number).toBe(validTicket);
       expect(res.tracking_token).toBeDefined();
       expect(typeof res.tracking_token).toBe('string');
-      expect(res.expires_in).toBe(900); // 15 menit
+      expect(res.expires_in).toBe(900);
       expect(res.expires_at).toBeDefined();
     });
 
@@ -242,7 +242,6 @@ describe('TrackingModule (Public Tracking & Revision Flow)', () => {
         ).rejects.toThrow(UnauthorizedException);
       }
 
-      // Percobaan ke-5 mencatat limit
       await expect(
         trackingService.verifyCredential(
           { ticket_number: validTicket, tracking_code: 'WRONG-5' },
@@ -250,7 +249,6 @@ describe('TrackingModule (Public Tracking & Revision Flow)', () => {
         ),
       ).rejects.toThrow(UnauthorizedException);
 
-      // Percobaan ke-6 harus ditolak dengan 429 TOO_MANY_REQUESTS
       try {
         await trackingService.verifyCredential(
           { ticket_number: validTicket, tracking_code: 'WRONG-6' },
@@ -284,7 +282,6 @@ describe('TrackingModule (Public Tracking & Revision Flow)', () => {
     });
 
     it('should reject expired session token with TRACKING_SESSION_EXPIRED', () => {
-      // Buat token yang sudah kedaluwarsa secara manual
       const now = Math.floor(Date.now() / 1000);
       const expiredPayload = {
         ticket_number: validTicket,
@@ -358,11 +355,9 @@ describe('TrackingModule (Public Tracking & Revision Flow)', () => {
       expect(summary.status_label).toBe('Permohonan Diterima');
       expect(summary.next_step).toBeDefined();
 
-      // Masking verification
       expect(summary.applicant_name_masked).toBe('Drs. A***');
       expect(summary.applicant_email_masked).toBe('ag***@bandungkab.go.id');
 
-      // Stage Progress & Applicant Action Verification (Tahap 2)
       expect(summary.stage_description).toBeDefined();
       expect(summary.stage_progress).toHaveLength(7);
       expect(summary.stage_progress[0].stage).toBe('ANALYSIS');
@@ -370,7 +365,6 @@ describe('TrackingModule (Public Tracking & Revision Flow)', () => {
       expect(summary.action_required_by_applicant).toBe(false);
       expect(summary.applicant_action_message).toContain('Tidak ada tindakan yang diperlukan');
 
-      // Data Isolation Check: Must not leak internal notes or raw technician details
       expect((summary as any).internal_notes).toBeUndefined();
       expect((summary as any).audit_logs).toBeUndefined();
       expect((summary as any).test_records).toBeUndefined();
@@ -396,7 +390,6 @@ describe('TrackingModule (Public Tracking & Revision Flow)', () => {
       expect(timeline.milestones[0].status).toBe('completed');
       expect(timeline.milestones[1].title).toBe('Verifikasi & Telaah Administrasi');
 
-      // Check intentional projection: no internal notes in descriptions
       timeline.milestones.forEach((m) => {
         expect(m.title).toBeDefined();
         expect(m.description).toBeDefined();
@@ -414,7 +407,6 @@ describe('TrackingModule (Public Tracking & Revision Flow)', () => {
         exp: 9999999999,
       };
 
-      // Tiket saat ini adalah 'SUBMITTED'
       await expect(
         trackingService.submitRevision(validTicket, session, {
           revision_notes: 'Ini kelengkapan KAK yang diminta',
@@ -464,14 +456,12 @@ describe('TrackingModule (Public Tracking & Revision Flow)', () => {
       const session = setupRevisionTicket();
       const revisionTicket = session.ticket_number;
 
-      // Verify can_revise flag in summary
       const summaryBefore = await trackingService.getPublicTicketSummary(revisionTicket, session);
       expect(summaryBefore.can_revise).toBe(true);
       expect(summaryBefore.action_required_by_applicant).toBe(true);
       expect(summaryBefore.applicant_action_message).toContain('Tindakan diperlukan');
       expect(summaryBefore.revision_reason).toBe('Mohon lampirkan KAK yang telah ditandatangani Kepala Dinas.');
 
-      // Submit revision response
       const res = await trackingService.submitRevision(revisionTicket, session, {
         revision_notes: 'Berkas KAK bertanda tangan basah telah kami upload ulang.',
         updated_title: 'Pengembangan Portal SPBE (Revisi Final)',
@@ -488,7 +478,6 @@ describe('TrackingModule (Public Tracking & Revision Flow)', () => {
       expect(res.previous_status).toBe('REVISION_REQUIRED');
       expect(res.current_status).toBe('VERIFICATION');
 
-      // Verify ticket state updated in summary
       const summaryAfter = await trackingService.getPublicTicketSummary(revisionTicket, session);
       expect(summaryAfter.current_status).toBe('VERIFICATION');
       expect(summaryAfter.title).toBe('Pengembangan Portal SPBE (Revisi Final)');
@@ -596,7 +585,6 @@ describe('TrackingModule (Public Tracking & Revision Flow)', () => {
         }),
       ).rejects.toThrow(InternalServerErrorException);
 
-      // Verify that storage rollback removal was triggered with UUID key
       expect(mockStorageRemove).toHaveBeenCalledWith(
         expect.arrayContaining([expect.stringMatching(/^applications\/[A-Z0-9-]+\/[a-f0-9-]{36}\.pdf$/)]),
       );
@@ -621,7 +609,6 @@ describe('TrackingModule (Public Tracking & Revision Flow)', () => {
         }),
       ).rejects.toThrow(InternalServerErrorException);
 
-      // Verify that database insert was never called because upload failed first
       expect(mockDocInsert).not.toHaveBeenCalled();
     });
 
@@ -643,18 +630,14 @@ describe('TrackingModule (Public Tracking & Revision Flow)', () => {
         }),
       ).rejects.toThrow(InternalServerErrorException);
 
-      // Verify storage and doc cleanup called with UUID key
       expect(mockStorageRemove).toHaveBeenCalledWith(
         expect.arrayContaining([expect.stringMatching(/^applications\/[A-Z0-9-]+\/[a-f0-9-]{36}\.pdf$/)]),
       );
       expect(mockDocDelete).toHaveBeenCalled();
-      // History and message were not inserted
       expect(mockHistoryInsert).not.toHaveBeenCalled();
       expect(mockMessageInsert).not.toHaveBeenCalled();
-      // Status revert was NOT called because forward update never succeeded
       expect(mockAppUpdate).toHaveBeenCalledTimes(1);
 
-      // Verify ticket state remains REVISION_REQUIRED
       const summaryAfter = await trackingService.getPublicTicketSummary(session.ticket_number, session);
       expect(summaryAfter.current_status).toBe('REVISION_REQUIRED');
       expect(summaryAfter.can_revise).toBe(true);
@@ -663,7 +646,6 @@ describe('TrackingModule (Public Tracking & Revision Flow)', () => {
 
     it('should abort, clean up storage/docs, and throw ConflictException when forward update matches 0 rows due to concurrent status change', async () => {
       const session = setupRevisionTicket();
-      // Simulate 0 rows updated because another process/admin moved the ticket status
       appUpdateData = [];
 
       await expect(
@@ -680,20 +662,16 @@ describe('TrackingModule (Public Tracking & Revision Flow)', () => {
         }),
       ).rejects.toThrow(ConflictException);
 
-      // Verify cleanup of uploaded storage and docs of this attempt
       expect(mockStorageRemove).toHaveBeenCalledWith(
         expect.arrayContaining([expect.stringMatching(/^applications\/[A-Z0-9-]+\/[a-f0-9-]{36}\.pdf$/)]),
       );
       expect(mockDocDelete).toHaveBeenCalled();
 
-      // Verify that no history or message was written
       expect(mockHistoryInsert).not.toHaveBeenCalled();
       expect(mockMessageInsert).not.toHaveBeenCalled();
 
-      // Verify status revert was NOT called (does not overwrite concurrent changes)
       expect(mockAppUpdate).toHaveBeenCalledTimes(1);
 
-      // Verify in-memory state was NOT changed to VERIFICATION
       const summaryAfter = await trackingService.getPublicTicketSummary(session.ticket_number, session);
       expect(summaryAfter.current_status).toBe('REVISION_REQUIRED');
       expect(summaryAfter.can_revise).toBe(true);
@@ -717,11 +695,9 @@ describe('TrackingModule (Public Tracking & Revision Flow)', () => {
         }),
       ).rejects.toThrow(InternalServerErrorException);
 
-      // Verify storage and documents cleanup
       expect(mockStorageRemove).toHaveBeenCalled();
       expect(mockDocDelete).toHaveBeenCalled();
 
-      // Verify status revert update was called on applications with previousStatus and select('id')
       expect(mockAppUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
           current_status: 'REVISION_REQUIRED',
@@ -729,10 +705,8 @@ describe('TrackingModule (Public Tracking & Revision Flow)', () => {
       );
       expect(mockAppUpdateSelect).toHaveBeenCalledWith('id');
 
-      // Message was not inserted
       expect(mockMessageInsert).not.toHaveBeenCalled();
 
-      // Verify in-memory status remains REVISION_REQUIRED and no docs added
       const summaryAfter = await trackingService.getPublicTicketSummary(session.ticket_number, session);
       expect(summaryAfter.current_status).toBe('REVISION_REQUIRED');
       expect(summaryAfter.can_revise).toBe(true);
@@ -757,7 +731,6 @@ describe('TrackingModule (Public Tracking & Revision Flow)', () => {
         }),
       ).rejects.toThrow(InternalServerErrorException);
 
-      // Verify storage, documents, and status history cleanup
       expect(mockStorageRemove).toHaveBeenCalled();
       expect(mockDocDelete).toHaveBeenCalled();
       expect(mockHistoryDelete().eq).toHaveBeenCalledWith(
@@ -765,14 +738,12 @@ describe('TrackingModule (Public Tracking & Revision Flow)', () => {
         expect.any(String),
       );
 
-      // Verify status revert update was called
       expect(mockAppUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
           current_status: 'REVISION_REQUIRED',
         }),
       );
 
-      // Verify summary status remains REVISION_REQUIRED
       const summaryAfter = await trackingService.getPublicTicketSummary(session.ticket_number, session);
       expect(summaryAfter.current_status).toBe('REVISION_REQUIRED');
       expect(summaryAfter.can_revise).toBe(true);
@@ -781,7 +752,6 @@ describe('TrackingModule (Public Tracking & Revision Flow)', () => {
     it('should handle rollback safely when revert update matches 0 rows due to concurrent modification', async () => {
       const session = setupRevisionTicket();
       messageInsertError = { message: 'Message table timeout' };
-      // Simulate that by the time rollback runs, another process changed status so 0 rows match revert
       appRevertData = [];
 
       await expect(
@@ -798,12 +768,10 @@ describe('TrackingModule (Public Tracking & Revision Flow)', () => {
         }),
       ).rejects.toThrow(InternalServerErrorException);
 
-      // Verify storage, documents, and status history were still cleaned up
       expect(mockStorageRemove).toHaveBeenCalled();
       expect(mockDocDelete).toHaveBeenCalled();
       expect(mockHistoryDelete().eq).toHaveBeenCalledWith('id', expect.any(String));
 
-      // Revert update was executed and handled safely
       expect(mockAppUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
           current_status: 'REVISION_REQUIRED',
@@ -814,7 +782,6 @@ describe('TrackingModule (Public Tracking & Revision Flow)', () => {
 
     it('should clean up ONLY storage objects and documents belonging to this attempt', async () => {
       const session = setupRevisionTicket();
-      // Inject existing document into ticket before revision
       const existingDoc = {
         requirement_name: 'Dokumen KAK Awal',
         original_filename: 'kak_awal.pdf',
@@ -840,20 +807,17 @@ describe('TrackingModule (Public Tracking & Revision Flow)', () => {
         }),
       ).rejects.toThrow(InternalServerErrorException);
 
-      // Verify storage remove only targeted the revision document, not existing files
       expect(mockStorageRemove).toHaveBeenCalledWith([
         expect.stringMatching(/^applications\/[A-Z0-9-]+\/[a-f0-9-]{36}\.pdf$/),
       ]);
       expect(mockStorageRemove.mock.calls[0][0][0]).not.toContain('dokumen_revisi_khusus');
       expect(mockStorageRemove.mock.calls[0][0][0]).not.toContain('kak_awal');
 
-      // Verify document delete in DB only targeted the newly generated ID
       const deleteInCall = mockDocDelete().in.mock.calls[0];
       expect(deleteInCall[0]).toBe('id');
       expect(deleteInCall[1]).toHaveLength(1);
       expect(typeof deleteInCall[1][0]).toBe('string');
 
-      // Verify existing document is still present in ticket
       const summaryAfter = await trackingService.getPublicTicketSummary(session.ticket_number, session);
       expect(summaryAfter.documents).toHaveLength(1);
       expect(summaryAfter.documents[0].original_filename).toBe('kak_awal.pdf');
@@ -883,7 +847,6 @@ describe('TrackingModule (Public Tracking & Revision Flow)', () => {
       const session = setupRevisionTicket();
       historyInsertError = { message: 'History insert DB error' };
 
-      // Make app update fail on the revert call
       let callCount = 0;
       mockAppUpdate.mockImplementation(() => {
         callCount++;
@@ -909,10 +872,8 @@ describe('TrackingModule (Public Tracking & Revision Flow)', () => {
       });
 
       expect(res.current_status).toBe('VERIFICATION');
-      // Verify that forward update filtered for both application id and REVISION_REQUIRED
       expect(mockAppUpdateEq).toHaveBeenCalledWith('id', session.application_id);
       expect(mockAppUpdateEq).toHaveBeenCalledWith('current_status', 'REVISION_REQUIRED');
-      // Verify that .select('id') was called to check row mutation
       expect(mockAppUpdateSelect).toHaveBeenCalledWith('id');
     });
 
@@ -954,7 +915,6 @@ describe('TrackingModule (Public Tracking & Revision Flow)', () => {
         }),
       ).rejects.toThrow(BadRequestException);
 
-      // Verify no storage upload or db insertion occurred
       expect(mockStorageUpload).not.toHaveBeenCalled();
       expect(mockDocInsert).not.toHaveBeenCalled();
     });

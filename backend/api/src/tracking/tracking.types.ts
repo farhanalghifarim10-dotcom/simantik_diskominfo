@@ -32,7 +32,7 @@ export interface TrackingSessionPayload {
 
 export interface TrackingVerificationResult {
   tracking_token: string;
-  expires_in: number; // in seconds
+  expires_in: number;
   ticket_number: string;
   expires_at: string;
 }

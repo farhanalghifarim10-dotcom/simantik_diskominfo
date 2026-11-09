@@ -36,11 +36,6 @@ export const DEFAULT_LOCAL_TEST_USERS: LocalTestUserSpec[] = [
   },
 ];
 
-/**
- * Validasi ketat bahwa target URL Supabase adalah instance lokal 127.0.0.1 atau localhost
- * dengan port yang sesuai konfigurasi Supabase lokal (default 54321).
- * Menolak seketika URL Supabase Cloud (*.supabase.co), domain publik, maupun IP non-lokal.
- */
 export function validateSupabaseLocalUrl(urlStr: string | undefined): { url: string; host: string; port: string } {
   if (!urlStr || typeof urlStr !== 'string' || urlStr.trim() === '') {
     throw new Error(
@@ -58,14 +53,12 @@ export function validateSupabaseLocalUrl(urlStr: string | undefined): { url: str
     throw new Error(`CONFIG ERROR: Format SUPABASE_URL tidak valid: "${trimmed}". Pesan: ${err.message}`);
   }
 
-  // 1. Validasi Protocol
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
     throw new Error(`SECURITY ERROR: Protokol "${parsed.protocol}" tidak diizinkan. Gunakan http:// atau https://.`);
   }
 
   const hostname = parsed.hostname.toLowerCase();
 
-  // 2. Blokir keras Supabase Cloud
   if (hostname.endsWith('.supabase.co') || hostname.includes('supabase.co')) {
     throw new Error(
       `SECURITY VIOLATION: Terdeteksi URL Supabase Cloud ("${hostname}"). ` +
@@ -73,7 +66,6 @@ export function validateSupabaseLocalUrl(urlStr: string | undefined): { url: str
     );
   }
 
-  // 3. Hanya izinkan host lokal: 127.0.0.1 atau localhost
   if (!ALLOWED_LOCAL_HOSTS.includes(hostname)) {
     throw new Error(
       `SECURITY VIOLATION: Host "${hostname}" bukan host lokal yang diizinkan! ` +
@@ -81,7 +73,6 @@ export function validateSupabaseLocalUrl(urlStr: string | undefined): { url: str
     );
   }
 
-  // 4. Validasi Port lokal (sesuai config.toml port 54321)
   const port = parsed.port || (parsed.protocol === 'https:' ? '443' : '80');
   if (port !== LOCAL_SUPABASE_DEFAULT_PORT) {
     throw new Error(
@@ -97,9 +88,6 @@ export function validateSupabaseLocalUrl(urlStr: string | undefined): { url: str
   };
 }
 
-/**
- * Validasi email pengujian lokal harus menggunakan domain .test
- */
 export function validateTestEmail(email: string): void {
   if (!email || !email.toLowerCase().endsWith('.test')) {
     throw new Error(
@@ -109,10 +97,6 @@ export function validateTestEmail(email: string): void {
   }
 }
 
-/**
- * Memeriksa kecukupan konfigurasi environment saat skrip dijalankan.
- * Tidak ada fallback otomatis ke file backend/api/.env.
- */
 export function resolveExecutionConfig(env: NodeJS.ProcessEnv = process.env) {
   const rawUrl = env.LOCAL_SUPABASE_URL || env.SUPABASE_URL;
   const validated = validateSupabaseLocalUrl(rawUrl);
@@ -125,7 +109,6 @@ export function resolveExecutionConfig(env: NodeJS.ProcessEnv = process.env) {
     );
   }
 
-  // Password retrieval (individual atau shared fallback untuk testing)
   const superAdminPassword = env.LOCAL_SUPER_ADMIN_PASSWORD || env.LOCAL_TEST_PASSWORD;
   const technicianPassword = env.LOCAL_TECHNICIAN_PASSWORD || env.LOCAL_TEST_PASSWORD;
 
@@ -137,9 +120,6 @@ export function resolveExecutionConfig(env: NodeJS.ProcessEnv = process.env) {
   };
 }
 
-/**
- * Membuat Supabase Client yang diisolasi untuk eksekusi skrip lokal
- */
 export function createLocalAdminClient(url: string, serviceRoleKey: string): SupabaseClient {
   return createClient(url, serviceRoleKey, {
     auth: {
@@ -150,10 +130,6 @@ export function createLocalAdminClient(url: string, serviceRoleKey: string): Sup
   });
 }
 
-/**
- * Melakukan provisioning akun pengujian secara idempotent dan aman.
- * Menjamin tidak terjadi perubahan role secara diam-diam (silent role mutation).
- */
 export async function provisionLocalUser(
   client: SupabaseClient,
   spec: LocalTestUserSpec
@@ -167,7 +143,6 @@ export async function provisionLocalUser(
     );
   }
 
-  // 1. Cari apakah akun sudah ada di auth.users via Supabase Auth Admin API
   const { data: listData, error: listError } = await client.auth.admin.listUsers({
     page: 1,
     perPage: 1000,
@@ -185,7 +160,6 @@ export async function provisionLocalUser(
   let authAction: 'CREATED' | 'UPDATED' | 'UNCHANGED';
 
   if (!existingAuthUser) {
-    // Buat akun baru dengan email terkonfirmasi
     const { data: createData, error: createError } = await client.auth.admin.createUser({
       email: spec.email,
       password: spec.password,
@@ -204,7 +178,6 @@ export async function provisionLocalUser(
   } else {
     userId = existingAuthUser.id;
 
-    // Perbarui password dan pastikan email terkonfirmasi
     const { error: updateError } = await client.auth.admin.updateUserById(userId, {
       password: spec.password,
       email_confirm: true,
@@ -221,7 +194,6 @@ export async function provisionLocalUser(
     authAction = 'UPDATED';
   }
 
-  // 2. Tangani public.profiles (Skema: id, full_name, role, is_active, email)
   const { data: existingProfile, error: profileFetchError } = await client
     .from('profiles')
     .select('id, full_name, role, is_active, email')
@@ -235,8 +207,6 @@ export async function provisionLocalUser(
   let profileAction: 'CREATED' | 'UPDATED' | 'VERIFIED';
 
   if (!existingProfile) {
-    // Karena migration SIMANTIK tidak memasang trigger otomatis pada auth.users,
-    // kita buat row profile secara eksplisit di public.profiles.
     const { error: insertError } = await client.from('profiles').insert({
       id: userId,
       full_name: spec.fullName,
@@ -251,7 +221,6 @@ export async function provisionLocalUser(
 
     profileAction = 'CREATED';
   } else {
-    // PERIKSA ROLE: Cegah silent role mutation!
     if (existingProfile.role !== spec.role) {
       throw new Error(
         `ROLE CONFLICT VIOLATION: Profil untuk user "${spec.email}" sudah memiliki role "${existingProfile.role}", ` +
@@ -261,7 +230,6 @@ export async function provisionLocalUser(
       );
     }
 
-    // Role sudah cocok. Perbarui status aktif, nama, dan email jika diperlukan
     const needsUpdate =
       !existingProfile.is_active ||
       existingProfile.full_name !== spec.fullName ||

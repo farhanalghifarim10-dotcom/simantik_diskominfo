@@ -46,7 +46,6 @@ export function AdminServicesPage() {
   const updateRequirementMutation = useUpdateRequirement();
   const deleteRequirementMutation = useDeleteRequirement();
 
-  // State for Service Creation Modal
   const [createServiceModalOpen, setCreateServiceModalOpen] = useState(false);
   const [newServiceForm, setNewServiceForm] = useState({
     code: '',
@@ -57,10 +56,8 @@ export function AdminServicesPage() {
     is_active: true,
   });
 
-  // State for Drawer (Selected Service Detail & Requirements)
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
 
-  // State for Service Metadata Edit Modal
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [serviceForm, setServiceForm] = useState({
     name: '',
@@ -69,7 +66,6 @@ export function AdminServicesPage() {
     sort_order: 1,
   });
 
-  // State for Requirement Add / Edit Modal
   const [requirementModalOpen, setRequirementModalOpen] = useState(false);
   const [editingRequirement, setEditingRequirement] = useState<ServiceRequirement | null>(null);
   const [requirementForm, setRequirementForm] = useState({
@@ -84,7 +80,6 @@ export function AdminServicesPage() {
     is_placeholder: false,
   });
 
-  // State for Requirement Deletion Confirmation
   const [deletingRequirement, setDeletingRequirement] = useState<{
     serviceId: string;
     requirement: ServiceRequirement;
@@ -92,7 +87,6 @@ export function AdminServicesPage() {
 
   const selectedService = services?.find((s) => s.id === selectedServiceId) || null;
 
-  // Handler for Opening Edit Service Modal
   const handleOpenEditService = (service: Service) => {
     setEditingService(service);
     setServiceForm({
@@ -127,7 +121,6 @@ export function AdminServicesPage() {
     }
   };
 
-  // Handler for Requirement Modal Open
   const handleOpenAddRequirement = () => {
     if (!selectedService) return;
     setEditingRequirement(null);
@@ -212,7 +205,6 @@ export function AdminServicesPage() {
 
     try {
       if (editingRequirement) {
-        // Update existing requirement
         await updateRequirementMutation.mutateAsync({
           serviceId: selectedService.id,
           reqId: editingRequirement.id,
@@ -224,7 +216,6 @@ export function AdminServicesPage() {
           message: `Persyaratan "${requirementForm.name}" berhasil dimutakhirkan.`,
         });
       } else {
-        // Create new requirement
         await createRequirementMutation.mutateAsync({
           serviceId: selectedService.id,
           data: requirementForm,
@@ -271,7 +262,6 @@ export function AdminServicesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header Halaman */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -297,7 +287,6 @@ export function AdminServicesPage() {
         </div>
       </div>
 
-      {/* Kebijakan Non-Invensi Regulasi SPBE */}
       <Alert variant="info" title="Panduan Integritas Regulasi SPBE">
         <p className="text-xs text-slate-700 leading-relaxed">
           Jangan mengarang persyaratan resmi instansi yang belum dikonfirmasi melalui SK atau Perbup. 
@@ -305,7 +294,6 @@ export function AdminServicesPage() {
         </p>
       </Alert>
 
-      {/* Loading Skeletons */}
       {isLoading && (
         <div className="space-y-4">
           <Skeleton className="h-12 w-full rounded-xl" />
@@ -314,7 +302,6 @@ export function AdminServicesPage() {
         </div>
       )}
 
-      {/* Error State */}
       {!isLoading && isError && (
         <div className="bg-white rounded-xl border border-red-200 p-8">
           <ErrorState
@@ -325,7 +312,6 @@ export function AdminServicesPage() {
         </div>
       )}
 
-      {/* Empty State */}
       {!isLoading && !isError && (!services || services.length === 0) && (
         <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
           <EmptyState
@@ -335,7 +321,6 @@ export function AdminServicesPage() {
         </div>
       )}
 
-      {/* Services List Table / Cards */}
       {!isLoading && !isError && services && services.length > 0 && (
         <div className="grid grid-cols-1 gap-6">
           {services.map((service) => {
@@ -414,9 +399,6 @@ export function AdminServicesPage() {
         </div>
       )}
 
-      {/* =========================================================================
-          DRAWER: REQUIREMENTS MANAGEMENT FOR SELECTED SERVICE
-         ========================================================================= */}
       <Drawer
         isOpen={Boolean(selectedServiceId)}
         onClose={() => setSelectedServiceId(null)}
@@ -440,7 +422,6 @@ export function AdminServicesPage() {
       >
         {selectedService && (
           <div className="space-y-6">
-            {/* Action Bar */}
             <div className="flex items-center justify-between gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
               <div>
                 <h3 className="text-sm font-bold text-slate-900">
@@ -462,7 +443,6 @@ export function AdminServicesPage() {
               </Button>
             </div>
 
-            {/* List Requirements */}
             {(!selectedService.requirements || selectedService.requirements.length === 0) ? (
               <div className="p-8 text-center border border-dashed border-slate-300 rounded-xl">
                 <p className="text-sm font-semibold text-slate-700">Belum ada persyaratan</p>
@@ -486,7 +466,6 @@ export function AdminServicesPage() {
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
-                        {/* Status Wajib vs Opsional Badge */}
                         <Badge
                           variant={req.is_required ? 'danger' : 'neutral'}
                           className="text-[10px] font-bold"
@@ -558,9 +537,6 @@ export function AdminServicesPage() {
         )}
       </Drawer>
 
-      {/* =========================================================================
-          MODAL: EDIT SERVICE METADATA
-         ========================================================================= */}
       <Dialog
         isOpen={Boolean(editingService)}
         onClose={() => setEditingService(null)}
@@ -651,9 +627,6 @@ export function AdminServicesPage() {
         </form>
       </Dialog>
 
-      {/* =========================================================================
-          MODAL: ADD / EDIT SERVICE REQUIREMENT
-         ========================================================================= */}
       <Dialog
         isOpen={requirementModalOpen}
         onClose={() => setRequirementModalOpen(false)}
@@ -834,9 +807,6 @@ export function AdminServicesPage() {
         </form>
       </Dialog>
 
-      {/* =========================================================================
-          MODAL: TAMBAH LAYANAN BARU
-         ========================================================================= */}
       <Dialog
         isOpen={createServiceModalOpen}
         onClose={() => setCreateServiceModalOpen(false)}
@@ -941,9 +911,6 @@ export function AdminServicesPage() {
         </form>
       </Dialog>
 
-      {/* =========================================================================
-          CONFIRMATION DIALOG: DELETE REQUIREMENT
-         ========================================================================= */}
       <ConfirmationDialog
         isOpen={Boolean(deletingRequirement)}
         onClose={() => setDeletingRequirement(null)}

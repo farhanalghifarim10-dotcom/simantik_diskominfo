@@ -46,15 +46,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
       errorMessage =
         'Ukuran total dokumen yang diunggah melebihi batas maksimum peladen (maksimal 50 MB). Harap perkecil atau kompres berkas Anda.';
     } else {
-      // Uncaught / Internal / Database driver errors
-      // Log the real error on the server side only - NEVER leak details to client
       this.logger.error(
         `[UnhandledException] ${request?.method} ${request?.url}`,
         exception instanceof Error ? exception.stack : String(exception),
       );
     }
 
-    // Format pesan error jika array (misal validasi DTO)
     const formattedMessage = Array.isArray(errorMessage)
       ? errorMessage.join('; ')
       : errorMessage;

@@ -66,7 +66,6 @@ export function Drawer({
           aria-labelledby={title ? titleId : undefined}
           aria-describedby={description ? descId : undefined}
         >
-          {/* Backdrop */}
           <motion.div
             variants={backdropVariants}
             initial="closed"
@@ -85,7 +84,6 @@ export function Drawer({
               transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
               className={`w-screen border-l border-slate-200 bg-white shadow-2xl flex flex-col ${sizeStyles[size]} ${className}`}
             >
-              {/* Header */}
               <div className="flex items-start justify-between border-b border-slate-200 p-5">
                 <div>
                   {title && (
@@ -116,12 +114,10 @@ export function Drawer({
                 </button>
               </div>
 
-              {/* Body */}
               <div className="flex-1 overflow-y-auto p-5 text-sm text-slate-700 leading-normal">
                 {children}
               </div>
 
-              {/* Footer */}
               {footer && (
                 <div className="border-t border-slate-200 bg-slate-50 p-4">
                   {footer}

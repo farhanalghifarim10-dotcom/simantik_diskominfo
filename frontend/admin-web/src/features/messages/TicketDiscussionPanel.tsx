@@ -89,7 +89,6 @@ export function TicketDiscussionPanel({ applicationId }: TicketDiscussionPanelPr
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
-      {/* HEADER & FILTER */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-slate-100 gap-4">
         <div>
           <h3 className="text-base font-bold text-slate-900">
@@ -119,7 +118,6 @@ export function TicketDiscussionPanel({ applicationId }: TicketDiscussionPanelPr
         </div>
       </div>
 
-      {/* MESSAGE STREAM WINDOW */}
       <div className="bg-slate-50/70 rounded-xl border border-slate-200 p-4 sm:p-6 max-h-[480px] min-h-[220px] overflow-y-auto space-y-4">
         {isLoading ? (
           <div className="space-y-3">
@@ -185,7 +183,6 @@ export function TicketDiscussionPanel({ applicationId }: TicketDiscussionPanelPr
         )}
       </div>
 
-      {/* COMPOSE & SEND BOX */}
       <form onSubmit={handleSend} className="space-y-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="font-bold text-xs text-slate-700">Tipe Pesan yang Dikirim:</span>

@@ -8,9 +8,8 @@ export class EmailService {
   private readonly apiKey: string | null;
   private readonly fromEmail: string;
 
-  // Deduplication cache: hash of (to + subject + idempotencyKey) -> timestamp
   private readonly sentCache: Map<string, number> = new Map();
-  private readonly deduplicationWindowMs = 5 * 60 * 1000; // 5 menit
+  private readonly deduplicationWindowMs = 5 * 60 * 1000;
 
   constructor(private readonly configService: ConfigService) {
     this.apiKey =
@@ -24,13 +23,9 @@ export class EmailService {
       'SIMANTIK Diskominfo <noreply@simantik.bandungkab.go.id>';
   }
 
-  /**
-   * Mengirim email menggunakan Resend API secara aman dari server-side.
-   */
   async sendEmail(options: SendEmailOptions): Promise<EmailDeliveryResult> {
     const { to, subject, html, text, idempotencyKey } = options;
 
-    // 1. Pemeriksaan deduplikasi untuk mencegah pengiriman email ganda
     const dedupKey = `${to.toLowerCase()}:${subject}:${idempotencyKey || ''}`;
     const now = Date.now();
     const lastSent = this.sentCache.get(dedupKey);
@@ -43,7 +38,6 @@ export class EmailService {
       };
     }
 
-    // 2. Mode simulasi jika API key tidak disetel (misal: development lokal atau testing)
     if (!this.apiKey) {
       this.logger.log(`[SIMULASI EMAIL - RESEND API KEY TIDAK DISET] To: ${to} | Subject: ${subject}`);
       this.sentCache.set(dedupKey, now);
@@ -53,7 +47,6 @@ export class EmailService {
       };
     }
 
-    // 3. Panggilan resmi ke Resend REST API
     try {
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -99,9 +92,6 @@ export class EmailService {
     }
   }
 
-  /**
-   * Reset cache deduplikasi (berguna untuk testing)
-   */
   clearDeduplicationCache(): void {
     this.sentCache.clear();
   }

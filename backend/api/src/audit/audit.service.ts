@@ -38,9 +38,6 @@ export class AuditService {
     );
   }
 
-  /**
-   * Catat mutasi atau aksi administratif ke jejak audit (audit_logs)
-   */
   async record(entry: RecordAuditLogEntry): Promise<AuditLogListItem> {
     const id = crypto.randomUUID();
     const createdAt = new Date().toISOString();
@@ -110,9 +107,6 @@ export class AuditService {
     return newLog;
   }
 
-  /**
-   * Mengambil daftar log audit dengan filter dan paginasi
-   */
   async listLogs(query: ListAuditLogsQueryDto): Promise<PaginatedAuditLogsResponse> {
     const page = Math.max(1, query.page || 1);
     const limit = Math.max(1, Math.min(100, query.limit || 20));
@@ -179,7 +173,6 @@ export class AuditService {
       // Fallback
     }
 
-    // In-memory filter
     let filtered = [...this.inMemoryAuditLogs];
     if (query.entity_type) {
       filtered = filtered.filter((l) => l.entity_type.toLowerCase() === query.entity_type?.toLowerCase());

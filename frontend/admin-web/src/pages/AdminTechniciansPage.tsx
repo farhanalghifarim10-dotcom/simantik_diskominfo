@@ -42,7 +42,6 @@ export function AdminTechniciansPage() {
   const updateTechMutation = useUpdateTechnician();
   const toggleStatusMutation = useToggleTechnicianStatus();
 
-  // Dialog State: Create / Edit
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTech, setEditingTech] = useState<TechnicianAccount | null>(null);
   const [formData, setFormData] = useState({
@@ -52,13 +51,11 @@ export function AdminTechniciansPage() {
     is_active: true,
   });
 
-  // Drawer Detail & Workload State
   const [selectedTechId, setSelectedTechId] = useState<string | null>(null);
   const { data: techDetail, isLoading: isDetailLoading } = useTechnicianDetail(
     selectedTechId || '',
   );
 
-  // Status Dialog State
   const [statusDialogTech, setStatusDialogTech] = useState<TechnicianAccount | null>(null);
 
   const handleOpenCreate = () => {
@@ -163,7 +160,6 @@ export function AdminTechniciansPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-slate-200">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
@@ -178,7 +174,6 @@ export function AdminTechniciansPage() {
         </Button>
       </div>
 
-      {/* Filter & Search Bar */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-3 items-center justify-between">
         <div className="w-full md:w-80">
           <Input
@@ -204,7 +199,6 @@ export function AdminTechniciansPage() {
         </div>
       </div>
 
-      {/* Main Table */}
       {isLoading ? (
         <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-3">
           <Skeleton className="h-8 w-full" />
@@ -324,7 +318,6 @@ export function AdminTechniciansPage() {
         </div>
       )}
 
-      {/* Modal Tambah / Edit Tenaga Ahli */}
       <Dialog
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -409,7 +402,6 @@ export function AdminTechniciansPage() {
         </form>
       </Dialog>
 
-      {/* Drawer Riwayat Penugasan */}
       <Drawer
         isOpen={Boolean(selectedTechId)}
         onClose={() => setSelectedTechId(null)}
@@ -428,7 +420,6 @@ export function AdminTechniciansPage() {
             <EmptyState title="Tenaga Ahli tidak ditemukan" />
           ) : (
             <>
-              {/* Summary Cards */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-[#CAF3E4]/40 border border-[#98F7D9] p-4 rounded-xl">
                   <span className="text-xs text-[#1B5040] font-semibold block mb-1">
@@ -448,7 +439,6 @@ export function AdminTechniciansPage() {
                 </div>
               </div>
 
-              {/* Assignment List */}
               <div>
                 <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
                   Daftar Penugasan Aplikasi
@@ -490,7 +480,6 @@ export function AdminTechniciansPage() {
         </div>
       </Drawer>
 
-      {/* Confirmation Dialog Toggle Status */}
       <ConfirmationDialog
         isOpen={Boolean(statusDialogTech)}
         onClose={() => setStatusDialogTech(null)}

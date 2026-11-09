@@ -19,7 +19,6 @@ export function Pagination({
 }: PaginationProps) {
   if (totalPages <= 1 && !totalItems) return null;
 
-  // Generate page numbers with ellipsis
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
     const maxVisible = 5;

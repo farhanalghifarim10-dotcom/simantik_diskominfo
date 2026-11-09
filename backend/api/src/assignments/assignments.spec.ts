@@ -90,14 +90,12 @@ describe('Assignments & Technician Workspace', () => {
     it('should enforce at most ONE current assignment per application upon re-assignment', async () => {
       const appId = 'a1000000-0000-0000-0000-000000000001';
 
-      // 1. Assign to Technician 1
       await assignmentsService.assignTechnician(
         appId,
         { technician_id: technician1User.id, note: 'Tugas pertama' },
         superAdminUser,
       );
 
-      // 2. Re-assign to Technician 2
       await assignmentsService.assignTechnician(
         appId,
         { technician_id: technician2User.id, note: 'Pengalihan tugas kedua' },
@@ -106,16 +104,13 @@ describe('Assignments & Technician Workspace', () => {
 
       const appAssignments = await assignmentsService.getApplicationAssignments(appId);
 
-      // Current assignee must be Technician 2
       expect(appAssignments.current_assignment?.technician_id).toBe(technician2User.id);
       expect(appAssignments.current_assignment?.is_current).toBe(true);
 
-      // Previous assignment for Technician 1 must be archived
       const archived = appAssignments.assignment_history.filter((a) => !a.is_current);
       expect(archived.length).toBeGreaterThanOrEqual(1);
       expect(archived[0].unassigned_at).toBeDefined();
 
-      // Exactly one current assignment
       const currentList = appAssignments.assignment_history.filter((a) => a.is_current);
       expect(currentList.length).toBe(1);
     });
@@ -178,12 +173,10 @@ describe('Assignments & Technician Workspace', () => {
         superAdminUser,
       );
 
-      // Technician 2 tries to access
       await expect(
         assignmentsService.getTechnicianApplicationDetail(appId, technician2User),
       ).rejects.toThrow(ForbiddenException);
 
-      // Technician 2 tries to execute transition
       await expect(
         assignmentsService.executeTechnicianTransition(
           appId,
@@ -196,22 +189,18 @@ describe('Assignments & Technician Workspace', () => {
     it('should allow assigned Technician 1 to access detail and execute permitted transitions', async () => {
       const appId = 'a1000000-0000-0000-0000-000000000001';
 
-      // Advance to APPROVED by Super Admin first
       await adminAppsService.executeTransition(appId, { target_status: 'VERIFICATION' }, superAdminUser);
       await adminAppsService.executeTransition(appId, { target_status: 'APPROVED' }, superAdminUser);
 
-      // Assign to Technician 1
       await assignmentsService.assignTechnician(
         appId,
         { technician_id: technician1User.id },
         superAdminUser,
       );
 
-      // Assigned Technician 1 can view detail
       const detail = await assignmentsService.getTechnicianApplicationDetail(appId, technician1User);
       expect(detail.id).toBe(appId);
 
-      // Assigned Technician 1 can start work (APPROVED -> IN_PROGRESS)
       const inProgressApp = await assignmentsService.executeTechnicianTransition(
         appId,
         { target_status: 'IN_PROGRESS', note: 'Mulai pengerjaan teknis modul' },
@@ -219,7 +208,6 @@ describe('Assignments & Technician Workspace', () => {
       );
       expect(inProgressApp.current_status).toBe('IN_PROGRESS');
 
-      // Assigned Technician 1 can complete work (IN_PROGRESS -> COMPLETED)
       const completedApp = await assignmentsService.executeTechnicianTransition(
         appId,
         { target_status: 'COMPLETED', note: 'Seluruh pengujian integrasi lulus' },
@@ -242,7 +230,6 @@ describe('Assignments & Technician Workspace', () => {
     });
 
     it('allows assigned TECHNICIAN to read assignments for their assigned application', async () => {
-      // Assign Technician 1 to application
       await assignmentsService.assignTechnician(
         appId,
         { technician_id: technician1User.id, note: 'Tugas teknisi 1' },
@@ -258,14 +245,12 @@ describe('Assignments & Technician Workspace', () => {
     });
 
     it('rejects unassigned TECHNICIAN with 403 Forbidden', async () => {
-      // Application is assigned to Technician 1
       await assignmentsService.assignTechnician(
         appId,
         { technician_id: technician1User.id, note: 'Tugas teknisi 1' },
         superAdminUser,
       );
 
-      // Technician 2 is NOT assigned to this application
       await expect(
         adminAssignmentsController.getApplicationAssignments(
           appId,
@@ -278,7 +263,6 @@ describe('Assignments & Technician Workspace', () => {
       const reflector = new Reflector();
       const guard = new RolesGuard(reflector);
 
-      // 1. getApplicationAssignments handler allows TECHNICIAN via method-level override
       const getAssignmentsContext = {
         getHandler: () => adminAssignmentsController.getApplicationAssignments,
         getClass: () => AdminAssignmentsController,
@@ -290,7 +274,6 @@ describe('Assignments & Technician Workspace', () => {
       };
       expect(guard.canActivate(getAssignmentsContext as any)).toBe(true);
 
-      // 2. listTechnicians handler blocks TECHNICIAN (class-level SUPER_ADMIN applies)
       const listTechsContext = {
         getHandler: () => adminAssignmentsController.listTechnicians,
         getClass: () => AdminAssignmentsController,
@@ -302,7 +285,6 @@ describe('Assignments & Technician Workspace', () => {
       };
       expect(() => guard.canActivate(listTechsContext as any)).toThrow(ForbiddenException);
 
-      // 3. assignTechnician handler blocks TECHNICIAN (class-level SUPER_ADMIN applies)
       const assignTechContext = {
         getHandler: () => adminAssignmentsController.assignTechnician,
         getClass: () => AdminAssignmentsController,
@@ -320,19 +302,16 @@ describe('Assignments & Technician Workspace', () => {
     const appId = 'a1000000-0000-0000-0000-000000000001';
 
     it('decreases active workload to 0 when application transitions to COMPLETED, while preserving assignment history', async () => {
-      // 1. Assign to Technician 1
       await assignmentsService.assignTechnician(
         appId,
         { technician_id: technician1User.id, note: 'Tugas implementasi sistem' },
         superAdminUser,
       );
 
-      // Verify active workload before completion
       let technicians = await assignmentsService.listTechnicians();
       let tech1 = technicians.find((t) => t.id === technician1User.id);
       expect(tech1?.active_assignments_count).toBe(1);
 
-      // 2. Transition through workflow: SUBMITTED -> VERIFICATION -> APPROVED -> IN_PROGRESS -> COMPLETED
       await adminAppsService.executeTransition(
         appId,
         { target_status: 'VERIFICATION', note: 'Verifikasi berkas' },
@@ -349,30 +328,25 @@ describe('Assignments & Technician Workspace', () => {
         superAdminUser,
       );
 
-      // Still active during IN_PROGRESS
       technicians = await assignmentsService.listTechnicians();
       tech1 = technicians.find((t) => t.id === technician1User.id);
       expect(tech1?.active_assignments_count).toBe(1);
 
-      // Transition to COMPLETED
       await adminAppsService.executeTransition(
         appId,
         { target_status: 'COMPLETED', note: 'Pekerjaan selesai lolos uji kelaikan' },
         superAdminUser,
       );
 
-      // 3. Active workload MUST be 0 now because application is COMPLETED
       technicians = await assignmentsService.listTechnicians();
       tech1 = technicians.find((t) => t.id === technician1User.id);
       expect(tech1?.active_assignments_count).toBe(0);
 
-      // 4. Historical assignment remains preserved in application assignments
       const appAssignments = await assignmentsService.getApplicationAssignments(appId);
       expect(appAssignments.current_assignment?.technician_id).toBe(technician1User.id);
       expect(appAssignments.current_assignment?.is_current).toBe(true);
       expect(appAssignments.assignment_history.length).toBeGreaterThanOrEqual(1);
 
-      // 5. Further transition to CLOSED keeps active workload at 0
       await adminAppsService.executeTransition(
         appId,
         { target_status: 'CLOSED', note: 'Tiket ditutup resmi' },
@@ -384,7 +358,6 @@ describe('Assignments & Technician Workspace', () => {
     });
 
     it('rejects assigning technician to a COMPLETED or CLOSED application', async () => {
-      // Transition application to COMPLETED
       await adminAppsService.executeTransition(
         appId,
         { target_status: 'VERIFICATION', note: 'Verifikasi' },
@@ -406,7 +379,6 @@ describe('Assignments & Technician Workspace', () => {
         superAdminUser,
       );
 
-      // Attempting to assign technician to COMPLETED application must throw BadRequestException
       await expect(
         assignmentsService.assignTechnician(
           appId,
@@ -415,7 +387,6 @@ describe('Assignments & Technician Workspace', () => {
         ),
       ).rejects.toThrow(BadRequestException);
 
-      // Further transition to CLOSED also rejects
       await adminAppsService.executeTransition(
         appId,
         { target_status: 'CLOSED', note: 'Ditutup' },
@@ -495,7 +466,6 @@ describe('Assignments & Technician Workspace', () => {
       apps.set('app-rejected', { detail: createMockApp('app-rejected', 'SIM-2026-555555', 'REJECTED', null) });
       apps.set('app-cancelled', { detail: createMockApp('app-cancelled', 'SIM-2026-666666', 'CANCELLED', null) });
 
-      // Assign all 6 tickets to technician1User with is_current=true
       for (const id of ['app-approved', 'app-inprogress', 'app-completed', 'app-closed', 'app-rejected', 'app-cancelled']) {
         adminAppsService.assignTechnicianInMemory(id, technician1User.id);
         (assignmentsService as any).inMemoryAssignments.set(id, [
@@ -519,55 +489,47 @@ describe('Assignments & Technician Workspace', () => {
     it('excludes terminal tickets (CLOSED, COMPLETED, REJECTED, CANCELLED) from Pekerjaan Saya and retains active tickets', async () => {
       const work = await assignmentsService.getTechnicianMyWork(technician1User.id, { page: 1, page_size: 10 });
 
-      // Hanya tiket non-terminal (APPROVED dan IN_PROGRESS) yang boleh muncul
       expect(work.total).toBe(2);
       expect(work.items.length).toBe(2);
 
       const ticketNumbers = work.items.map((i) => i.ticket_number);
-      expect(ticketNumbers).toContain('SIM-2026-111111'); // APPROVED
-      expect(ticketNumbers).toContain('SIM-2026-222222'); // IN_PROGRESS
+      expect(ticketNumbers).toContain('SIM-2026-111111');
+      expect(ticketNumbers).toContain('SIM-2026-222222');
 
-      // Tiket terminal DILARANG muncul di daftar pekerjaan aktif
-      expect(ticketNumbers).not.toContain('SIM-2026-333333'); // COMPLETED
-      expect(ticketNumbers).not.toContain('SIM-2026-444444'); // CLOSED
-      expect(ticketNumbers).not.toContain('SIM-2026-555555'); // REJECTED
-      expect(ticketNumbers).not.toContain('SIM-2026-666666'); // CANCELLED
+      expect(ticketNumbers).not.toContain('SIM-2026-333333');
+      expect(ticketNumbers).not.toContain('SIM-2026-444444');
+      expect(ticketNumbers).not.toContain('SIM-2026-555555');
+      expect(ticketNumbers).not.toContain('SIM-2026-666666');
     });
 
     it('ensures getTechnicianWorkSummary is consistent with active work items', async () => {
       const summary = await assignmentsService.getTechnicianWorkSummary(technician1User.id);
       const work = await assignmentsService.getTechnicianMyWork(technician1User.id, { page: 1 });
 
-      // total_assigned pada ringkasan harus sinkron dengan total aktif dari getTechnicianMyWork
       expect(summary.total_assigned).toBe(work.total);
       expect(summary.total_assigned).toBe(2);
       expect(summary.approved_pending_count).toBe(1);
       expect(summary.in_progress_count).toBe(1);
-      expect(summary.completed_count).toBe(0); // COMPLETED status bukan beban kerja aktif
+      expect(summary.completed_count).toBe(0);
     });
 
     it('handles status, stage, search filtering and pagination consistently on non-terminal items', async () => {
-      // Filter by status: APPROVED
       const approvedOnly = await assignmentsService.getTechnicianMyWork(technician1User.id, { status: 'APPROVED' });
       expect(approvedOnly.total).toBe(1);
       expect(approvedOnly.items[0].ticket_number).toBe('SIM-2026-111111');
 
-      // Filter by status: CLOSED (terminal -> should yield 0)
       const closedQuery = await assignmentsService.getTechnicianMyWork(technician1User.id, { status: 'CLOSED' });
       expect(closedQuery.total).toBe(0);
       expect(closedQuery.items.length).toBe(0);
 
-      // Filter by stage: IMPLEMENTATION
       const stageFilter = await assignmentsService.getTechnicianMyWork(technician1User.id, { stage: 'IMPLEMENTATION' });
       expect(stageFilter.total).toBe(1);
       expect(stageFilter.items[0].ticket_number).toBe('SIM-2026-222222');
 
-      // Filter by search: '111111'
       const searchQuery = await assignmentsService.getTechnicianMyWork(technician1User.id, { search: '111111' });
       expect(searchQuery.total).toBe(1);
       expect(searchQuery.items[0].ticket_number).toBe('SIM-2026-111111');
 
-      // Pagination
       const page1 = await assignmentsService.getTechnicianMyWork(technician1User.id, { page: 1, page_size: 1 });
       expect(page1.items.length).toBe(1);
       expect(page1.total).toBe(2);
@@ -580,12 +542,10 @@ describe('Assignments & Technician Workspace', () => {
     });
 
     it('preserves assignment history and detail access for CLOSED applications', async () => {
-      // Penugasan historis pada tiket CLOSED tetap tercatat dan tidak dihapus
       const appAssignments = await assignmentsService.getApplicationAssignments('app-closed');
       expect(appAssignments.current_assignment?.technician_id).toBe(technician1User.id);
       expect(appAssignments.current_assignment?.is_current).toBe(true);
 
-      // Tenaga ahli tetap memiliki hak akses membaca detail tiket historisnya
       const detail = await assignmentsService.getTechnicianApplicationDetail('app-closed', technician1User);
       expect(detail.id).toBe('app-closed');
       expect(detail.ticket_number).toBe('SIM-2026-444444');
@@ -593,19 +553,16 @@ describe('Assignments & Technician Workspace', () => {
     });
 
     it('dynamically reduces active work and summary when application transitions from IN_PROGRESS to COMPLETED', async () => {
-      // Sebelum transisi: 2 pekerjaan aktif
       let summary = await assignmentsService.getTechnicianWorkSummary(technician1User.id);
       expect(summary.total_assigned).toBe(2);
       expect(summary.in_progress_count).toBe(1);
 
-      // Transisi 'app-inprogress' ke COMPLETED
       await adminAppsService.executeTransition(
         'app-inprogress',
         { target_status: 'COMPLETED', note: 'Pekerjaan selesai dan diserahkan' },
         superAdminUser,
       );
 
-      // Setelah transisi: pekerjaan aktif berkurang menjadi 1
       const work = await assignmentsService.getTechnicianMyWork(technician1User.id, { page: 1 });
       expect(work.total).toBe(1);
       expect(work.items.map((i) => i.id)).toEqual(['app-approved']);

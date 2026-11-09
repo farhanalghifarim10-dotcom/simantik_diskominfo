@@ -32,7 +32,6 @@ import type {
   StatusHistoryItem,
 } from './admin-applications.types.js';
 
-// In-memory fallback dataset for robust automated tests & offline development
 interface InMemRecord {
   detail: ApplicationDetailResponse;
   tracking_code_hash?: string;
@@ -140,9 +139,6 @@ export class AdminApplicationsService {
     );
   }
 
-  /**
-   * Helper untuk mendaftarkan permohonan ke in-memory store (dipanggil saat submission baru)
-   */
   registerApplicationInMemory(
     record: ApplicationDetailResponse,
     trackingCodeHash?: string,
@@ -161,27 +157,16 @@ export class AdminApplicationsService {
     this.inMemoryRecords.clear();
   }
 
-  /**
-   * Helper untuk mendaftarkan penugasan teknisi ke in-memory store
-   */
   assignTechnicianInMemory(applicationId: string, technicianId: string): void {
     const existing = this.inMemoryAssignedTechnicians.get(applicationId) || new Set<string>();
     existing.add(technicianId);
     this.inMemoryAssignedTechnicians.set(applicationId, existing);
   }
 
-  /**
-   * Helper untuk mereset penugasan teknisi in-memory (misal saat reassignment)
-   */
   unassignTechniciansInMemory(applicationId: string): void {
     this.inMemoryAssignedTechnicians.delete(applicationId);
   }
 
-  /**
-   * Memvalidasi batas otorisasi penugasan teknisi (Technician assignment boundary).
-   * SUPER_ADMIN memiliki akses menyeluruh.
-   * TECHNICIAN harus memiliki penugasan aktif pada permohonan bersangkutan.
-   */
   async assertTechnicianAssignment(
     applicationId: string,
     user: AuthenticatedUser,
@@ -191,7 +176,6 @@ export class AdminApplicationsService {
     }
 
     if (user.role === 'TECHNICIAN') {
-      // 1. Coba periksa di Supabase database jika terhubung
       try {
         const client = this.supabaseService.getClient();
         const { data, error } = await client
@@ -209,7 +193,6 @@ export class AdminApplicationsService {
         // Fallback ke pengecekan in-memory
       }
 
-      // 2. Pengecekan in-memory fallback
       const assigned = this.inMemoryAssignedTechnicians.get(applicationId);
       if (assigned && assigned.has(user.id)) {
         return;
@@ -223,9 +206,6 @@ export class AdminApplicationsService {
     throw new ForbiddenException('Akses ditolak.');
   }
 
-  /**
-   * 1. Daftar permohonan (List dengan search, filter, sort, pagination)
-   */
   async listApplications(
     query: ListApplicationsQueryDto,
     user: AuthenticatedUser,
@@ -303,7 +283,6 @@ export class AdminApplicationsService {
             : 0,
         }));
 
-        // Search text client-side if needed or filter
         if (query.search && query.search.trim()) {
           const q = query.search.trim().toLowerCase();
           items = items.filter(
@@ -327,7 +306,6 @@ export class AdminApplicationsService {
       // Fallback ke in-memory store
     }
 
-    // In-memory fallback
     let all = Array.from(this.inMemoryRecords.values()).map((r) => {
       const d = r.detail;
       return {
@@ -391,16 +369,6 @@ export class AdminApplicationsService {
     };
   }
 
-  /**
-   * Mengambil ringkasan metrik statistik dashboard SUPER_ADMIN & TECHNICIAN.
-   * Aturan kalkulasi sesuai PRD & UAT SIMANTIK:
-   * 1. Total Permohonan: Menghitung seluruh permohonan dalam cakupan (termasuk SUBMITTED, IN_PROGRESS, COMPLETED, CLOSED, CANCELLED, REJECTED).
-   * 2. Dalam Pengerjaan: Menghitung permohonan dengan status operasional IN_PROGRESS.
-   * 3. Selesai / Ditutup: Menghitung permohonan dengan status operasional COMPLETED atau CLOSED.
-   * 4. Teknisi Aktif: Menghitung profil teknisi yang berstatus is_active = true.
-   * 5. Filter tahun: Jika filter tahun diberikan, memfilter berdasarkan tahun submitted_at atau created_at. Jika tidak diberikan, seluruh tahun valid disertakan tanpa terlewat.
-   * 6. Integritas Skema: Tidak menyaring kolom fiktif seperti 'deleted_at' atau 'is_deleted'. Menggunakan nama field authoritatif 'current_status' dan 'submitted_at'.
-   */
   async getDashboardStats(
     dto?: DashboardStatsQueryDto,
     _user?: AuthenticatedUser,
@@ -418,7 +386,6 @@ export class AdminApplicationsService {
     try {
       const client = this.supabaseService.getClient();
 
-      // Query database Supabase untuk seluruh permohonan
       const { data, error } = await client
         .from('applications')
         .select('id, current_status, current_stage, submitted_at, created_at');
@@ -426,7 +393,6 @@ export class AdminApplicationsService {
       if (!error && Array.isArray(data)) {
         apps = data;
       } else {
-        // Fallback in-memory jika query Supabase mengembalikan error / mock test
         apps = Array.from(this.inMemoryRecords.values()).map((r) => ({
           id: r.detail.id,
           current_status: r.detail.current_status,
@@ -436,7 +402,6 @@ export class AdminApplicationsService {
         }));
       }
 
-      // Query database Supabase untuk jumlah teknisi aktif
       const { count, error: techError } = await client
         .from('profiles')
         .select('id', { count: 'exact', head: true })
@@ -446,11 +411,9 @@ export class AdminApplicationsService {
       if (!techError && count !== null) {
         activeTechCount = count;
       } else {
-        // In-memory fallback
         activeTechCount = 1;
       }
     } catch {
-      // Fallback in-memory
       apps = Array.from(this.inMemoryRecords.values()).map((r) => ({
         id: r.detail.id,
         current_status: r.detail.current_status,
@@ -461,7 +424,6 @@ export class AdminApplicationsService {
       activeTechCount = 1;
     }
 
-    // Filter opsional tahun anggaran jika parameter query tahun diberikan
     let filteredApps = apps;
     if (dto?.year) {
       const targetYear = Number(dto.year);
@@ -493,9 +455,6 @@ export class AdminApplicationsService {
     };
   }
 
-  /**
-   * 2. Detail Permohonan (Full details, history, evidence, allowed transitions)
-   */
   async getApplicationDetail(
     id: string,
     user: AuthenticatedUser,
@@ -515,28 +474,24 @@ export class AdminApplicationsService {
         .single();
 
       if (!error && app) {
-        // Ambil documents
         const { data: docs } = await client
           .from('application_documents')
           .select('*, service_requirements:requirement_id(name, is_required)')
           .eq('application_id', id)
           .order('uploaded_at', { ascending: true });
 
-        // Ambil status history
         const { data: statusHistory } = await client
           .from('application_status_history')
           .select('*, profiles:changed_by(full_name, role)')
           .eq('application_id', id)
           .order('changed_at', { ascending: false });
 
-        // Ambil stage history
         const { data: stageHistory } = await client
           .from('application_stage_history')
           .select('*, profiles:changed_by(full_name, role)')
           .eq('application_id', id)
           .order('changed_at', { ascending: false });
 
-        // Ambil internal notes (messages internal)
         const { data: notes } = await client
           .from('messages')
           .select('*')
@@ -544,7 +499,6 @@ export class AdminApplicationsService {
           .eq('visibility', 'INTERNAL')
           .order('created_at', { ascending: true });
 
-        // Ambil audit logs
         const { data: auditLogs } = await client
           .from('audit_logs')
           .select('*, profiles:actor_profile_id(full_name)')
@@ -668,9 +622,6 @@ export class AdminApplicationsService {
     };
   }
 
-  /**
-   * 3. Eksekusi Transisi Status Terpusat
-   */
   async executeTransition(
     id: string,
     dto: ExecuteTransitionDto,
@@ -678,7 +629,6 @@ export class AdminApplicationsService {
   ): Promise<ApplicationDetailResponse> {
     const current = await this.getApplicationDetail(id, user);
 
-    // Validasi aturan transisi secara ketat
     const rule = this.workflowEngine.validateTransition(
       current.current_status,
       dto.target_status,
@@ -694,7 +644,6 @@ export class AdminApplicationsService {
     try {
       const client = this.supabaseService.getClient();
 
-      // a. Update status di tabel applications
       await client
         .from('applications')
         .update({
@@ -704,7 +653,6 @@ export class AdminApplicationsService {
         })
         .eq('id', id);
 
-      // b. Insert riwayat di application_status_history
       await client.from('application_status_history').insert({
         application_id: id,
         from_status: fromStatus,
@@ -714,7 +662,6 @@ export class AdminApplicationsService {
         changed_at: now,
       });
 
-      // c. Jika targetStage terisi baru, catat di application_stage_history
       if (rule.targetStage && rule.targetStage !== current.current_stage) {
         await client.from('application_stage_history').insert({
           application_id: id,
@@ -726,7 +673,6 @@ export class AdminApplicationsService {
         });
       }
 
-      // d. Insert audit log
       await client.from('audit_logs').insert({
         actor_profile_id: user.id,
         application_id: id,
@@ -738,7 +684,6 @@ export class AdminApplicationsService {
         created_at: now,
       });
 
-      // e. Jika ada catatan yang relevan, simpan juga sebagai pesan internal
       if (dto.note && dto.note.trim()) {
         await client.from('messages').insert({
           application_id: id,
@@ -754,7 +699,6 @@ export class AdminApplicationsService {
       // Fallback in-memory
     }
 
-    // Update in-memory record jika ada
     const inMem = this.inMemoryRecords.get(id);
     if (inMem) {
       inMem.detail.current_status = toStatus;
@@ -799,7 +743,6 @@ export class AdminApplicationsService {
       });
     }
 
-    // Sinkronisasi status ke trackingService in-memory jika tersedia
     if (this.trackingService && current?.ticket_number) {
       this.trackingService.updateInMemoryStatus(
         current.ticket_number,
@@ -813,9 +756,6 @@ export class AdminApplicationsService {
     return this.getApplicationDetail(id, user);
   }
 
-  /**
-   * 4. Eksekusi Pemindahan Tahapan Lifecycle Stage
-   */
   async executeStageTransition(
     id: string,
     dto: ExecuteStageTransitionDto,
@@ -892,9 +832,6 @@ export class AdminApplicationsService {
     return this.getApplicationDetail(id, user);
   }
 
-  /**
-   * 5. Tambah Catatan Internal (Internal Note)
-   */
   async addInternalNote(
     id: string,
     message: string,
@@ -951,9 +888,6 @@ export class AdminApplicationsService {
     return newNote;
   }
 
-  /**
-   * 6. Generate Akses Dokumen Aman (Signed URL dengan Audit Log)
-   */
   async getDocumentSignedUrl(
     id: string,
     docId: string,
@@ -966,7 +900,7 @@ export class AdminApplicationsService {
       throw new NotFoundException(`Dokumen dengan ID [${docId}] tidak ditemukan pada permohonan ini.`);
     }
 
-    const expiresInSeconds = 900; // 15 menit
+    const expiresInSeconds = 900;
     let signedUrl = `https://mock-storage.simantik.bandungkab.go.id/signed/${doc.storage_path}?token=${crypto.randomUUID()}&expires=${Date.now() + expiresInSeconds * 1000}`;
 
     try {
@@ -1009,28 +943,17 @@ export class AdminApplicationsService {
     };
   }
 
-  /**
-   * Menerbitkan ulang kode pelacakan untuk permohonan yang ada.
-   * Hanya SUPER_ADMIN yang diizinkan melakukan tindakan ini.
-   * Kode baru dibuat acak dan aman (TRK-XXXXXXXX).
-   * Simpan hanya hash SHA-256 di basis data.
-   * Kode lama langsung tidak berlaku begitu hash diperbarui.
-   * Kode baru hanya dikembalikan satu kali kepada petugas untuk diverifikasi dan disampaikan ke OPD.
-   * Mencatat jejak audit tanpa menyimpan kode asli atau hash kode.
-   */
   async reissueTrackingCode(
     idOrTicket: string,
     dto: ReissueTrackingCodeDto,
     user: AuthenticatedUser,
   ): Promise<ReissueTrackingCodeResult> {
-    // 1. Otorisasi ketat: hanya SUPER_ADMIN yang berwenang
     if (user.role !== 'SUPER_ADMIN') {
       throw new ForbiddenException(
         'Hanya SUPER_ADMIN yang memiliki wewenang untuk menerbitkan ulang kode pelacakan.',
       );
     }
 
-    // 2. Validasi input alasan (minimal 10 karakter setelah trim, selaras dengan modal Web Admin)
     if (!dto || typeof dto.reason !== 'string' || dto.reason.trim().length < 10) {
       throw new BadRequestException(
         'Alasan penerbitan ulang kode pelacakan wajib diisi (minimal 10 karakter).',
@@ -1040,7 +963,6 @@ export class AdminApplicationsService {
     const trimmedReason = dto.reason.trim();
     const now = new Date().toISOString();
 
-    // 3. Cari aplikasi target
     let targetAppId: string | null = null;
     let targetTicketNumber: string | null = null;
     let targetStatus: ApplicationStatus | null = null;
@@ -1073,7 +995,6 @@ export class AdminApplicationsService {
       // Supabase tidak tersedia, gunakan in-memory fallback
     }
 
-    // Fallback in-memory jika data tidak ditemukan di database
     if (!foundInDb && (!targetAppId || !targetTicketNumber)) {
       const inMem =
         this.inMemoryRecords.get(idOrTicket) ||
@@ -1097,9 +1018,6 @@ export class AdminApplicationsService {
       );
     }
 
-    // 4. Validasi status permohonan resmi dan non-terminal
-    // Penerbitan ulang hanya dapat dilanjutkan apabila status permohonan berhasil
-    // dibaca dan dikenali sebagai status nonterminal yang valid.
     const validNonTerminalStatuses: ApplicationStatus[] = [
       'SUBMITTED',
       'VERIFICATION',
@@ -1132,21 +1050,15 @@ export class AdminApplicationsService {
       );
     }
 
-    // Pastikan hash lama tercatat dari in-memory jika belum terisi dari DB
     const memRecord = this.inMemoryRecords.get(targetAppId);
     if (!oldHash && memRecord?.tracking_code_hash) {
       oldHash = memRecord.tracking_code_hash;
     }
 
-    // 5. Generate kode pelacakan baru (8 karakter hex kapital, format: TRK-XXXXXXXX)
     const randomHex = crypto.randomBytes(4).toString('hex').toUpperCase();
     const newTrackingCode = `TRK-${randomHex}`;
     const newHash = crypto.createHash('sha256').update(newTrackingCode).digest('hex');
 
-    // 6. Perbarui database secara atomik via PostgreSQL RPC (reissue_tracking_code_atomic)
-    // KEBIJAKAN KEAMANAN KETAT:
-    // Tidak ada fallback dua-tahap non-atomik. Jika RPC tidak tersedia atau gagal dieksekusi,
-    // operasi dibatalkan seketika dan tidak melakukan update hash melalui jalur alternatif.
     const client = this.supabaseService.getClient();
     if (client) {
       if (typeof client.rpc !== 'function') {
@@ -1177,7 +1089,6 @@ export class AdminApplicationsService {
       }
     }
 
-    // 6. Sinkronisasi jejak audit ke AuditService jika terinjeksi
     if (this.auditService) {
       const auditPayload = {
         actor_profile_id: user.id,
@@ -1199,7 +1110,6 @@ export class AdminApplicationsService {
       await this.auditService.record(auditPayload).catch(() => {});
     }
 
-    // 7. Komit pembaruan ke in-memory store dan TrackingService HANYA setelah penyimpanan dan audit sukses
     if (memRecord) {
       memRecord.tracking_code_hash = newHash;
       memRecord.detail.audit_logs.unshift({
@@ -1223,7 +1133,6 @@ export class AdminApplicationsService {
       );
     }
 
-    // 8. Kembalikan kode baru sekali saja kepada petugas berwenang
     return {
       application_id: targetAppId,
       ticket_number: targetTicketNumber,

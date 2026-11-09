@@ -44,7 +44,6 @@ export function AdminAuditLogsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-slate-200">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
@@ -56,7 +55,6 @@ export function AdminAuditLogsPage() {
         </div>
       </div>
 
-      {/* Filter Bar */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-3 items-center justify-between">
         <div className="w-full md:w-80">
           <Input
@@ -92,7 +90,6 @@ export function AdminAuditLogsPage() {
         </div>
       </div>
 
-      {/* Table Content */}
       {isLoading ? (
         <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-3">
           <Skeleton className="h-8 w-full" />
@@ -178,7 +175,6 @@ export function AdminAuditLogsPage() {
             </table>
           </div>
 
-          {/* Pagination Controls */}
           <div className="bg-slate-50 px-5 py-3 border-t border-slate-200 text-xs text-slate-600 flex justify-between items-center">
             <span>
               Halaman <strong>{auditData.pagination.page}</strong> dari{' '}
@@ -207,7 +203,6 @@ export function AdminAuditLogsPage() {
         </div>
       )}
 
-      {/* Dialog Detail Mutasi Data */}
       <Dialog
         isOpen={Boolean(inspectLog)}
         onClose={() => setInspectLog(null)}

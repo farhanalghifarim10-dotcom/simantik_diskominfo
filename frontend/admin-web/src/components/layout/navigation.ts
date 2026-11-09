@@ -10,7 +10,6 @@ export interface NavItem {
 }
 
 export const navigationItems: NavItem[] = [
-  // Utama
   {
     title: 'Dashboard',
     href: '/',
@@ -33,7 +32,6 @@ export const navigationItems: NavItem[] = [
     section: 'main',
   },
 
-  // Operasional & Lifecycle
   {
     title: 'Penugasan Tenaga Ahli',
     href: '/assignments',
@@ -63,7 +61,6 @@ export const navigationItems: NavItem[] = [
     section: 'operations',
   },
 
-  // Administrasi Sistem (Hanya SUPER_ADMIN)
   {
     title: 'Master Layanan TI',
     href: '/master/services',

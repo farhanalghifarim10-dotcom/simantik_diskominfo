@@ -32,7 +32,6 @@ import {
 export function AdminAssignmentsOverviewPage() {
   const { toast } = useToast();
 
-  // Queries
   const {
     data: technicians,
     isLoading: techLoading,
@@ -55,10 +54,8 @@ export function AdminAssignmentsOverviewPage() {
     status: selectedStatusFilter,
   });
 
-  // Assign mutation
   const assignMutation = useAssignTechnician();
 
-  // Modal State for Quick Assignment
   const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
   const [targetAppId, setTargetAppId] = useState<string>('');
   const [targetAppTitle, setTargetAppTitle] = useState<string>('');
@@ -106,7 +103,6 @@ export function AdminAssignmentsOverviewPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
           <div className="flex items-center gap-2">
@@ -133,7 +129,6 @@ export function AdminAssignmentsOverviewPage() {
         </div>
       </div>
 
-      {/* TECHNICIAN WORKLOAD OVERVIEW CARDS */}
       <div>
         <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-2">
           <UsersIcon size={16} className="text-[#1B5040]" />
@@ -191,7 +186,6 @@ export function AdminAssignmentsOverviewPage() {
         )}
       </div>
 
-      {/* APPLICATIONS ASSIGNMENT TABLE */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden space-y-4 p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b border-slate-100">
           <div>
@@ -342,7 +336,6 @@ export function AdminAssignmentsOverviewPage() {
         )}
       </div>
 
-      {/* DIALOG ASSIGN / RE-ASSIGN TECHNICIAN */}
       <Dialog
         isOpen={assignmentModalOpen}
         onClose={() => setAssignmentModalOpen(false)}

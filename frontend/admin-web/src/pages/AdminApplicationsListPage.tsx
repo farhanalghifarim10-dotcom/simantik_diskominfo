@@ -91,7 +91,6 @@ export function AdminApplicationsListPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page Title & Overview */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
           <div className="flex items-center gap-2">
@@ -116,10 +115,8 @@ export function AdminApplicationsListPage() {
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
         <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-          {/* Search Box */}
           <div className="md:col-span-5">
             <Input
               placeholder="Cari nomor tiket, judul usulan, nama pemohon, OPD..."
@@ -129,7 +126,6 @@ export function AdminApplicationsListPage() {
             />
           </div>
 
-          {/* Status Dropdown */}
           <div className="md:col-span-3">
             <Select
               value={statusFilter}
@@ -141,7 +137,6 @@ export function AdminApplicationsListPage() {
             />
           </div>
 
-          {/* Stage Dropdown */}
           <div className="md:col-span-3">
             <Select
               value={stageFilter}
@@ -153,7 +148,6 @@ export function AdminApplicationsListPage() {
             />
           </div>
 
-          {/* Search Action */}
           <div className="md:col-span-1 flex items-center gap-2">
             <Button type="submit" variant="primary" size="md" className="w-full">
               Cari
@@ -161,7 +155,6 @@ export function AdminApplicationsListPage() {
           </div>
         </form>
 
-        {/* Sort & Quick info */}
         <div className="flex flex-wrap items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100 gap-2">
           <div className="flex items-center gap-2">
             <span className="font-medium text-slate-700">Urutkan:</span>
@@ -200,7 +193,6 @@ export function AdminApplicationsListPage() {
         </div>
       </div>
 
-      {/* Main Table Content */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         {isLoading && (
           <div className="p-6 space-y-4">
@@ -275,7 +267,6 @@ export function AdminApplicationsListPage() {
                       key={item.id}
                       className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
                     >
-                      {/* Ticket & Submitted Date */}
                       <td className="px-5 py-4 whitespace-nowrap">
                         <Link
                           to={`/applications/${item.id}`}
@@ -288,7 +279,6 @@ export function AdminApplicationsListPage() {
                         </span>
                       </td>
 
-                      {/* OPD & Applicant */}
                       <td className="px-5 py-4">
                         <div className="font-medium text-slate-900 line-clamp-1">
                           {item.applicant.opd_name}
@@ -299,7 +289,6 @@ export function AdminApplicationsListPage() {
                         </div>
                       </td>
 
-                      {/* Title & Service */}
                       <td className="px-5 py-4 max-w-xs">
                         <Link
                           to={`/applications/${item.id}`}
@@ -318,24 +307,20 @@ export function AdminApplicationsListPage() {
                         </div>
                       </td>
 
-                      {/* Status */}
                       <td className="px-5 py-4 whitespace-nowrap">
                         {getStatusBadge(item.current_status)}
                       </td>
 
-                      {/* Stage */}
                       <td className="px-5 py-4 whitespace-nowrap">
                         {getStageBadge(item.current_stage)}
                       </td>
 
-                      {/* Documents Count */}
                       <td className="px-5 py-4 text-center whitespace-nowrap">
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">
                           {item.documents_count} berkas
                         </span>
                       </td>
 
-                      {/* Action */}
                       <td className="px-5 py-4 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-2">
                           {isSuperAdmin && (
@@ -372,7 +357,6 @@ export function AdminApplicationsListPage() {
               </table>
             </div>
 
-            {/* Pagination footer */}
             <div className="px-5 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
               <div>
                 Menampilkan halaman <strong>{data.page}</strong> dari <strong>{data.total_pages}</strong> (Total <strong>{data.total}</strong> permohonan)
@@ -403,7 +387,6 @@ export function AdminApplicationsListPage() {
         )}
       </div>
 
-      {/* Modal Penerbitan Ulang Kode Pelacakan (Khusus SUPER_ADMIN) */}
       {isSuperAdmin && (
         <ReissueTrackingCodeModal
           isOpen={Boolean(selectedReissueApp)}

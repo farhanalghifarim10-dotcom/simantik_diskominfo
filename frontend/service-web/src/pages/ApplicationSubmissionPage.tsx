@@ -47,36 +47,29 @@ export function ApplicationSubmissionPage() {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
 
-  // Load Services & OPD Units
   const { data: services, isLoading: servicesLoading } = usePublicServices();
   const { data: opdUnits, isLoading: opdLoading } = useOpdUnits();
 
-  // Mutation
   const submitMutation = useSubmitApplication();
 
-  // Form State
   const [currentStep, setCurrentStep] = useState(1);
   const [submissionResult, setSubmissionResult] = useState<ApplicationSubmissionResult | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
 
-  // Stable Idempotency Key per submission session
   const [idempotencyKey] = useState(() => crypto.randomUUID());
 
-  // Form Fields
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
   const param = searchParams.get('service');
   const matchedFromParam = services?.find((s) => s.slug === param || s.id === param);
   const serviceId = selectedServiceId ?? (matchedFromParam?.id || (services && services.length > 0 ? services[0].id : ''));
   const [opdUnitId, setOpdUnitId] = useState('');
 
-  // Applicant Fields
   const [applicantName, setApplicantName] = useState('');
   const [applicantEmployeeId, setApplicantEmployeeId] = useState('');
   const [applicantPosition, setApplicantPosition] = useState('');
   const [applicantEmail, setApplicantEmail] = useState('');
   const [applicantPhone, setApplicantPhone] = useState('');
 
-  // Application Details
   const [title, setTitle] = useState('');
   const [background, setBackground] = useState('');
   const [problemStatement, setProblemStatement] = useState('');
@@ -87,21 +80,17 @@ export function ApplicationSubmissionPage() {
   const [existingApplicationName, setExistingApplicationName] = useState('');
   const [additionalNotes, setAdditionalNotes] = useState('');
 
-  // Documents State
   const [uploadedDocuments, setUploadedDocuments] = useState<Record<string, UploadedFileState>>({});
 
-  // Terms State
   const [termsAccepted, setTermsAccepted] = useState(false);
   const termsVersion = 'v1.0-2026';
 
   const selectedService: Service | undefined = services?.find((s) => s.id === serviceId);
   const selectedOpd = opdUnits?.find((o) => o.id === opdUnitId);
 
-  // Kumpulan dokumen sah dan aktif untuk layanan terpilih saat ini
   const validDocumentRequirements = getValidDocumentRequirements(selectedService);
   const activeUploadedDocuments = filterValidUploadedDocuments(uploadedDocuments, selectedService);
 
-  // Handler pemilihan / pergantian kategori layanan
   const handleSelectService = (newServiceId: string) => {
     const newService = services?.find((s) => s.id === newServiceId);
     if (!newService) return;
@@ -132,7 +121,6 @@ export function ApplicationSubmissionPage() {
     }
   };
 
-  // File Upload Handler
   const handleFileUpload = (
     requirementId: string,
     e: React.ChangeEvent<HTMLInputElement>,
@@ -153,7 +141,6 @@ export function ApplicationSubmissionPage() {
         title: 'Format Berkas Tidak Didukung',
         message: validation.errorMessage || `Berkas "${file.name}" tidak didukung.`,
       });
-      // Reset input agar pemohon dapat memilih ulang berkas yang valid
       e.target.value = '';
       return;
     }
@@ -188,7 +175,6 @@ export function ApplicationSubmissionPage() {
     });
   };
 
-  // Step Validation & Progression
   const handleNextStep = () => {
     if (currentStep === 1) {
       if (!serviceId) {
@@ -259,7 +245,6 @@ export function ApplicationSubmissionPage() {
         }
       }
 
-      // Validasi bahwa tidak ada berkas dengan ekstensi tidak didukung pada dokumen aktif layanan
       for (const doc of activeUploadedDocuments) {
         const ext = doc.original_filename.slice(doc.original_filename.lastIndexOf('.') + 1).toLowerCase();
         if (!BASELINE_ALLOWED_EXTENSIONS.includes(ext)) {
@@ -291,11 +276,9 @@ export function ApplicationSubmissionPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Final Submit Action
   const handleFinalSubmit = async () => {
     setConfirmDialogOpen(false);
 
-    // Hanya kirimkan dokumen yang sah dan terdaftar pada layanan terpilih
     const docsPayload = activeUploadedDocuments.map((d) => ({
       requirement_id: d.requirement_id,
       original_filename: d.original_filename,
@@ -344,14 +327,10 @@ export function ApplicationSubmissionPage() {
     }
   };
 
-  // =========================================================================
-  // VIEW: TICKET ISSUED / SUCCESS VIEW (STEP 8)
-  // =========================================================================
   if (submissionResult) {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16 space-y-8">
         <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden">
-          {/* Header Banner */}
           <div className="bg-gradient-to-r from-[#1B5040] via-[#2E8A6E] to-[#1B5040] text-white p-8 sm:p-12 text-center space-y-3">
             <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto border border-white/20">
               <CheckCircleIcon size={36} className="text-[#2BD9A5]" />
@@ -369,9 +348,7 @@ export function ApplicationSubmissionPage() {
           </div>
 
           <div className="p-6 sm:p-10 space-y-8">
-            {/* Ticket & Tracking Code Box */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-6 rounded-2xl border border-slate-200">
-              {/* Nomor Tiket */}
               <div className="space-y-1.5">
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   Nomor Tiket Permohonan
@@ -396,7 +373,6 @@ export function ApplicationSubmissionPage() {
                 </p>
               </div>
 
-              {/* Kode Pelacakan Rahasia */}
               <div className="space-y-1.5 border-t md:border-t-0 md:border-l border-slate-200 pt-4 md:pt-0 md:pl-6">
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
@@ -425,7 +401,6 @@ export function ApplicationSubmissionPage() {
               </div>
             </div>
 
-            {/* Rekapitulasi Ringkas Permohonan */}
             <div className="border border-slate-200 rounded-xl p-5 space-y-3 text-xs sm:text-sm">
               <h3 className="font-bold text-slate-900 uppercase tracking-wider text-xs border-b border-slate-100 pb-2">
                 Rincian Registrasi
@@ -458,7 +433,6 @@ export function ApplicationSubmissionPage() {
               </div>
             </div>
 
-            {/* Langkah Selanjutnya */}
             <div className="p-5 rounded-xl bg-[#CAF3E4]/70 border border-[#98F7D9] space-y-2 text-xs sm:text-sm text-[#000408]">
               <h3 className="font-bold flex items-center gap-2 text-[#1B5040]">
                 <InfoIcon size={16} className="text-[#1B5040]" />
@@ -471,7 +445,6 @@ export function ApplicationSubmissionPage() {
               </ol>
             </div>
 
-            {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-100">
               <Button
                 variant="outline"
@@ -504,12 +477,8 @@ export function ApplicationSubmissionPage() {
     );
   }
 
-  // =========================================================================
-  // VIEW: MULTI-STEP GUIDED FORM (STEPS 1 - 6)
-  // =========================================================================
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-16 space-y-10">
-      {/* Header Halaman */}
       <div className="border-b border-slate-200 pb-6 space-y-2">
         <div className="flex items-center gap-2 text-xs font-semibold text-[#2E8A6E] uppercase tracking-wider">
           <Link to="/" className="hover:underline text-slate-500">Beranda</Link>
@@ -525,7 +494,6 @@ export function ApplicationSubmissionPage() {
         </p>
       </div>
 
-      {/* Stepper Progress Bar */}
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">
         <div className="flex items-center justify-between gap-2 overflow-x-auto pb-2 scrollbar-none">
           {STEPS.map((s) => {
@@ -561,11 +529,7 @@ export function ApplicationSubmissionPage() {
         </div>
       </div>
 
-      {/* Main Form Container */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-8">
-        {/* =========================================================================
-            LANGKAH 1: PILIH LAYANAN
-           ========================================================================= */}
         {currentStep === 1 && (
           <div className="space-y-6">
             <div className="border-b border-slate-100 pb-4">
@@ -621,9 +585,6 @@ export function ApplicationSubmissionPage() {
           </div>
         )}
 
-        {/* =========================================================================
-            LANGKAH 2: DATA PEMOHON OPD
-           ========================================================================= */}
         {currentStep === 2 && (
           <div className="space-y-6">
             <div className="border-b border-slate-100 pb-4">
@@ -725,9 +686,6 @@ export function ApplicationSubmissionPage() {
           </div>
         )}
 
-        {/* =========================================================================
-            LANGKAH 3: RINCIAN KEBUTUHAN SISTEM
-           ========================================================================= */}
         {currentStep === 3 && (
           <div className="space-y-6">
             <div className="border-b border-slate-100 pb-4">
@@ -749,7 +707,6 @@ export function ApplicationSubmissionPage() {
                 />
               </div>
 
-              {/* Bidang khusus layanan pengembangan eksisting */}
               {selectedService?.type === 'ENHANCEMENT' && (
                 <div className="p-4 rounded-xl bg-[#CAF3E4]/30 border border-[#98F7D9]">
                   <label className="block text-xs font-bold text-[#0D2820] mb-1">
@@ -861,9 +818,6 @@ export function ApplicationSubmissionPage() {
           </div>
         )}
 
-        {/* =========================================================================
-            LANGKAH 4: UNGGAH DOKUMEN PERSYARATAN
-           ========================================================================= */}
         {currentStep === 4 && (
           <div className="space-y-6">
             <div className="border-b border-slate-100 pb-4">
@@ -872,7 +826,6 @@ export function ApplicationSubmissionPage() {
               <p className="text-xs text-slate-500">Lampirkan dokumen resmi sesuai persyaratan layanan {selectedService?.name}.</p>
             </div>
 
-            {/* Info Petunjuk Persyaratan Layanan */}
             <div className="p-4 rounded-xl bg-[#CAF3E4]/70 border border-[#98F7D9] text-xs text-[#000408] flex items-start gap-2.5">
               <InfoIcon size={18} className="text-[#1B5040] shrink-0 mt-0.5" />
               <div>
@@ -957,9 +910,6 @@ export function ApplicationSubmissionPage() {
           </div>
         )}
 
-        {/* =========================================================================
-            LANGKAH 5: SYARAT & KETENTUAN SPBE
-           ========================================================================= */}
         {currentStep === 5 && (
           <div className="space-y-6">
             <div className="border-b border-slate-100 pb-4">
@@ -995,7 +945,6 @@ export function ApplicationSubmissionPage() {
                 </p>
               </div>
 
-              {/* Checkbox Explicit Consent */}
               <div className="p-4 rounded-xl border-2 border-[#98F7D9] bg-[#CAF3E4]/30">
                 <label className="flex items-start gap-3 cursor-pointer">
                   <input
@@ -1014,9 +963,6 @@ export function ApplicationSubmissionPage() {
           </div>
         )}
 
-        {/* =========================================================================
-            LANGKAH 6: TINJAU KEMBALI PERMOHONAN (REVIEW)
-           ========================================================================= */}
         {currentStep === 6 && (
           <div className="space-y-6">
             <div className="border-b border-slate-100 pb-4">
@@ -1026,7 +972,6 @@ export function ApplicationSubmissionPage() {
             </div>
 
             <div className="space-y-6">
-              {/* Bagian 1: Layanan & OPD */}
               <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-3 text-xs sm:text-sm">
                 <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                   <span className="font-bold text-slate-900 uppercase tracking-wider text-xs">1. Layanan & Instansi</span>
@@ -1050,7 +995,6 @@ export function ApplicationSubmissionPage() {
                 </div>
               </div>
 
-              {/* Bagian 2: Data Pemohon */}
               <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-3 text-xs sm:text-sm">
                 <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                   <span className="font-bold text-slate-900 uppercase tracking-wider text-xs">2. Identitas PIC Pemohon</span>
@@ -1082,7 +1026,6 @@ export function ApplicationSubmissionPage() {
                 </div>
               </div>
 
-              {/* Bagian 3: Rincian Kebutuhan */}
               <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-3 text-xs sm:text-sm">
                 <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                   <span className="font-bold text-slate-900 uppercase tracking-wider text-xs">3. Rincian Usulan Sistem</span>
@@ -1122,7 +1065,6 @@ export function ApplicationSubmissionPage() {
                 </div>
               </div>
 
-              {/* Bagian 4: Dokumen yang Dilampirkan */}
               <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-3 text-xs sm:text-sm">
                 <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                   <span className="font-bold text-slate-900 uppercase tracking-wider text-xs">
@@ -1168,7 +1110,6 @@ export function ApplicationSubmissionPage() {
           </div>
         )}
 
-        {/* Stepper Navigation Buttons */}
         <div className="flex items-center justify-between pt-6 border-t border-slate-100">
           {currentStep > 1 ? (
             <Button variant="outline" size="md" onClick={handlePrevStep}>
@@ -1197,7 +1138,6 @@ export function ApplicationSubmissionPage() {
         </div>
       </div>
 
-      {/* Confirmation Dialog before Final Submission */}
       <ConfirmationDialog
         isOpen={confirmDialogOpen}
         onClose={() => setConfirmDialogOpen(false)}

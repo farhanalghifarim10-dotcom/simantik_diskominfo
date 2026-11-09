@@ -23,7 +23,6 @@ export function HomePage() {
   const [quickCode, setQuickCode] = useState('');
   const [quickError, setQuickError] = useState<string | null>(null);
 
-  // FAQ Accordion State for landing page preview
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
   const handleQuickTrackSubmit = (e: FormEvent) => {
@@ -58,11 +57,7 @@ export function HomePage() {
 
   return (
     <div className="space-y-16 lg:space-y-24 pb-16">
-      {/* =========================================================================
-          1. HERO SECTION WITH OFFICIAL VALUE PROPOSITION & QUICK TRACK JUMP
-         ========================================================================= */}
       <section className="relative overflow-hidden bg-[#F5F5F5] pt-10 pb-16 lg:pt-14 lg:pb-20 px-4 sm:px-6 lg:px-8">
-        {/* Gedung Sabilulungan Hero Architectural Background */}
         <motion.div
           initial={{ opacity: 0, scale: 1.05 }}
           animate={{ opacity: 0.4, scale: 1 }}
@@ -76,7 +71,6 @@ export function HomePage() {
 
         <div className="relative max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center">
-            {/* Left Column: Heading & Value Proposition */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -116,7 +110,6 @@ export function HomePage() {
                 <strong className="text-[#000408] font-semibold">pengembangan aplikasi</strong> secara terpadu, akuntabel, dan transparan sesuai tata kelola SPBE.
               </motion.p>
 
-              {/* Action Buttons */}
               <motion.div
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -149,7 +142,6 @@ export function HomePage() {
                 </Link>
               </motion.div>
 
-              {/* 3 Government Trust Badges */}
               <motion.div
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -180,7 +172,6 @@ export function HomePage() {
               </motion.div>
             </motion.div>
 
-            {/* Right Column: Quick Tracker Widget Card */}
             <motion.div
               initial={{ opacity: 0, y: 24, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -273,9 +264,6 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* =========================================================================
-          2. CORE SERVICES CATALOG PREVIEW (WHAT SERVICES ARE AVAILABLE)
-         ========================================================================= */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -380,9 +368,6 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* =========================================================================
-          3. HOW TO SUBMIT: 4-STEP TRANSPARENT WORKFLOW
-         ========================================================================= */}
       <section className="bg-slate-100/70 border-y border-slate-200 py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto space-y-12">
           <motion.div
@@ -450,9 +435,6 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* =========================================================================
-          4. HOW TO TRACK (DATA MINIMIZATION & ACCESSIBILITY)
-         ========================================================================= */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -514,9 +496,6 @@ export function HomePage() {
         </motion.div>
       </section>
 
-      {/* =========================================================================
-          5. FAQ PREVIEW & HELPDESK BANNER (HOW TO GET HELP)
-         ========================================================================= */}
       <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -536,7 +515,6 @@ export function HomePage() {
           </p>
         </motion.div>
 
-        {/* Accordion List */}
         <div className="space-y-3">
           {faqItems.map((item, index) => {
             const isOpen = openFaqIndex === index;
@@ -595,7 +573,6 @@ export function HomePage() {
           </Link>
         </div>
 
-        {/* Official Helpdesk Banner */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}

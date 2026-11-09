@@ -37,7 +37,6 @@ describe('OPD Units Management (Phase 13)', () => {
 
   describe('1. Public vs Admin Visibility', () => {
     it('public controller returns only active OPD units', async () => {
-      // First de-activate an OPD in admin
       const allOpds = await adminOpdController.getAdminOpds();
       const firstOpd = allOpds.data[0];
       await adminOpdController.toggleOpdStatus(firstOpd.id, false, {
@@ -109,7 +108,6 @@ describe('OPD Units Management (Phase 13)', () => {
 
       expect(deactRes.data.is_active).toBe(false);
 
-      // Verify BAPENDA is still retrievable by ID for historical tickets
       const detail = await adminOpdController.getOpdDetail(bapenda.id);
       expect(detail.data.id).toBe(bapenda.id);
       expect(detail.data.is_active).toBe(false);

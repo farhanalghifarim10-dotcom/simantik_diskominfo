@@ -18,7 +18,6 @@ import type {
 
 @Injectable()
 export class MessagesService {
-  // In-memory fallback message store for offline and unit testing
   private readonly inMemoryMessages: Map<string, MessageItem[]> = new Map();
 
   constructor(
@@ -70,20 +69,10 @@ export class MessagesService {
     ]);
   }
 
-  /**
-   * Helper untuk mendaftarkan pesan in-memory pada unit test
-   */
   setInMemoryMessages(applicationId: string, messages: MessageItem[]): void {
     this.inMemoryMessages.set(applicationId, messages);
   }
 
-  /**
-   * 1. GET PUBLIC MESSAGES
-   * CRITICAL SECURITY CONSTRAINT:
-   * Mengambil pesan komunikasi tiket untuk akses publik pemohon.
-   * HANYA pesan dengan visibility = 'PUBLIC' yang dikembalikan!
-   * Pesan 'INTERNAL' TIDAK PERNAH dikembalikan ke publik.
-   */
   async getPublicMessages(
     ticketNumber: string,
     session: TrackingSessionPayload,
@@ -99,14 +88,13 @@ export class MessagesService {
 
     const appId = session.application_id;
 
-    // 1. Coba dari Supabase dengan filter ketat visibility = 'PUBLIC'
     try {
       const client = this.supabaseService.getClient();
       const { data, error } = await client
         .from('messages')
         .select('*')
         .eq('application_id', appId)
-        .eq('visibility', 'PUBLIC') // KETAT: hanya PUBLIC
+        .eq('visibility', 'PUBLIC')
         .order('created_at', { ascending: true });
 
       if (!error && Array.isArray(data)) {
@@ -116,18 +104,12 @@ export class MessagesService {
       // Fallback in-memory
     }
 
-    // 2. Fallback in-memory: filter ketat visibility = 'PUBLIC'
     const list = this.inMemoryMessages.get(appId) || [];
     return list
       .filter((m) => m.visibility === 'PUBLIC')
       .map((m) => this.sanitizePublicMessage(m));
   }
 
-  /**
-   * 2. POST PUBLIC MESSAGE
-   * Mengirim pesan dari sisi pemohon publik.
-   * Visibility dipaksa 'PUBLIC', sender_type dipaksa 'PUBLIC_APPLICANT'.
-   */
   async sendPublicMessage(
     ticketNumber: string,
     session: TrackingSessionPayload,
@@ -159,7 +141,6 @@ export class MessagesService {
 
     const appId = session.application_id;
 
-    // Periksa apakah tiket permohonan telah ditutup
     try {
       const client = this.supabaseService.getClient();
       const { data: appData } = await client
@@ -193,7 +174,6 @@ export class MessagesService {
       updated_at: now,
     };
 
-    // Simpan ke Supabase
     try {
       const client = this.supabaseService.getClient();
       await client.from('messages').insert({
@@ -209,12 +189,10 @@ export class MessagesService {
       // Fallback
     }
 
-    // Simpan di in-memory
     const existing = this.inMemoryMessages.get(appId) || [];
     existing.push(record);
     this.inMemoryMessages.set(appId, existing);
 
-    // Kirim notifikasi in-app kepada admin/teknisi
     try {
       await this.notificationsService.notify({
         application_id: appId,
@@ -231,18 +209,12 @@ export class MessagesService {
     return this.sanitizePublicMessage(record);
   }
 
-  /**
-   * 3. GET INTERNAL MESSAGES
-   * Khusus pengguna internal terautentikasi (SUPER_ADMIN atau TECHNICIAN yang ditugaskan).
-   * Mengembalikan semua pesan (PUBLIC maupun INTERNAL).
-   */
   async getInternalMessages(
     applicationId: string,
     user: AuthenticatedUser,
   ): Promise<MessageItem[]> {
     await this.assertInternalAccess(applicationId, user);
 
-    // 1. Coba dari Supabase
     try {
       const client = this.supabaseService.getClient();
       const { data, error } = await client
@@ -258,14 +230,9 @@ export class MessagesService {
       // Fallback
     }
 
-    // 2. Fallback in-memory
     return this.inMemoryMessages.get(applicationId) || [];
   }
 
-  /**
-   * 4. POST INTERNAL MESSAGE
-   * Mengirim balasan publik atau catatan internal oleh admin/teknisi.
-   */
   async sendInternalMessage(
     applicationId: string,
     user: AuthenticatedUser,
@@ -299,7 +266,6 @@ export class MessagesService {
       updated_at: now,
     };
 
-    // Simpan ke Supabase
     try {
       const client = this.supabaseService.getClient();
       await client.from('messages').insert({
@@ -317,18 +283,15 @@ export class MessagesService {
       // Fallback
     }
 
-    // Simpan di in-memory
     const existing = this.inMemoryMessages.get(applicationId) || [];
     existing.push(record);
     this.inMemoryMessages.set(applicationId, existing);
 
-    // Jika pesan bertipe PUBLIC: beri notifikasi ke pemohon via EMAIL
     if (visibility === 'PUBLIC') {
       try {
         let recipientEmail: string | undefined;
         let ticketNumber = 'TIK';
 
-        // Cari email pemohon
         const client = this.supabaseService.getClient();
         const { data: app } = await client
           .from('applications')
@@ -360,9 +323,6 @@ export class MessagesService {
     return record;
   }
 
-  /**
-   * Memastikan otorisasi internal admin/teknisi
-   */
   private async assertInternalAccess(applicationId: string, user: AuthenticatedUser) {
     if (user.role === 'SUPER_ADMIN') return;
 
@@ -387,9 +347,6 @@ export class MessagesService {
     });
   }
 
-  /**
-   * Sanitasi pesan publik: tidak membocorkan email teknisi atau internal ID
-   */
   private sanitizePublicMessage(m: MessageItem): MessageItem {
     return {
       id: m.id,

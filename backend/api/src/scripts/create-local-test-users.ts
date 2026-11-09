@@ -61,7 +61,6 @@ async function main() {
   }
 }
 
-// Hanya dieksekusi langsung jika file dipanggil sebagai CLI entrypoint
 const isDirectExecution =
   process.argv[1] &&
   (process.argv[1].endsWith('create-local-test-users.ts') ||

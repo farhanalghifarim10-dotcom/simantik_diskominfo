@@ -49,7 +49,6 @@ export function ReissueTrackingCodeModal({
 
   const reissueMutation = useReissueTrackingCode();
 
-  // Modal Step: 'form' | 'success'
   const [step, setStep] = useState<'form' | 'success'>('form');
   const [reason, setReason] = useState('');
   const [hasVerifiedIdentity, setHasVerifiedIdentity] = useState(false);
@@ -57,7 +56,6 @@ export function ReissueTrackingCodeModal({
   const [reissuedResult, setReissuedResult] = useState<ReissueTrackingCodeResult | null>(null);
   const [hasCopied, setHasCopied] = useState(false);
 
-  // Reset modal state on open or change of application
   useEffect(() => {
     if (isOpen) {
       setStep('form');
@@ -69,7 +67,6 @@ export function ReissueTrackingCodeModal({
     }
   }, [isOpen, application?.id]);
 
-  // Restrict access strictly to SUPER_ADMIN
   if (!isSuperAdmin || !application) {
     return null;
   }
@@ -212,12 +209,10 @@ export function ReissueTrackingCodeModal({
     >
       {step === 'form' ? (
         <div className="space-y-4 text-xs sm:text-sm">
-          {/* Security Alert */}
           <Alert variant="warning" title="Perhatian Keamanan & Prosedur Resmi">
             Penerbitan ulang kode pelacakan akan <strong>membatalkan kode lama seketika</strong> secara permanen. Pastikan Anda telah melakukan verifikasi identitas pejabat atau narahubung resmi Perangkat Daerah (OPD) pemohon melalui saluran resmi sebelum melanjutkan.
           </Alert>
 
-          {/* Application & Applicant Details Summary */}
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
             <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
               Rincian Permohonan Terkait
@@ -246,7 +241,6 @@ export function ReissueTrackingCodeModal({
             </div>
           </div>
 
-          {/* Justification Reason Input */}
           <div className="space-y-1.5">
             <label htmlFor="reissue-reason" className="font-bold text-slate-800 flex items-center justify-between">
               <span>Alasan Penerbitan Ulang *</span>
@@ -269,7 +263,6 @@ export function ReissueTrackingCodeModal({
             </p>
           </div>
 
-          {/* Verification Checkbox */}
           <div className="pt-2">
             <Checkbox
               id="verify-identity-confirm"
@@ -286,7 +279,6 @@ export function ReissueTrackingCodeModal({
             />
           </div>
 
-          {/* Validation Error Banner */}
           {validationError && (
             <Alert variant="danger" title="Validasi Gagal">
               {validationError}
@@ -294,13 +286,11 @@ export function ReissueTrackingCodeModal({
           )}
         </div>
       ) : (
-        /* STEP 2: SINGLE-VIEW SUCCESS SCREEN */
         <div className="space-y-5 text-xs sm:text-sm py-1">
           <Alert variant="success" title="Kode Pelacakan Berhasil Diterbitkan">
             Kode lama untuk tiket <strong>{application.ticket_number}</strong> telah dibatalkan secara permanen. Pengguna atau pihak lain tidak dapat lagi mengakses permohonan menggunakan kode sebelumnya.
           </Alert>
 
-          {/* One-time Display Card */}
           <div className="bg-gradient-to-br from-[#CAF3E4]/40 via-white to-slate-50 border-2 border-[#98F7D9] rounded-2xl p-5 shadow-sm space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold text-[#1B5040] uppercase tracking-wider flex items-center gap-1.5">
@@ -342,7 +332,6 @@ export function ReissueTrackingCodeModal({
             </p>
           </div>
 
-          {/* High-priority Security Warning Notice */}
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3 text-amber-900">
             <AlertTriangleIcon size={20} className="text-amber-600 shrink-0 mt-0.5" />
             <div className="space-y-1">

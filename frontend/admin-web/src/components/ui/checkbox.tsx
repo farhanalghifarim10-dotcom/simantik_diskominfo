@@ -36,7 +36,6 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
     const id = customId ?? generatedId;
     const innerRef = useRef<HTMLInputElement>(null);
 
-    // Merge refs
     useEffect(() => {
       const target = (ref as React.RefObject<HTMLInputElement>)?.current || innerRef.current;
       if (target) {

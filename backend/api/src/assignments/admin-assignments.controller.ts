@@ -28,11 +28,6 @@ export class AdminAssignmentsController {
     private readonly assignmentsService: AssignmentsService,
   ) {}
 
-  /**
-   * GET /api/v1/admin/technicians
-   * Mengambil daftar teknisi internal Diskominfo beserta beban kerja aktif.
-   * Khusus SUPER_ADMIN.
-   */
   @Get('technicians')
   async listTechnicians() {
     const data = await this.assignmentsService.listTechnicians();
@@ -42,11 +37,6 @@ export class AdminAssignmentsController {
     };
   }
 
-  /**
-   * GET /api/v1/admin/applications/:id/assignments
-   * Mengambil riwayat dan status penugasan terkini pada permohonan.
-   * TECHNICIAN diizinkan hanya jika ditugaskan pada tiket tersebut (RBAC).
-   */
   @Get('applications/:id/assignments')
   @Roles('SUPER_ADMIN', 'TECHNICIAN')
   async getApplicationAssignments(
@@ -74,10 +64,6 @@ export class AdminAssignmentsController {
     };
   }
 
-  /**
-   * POST /api/v1/admin/applications/:id/assignments
-   * Menugaskan atau mengalihkan teknisi penanggung jawab (Re-assignment).
-   */
   @Post('applications/:id/assignments')
   async assignTechnician(
     @Param('id') applicationId: string,
